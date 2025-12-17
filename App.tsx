@@ -68,25 +68,31 @@ const App: React.FC = () => {
         let senderAvatar: string | undefined;
         let messageBody = "Hello! Just checking in.";
 
+        // Safely access mock data or fallback
+        const adminSender = mockTeachers.length > 0 ? mockTeachers[0] : { name: 'Mr. Teacher', avatarUrl: '' };
+        const teacherSender = mockStudents.length > 2 ? mockStudents[2] : (mockStudents.length > 0 ? mockStudents[0] : { name: 'Student', avatarUrl: '' });
+        const parentSender = mockTeachers.length > 1 ? mockTeachers[1] : { name: 'Mrs. Teacher', avatarUrl: '' };
+        const studentSender = mockTeachers.length > 0 ? mockTeachers[0] : { name: 'Mr. Teacher', avatarUrl: '' };
+
         switch (activeDashboard) {
           case DashboardType.Admin:
-            senderName = mockTeachers[0].name;
-            senderAvatar = mockTeachers[0].avatarUrl;
+            senderName = adminSender.name;
+            senderAvatar = adminSender.avatarUrl;
             messageBody = "The reports for Grade 10A are ready for review.";
             break;
           case DashboardType.Teacher:
-            senderName = mockStudents[2].name; // Musa Ibrahim
-            senderAvatar = mockStudents[2].avatarUrl;
+            senderName = teacherSender.name;
+            senderAvatar = teacherSender.avatarUrl;
             messageBody = "Good afternoon, I have a question about the assignment.";
             break;
           case DashboardType.Parent:
-            senderName = mockTeachers[1].name; // Mrs. Funke Akintola
-            senderAvatar = mockTeachers[1].avatarUrl;
+            senderName = parentSender.name;
+            senderAvatar = parentSender.avatarUrl;
             messageBody = "Hello, just a reminder about the PTA meeting tomorrow.";
             break;
           case DashboardType.Student:
-            senderName = mockTeachers[0].name; // Mr. John Adeoye
-            senderAvatar = mockTeachers[0].avatarUrl;
+            senderName = studentSender.name;
+            senderAvatar = studentSender.avatarUrl;
             messageBody = "Great work on the last test! Keep it up.";
             break;
         }
