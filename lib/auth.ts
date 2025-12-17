@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { emailTemplates } from './emailTemplates';
 import bcrypt from 'bcryptjs';
 
@@ -105,6 +105,10 @@ export const checkEmailExists = async (email: string): Promise<{
   authAccountRow?: any | null;
   error?: string | null;
 }> => {
+  if (!isSupabaseConfigured) {
+    return { inUsers: false, userRow: null, inAuthAccounts: false, authAccountRow: null, error: null };
+  }
+
   try {
     // Query users table
     const { data: userRow, error: userError } = await supabase

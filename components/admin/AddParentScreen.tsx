@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { CameraIcon, UserIcon, MailIcon, PhoneIcon, StudentsIcon } from '../../constants';
 import { Parent } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { createUserAccount, sendVerificationEmail, checkEmailExists } from '../../lib/auth';
 import CredentialsModal from '../ui/CredentialsModal';
+import { mockParents } from '../../data';
 
 interface AddParentScreenProps {
     parentToEdit?: Parent;
@@ -52,6 +53,48 @@ const AddParentScreen: React.FC<AddParentScreenProps> = ({ parentToEdit, forceUp
             const avatarUrl = avatar || `https://i.pravatar.cc/150?u=${name.replace(' ', '')}`;
             const childIdArray = childIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
 
+            // MOCK MODE HANDLING
+            if (!isSupabaseConfigured) {
+                if (parentToEdit) {
+                    const index = mockParents.findIndex(p => p.id === parentToEdit.id);
+                    if (index !== -1) {
+                        mockParents[index] = {
+                            ...mockParents[index],
+                            name,
+                            email,
+                            phone,
+                            avatarUrl,
+                            childIds: childIdArray,
+                            children: [] // In mock mode we might not easily link objects, so leave empty or resolve later
+                        };
+                    }
+                    alert('Parent updated successfully (Mock Mode - Session Only)');
+                } else {
+                    const newId = mockParents.length > 0 ? Math.max(...mockParents.map(p => p.id)) + 1 : 1;
+                    mockParents.push({
+                        id: newId,
+                        name,
+                        email,
+                        phone,
+                        avatarUrl,
+                        childIds: childIdArray,
+                        children: [],
+                    });
+                    // Simulate credentials generation
+                    setCredentials({
+                        username: email.split('@')[0],
+                        password: 'password123',
+                        email: email
+                    });
+                    setShowCredentialsModal(true);
+                    setIsLoading(false);
+                    return;
+                }
+                forceUpdate();
+                handleBack();
+                return;
+            }
+
             if (parentToEdit) {
                 // UPDATE MODE
                 const { error: updateError } = await supabase
@@ -76,7 +119,6 @@ const AddParentScreen: React.FC<AddParentScreenProps> = ({ parentToEdit, forceUp
                 }
 
                 let userIdToUse: number | null = null;
-
                 if (exists.inAuthAccounts) {
                     let whereFound: string[] = [];
                     if (exists.inUsers) whereFound.push(`users (id: ${exists.userRow?.id || 'unknown'})`);

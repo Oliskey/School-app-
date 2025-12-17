@@ -1,11 +1,11 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { CameraIcon, UserIcon, MailIcon, PhoneIcon } from '../../constants';
 import { Student, Department } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { createUserAccount, generateUsername, generatePassword, sendVerificationEmail, checkEmailExists } from '../../lib/auth';
 import CredentialsModal from '../ui/CredentialsModal';
+import { mockStudents } from '../../data';
 
 interface AddStudentScreenProps {
     studentToEdit?: Student;
@@ -68,6 +68,53 @@ const AddStudentScreen: React.FC<AddStudentScreenProps> = ({ studentToEdit, forc
             // Generate email for the student
             let generatedEmail = `${fullName.toLowerCase().replace(/\s+/g, '.')}@student.school.com`;
             const avatarUrl = selectedImage || `https://i.pravatar.cc/150?u=${fullName.replace(' ', '')}`;
+
+            // MOCK MODE HANDLING
+            if (!isSupabaseConfigured) {
+                if (studentToEdit) {
+                    // Update existing mock student
+                    const index = mockStudents.findIndex(s => s.id === studentToEdit.id);
+                    if (index !== -1) {
+                        mockStudents[index] = {
+                            ...mockStudents[index],
+                            name: fullName,
+                            grade,
+                            section,
+                            department: department || undefined,
+                            birthday: birthday || undefined,
+                            avatarUrl: avatarUrl
+                        };
+                    }
+                    alert('Student updated successfully (Mock Mode - Session Only)');
+                } else {
+                    // Create new mock student
+                    const newId = mockStudents.length > 0 ? Math.max(...mockStudents.map(s => s.id)) + 1 : 1;
+                    mockStudents.push({
+                        id: newId,
+                        name: fullName,
+                        avatarUrl: avatarUrl,
+                        grade: grade,
+                        section: section,
+                        department: department || undefined,
+                        attendanceStatus: 'Present',
+                        birthday: birthday || undefined,
+                        academicPerformance: [], // Empty for now
+                        behaviorNotes: []
+                    });
+                    // Simulate credentials generation
+                    setCredentials({
+                        username: generatedEmail.split('@')[0],
+                        password: 'password123',
+                        email: generatedEmail
+                    });
+                    setShowCredentialsModal(true);
+                    setIsLoading(false);
+                    return; // Don't close immediately, wait for modal
+                }
+                forceUpdate();
+                handleBack();
+                return;
+            }
 
             if (studentToEdit) {
                 // UPDATE MODE - Update existing student in Supabase

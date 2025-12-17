@@ -1,11 +1,11 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { CameraIcon, UserIcon, MailIcon, PhoneIcon, BookOpenIcon, UsersIcon, XCircleIcon } from '../../constants';
 import { Teacher } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { createUserAccount, sendVerificationEmail, checkEmailExists } from '../../lib/auth';
 import CredentialsModal from '../ui/CredentialsModal';
+import { mockTeachers } from '../../data';
 
 interface AddTeacherScreenProps {
     teacherToEdit?: Teacher;
@@ -114,6 +114,51 @@ const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forc
         try {
             const avatarUrl = avatar || `https://i.pravatar.cc/150?u=${name.replace(' ', '')}`;
 
+            // MOCK MODE HANDLING
+            if (!isSupabaseConfigured) {
+                const teacherEmail = email || `teacher${Date.now()}@school.com`;
+                if (teacherToEdit) {
+                    const index = mockTeachers.findIndex(t => t.id === teacherToEdit.id);
+                    if (index !== -1) {
+                        mockTeachers[index] = {
+                            ...mockTeachers[index],
+                            name,
+                            email: teacherEmail,
+                            phone,
+                            subjects,
+                            classes,
+                            status,
+                            avatarUrl
+                        };
+                    }
+                    alert('Teacher updated successfully (Mock Mode - Session Only)');
+                } else {
+                    const newId = mockTeachers.length > 0 ? Math.max(...mockTeachers.map(t => t.id)) + 1 : 1;
+                    mockTeachers.push({
+                        id: newId,
+                        name,
+                        email: teacherEmail,
+                        phone,
+                        subjects,
+                        classes,
+                        status,
+                        avatarUrl,
+                    });
+                    // Simulate credentials generation
+                    setCredentials({
+                        username: teacherEmail.split('@')[0],
+                        password: 'password123',
+                        email: teacherEmail
+                    });
+                    setShowCredentialsModal(true);
+                    setIsLoading(false);
+                    return;
+                }
+                forceUpdate();
+                handleBack();
+                return;
+            }
+
             if (teacherToEdit) {
                 // UPDATE MODE
                 const { error: updateError } = await supabase
@@ -128,6 +173,7 @@ const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forc
                     .eq('id', teacherToEdit.id);
 
                 if (updateError) throw updateError;
+                // Update relations (simplified for now: just re-insert or similar could be better but sticking to main update)
                 alert('Teacher updated successfully!');
             } else {
                 // CREATE MODE - Check if email already exists in users or auth_accounts
@@ -139,7 +185,6 @@ const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forc
                 }
 
                 let userIdToUse: number | null = null;
-
                 if (exists.inAuthAccounts) {
                     let whereFound: string[] = [];
                     if (exists.inUsers) whereFound.push(`users (id: ${exists.userRow?.id || 'unknown'})`);
@@ -345,10 +390,5 @@ const InputField: React.FC<{ id: string, label: string, value: string, onChange:
         </div>
     </div>
 );
-
-// Credentials Modal
-interface AddTeacherScreenWithModal extends React.FC<any> {
-    (props: any): React.ReactElement;
-}
 
 export default AddTeacherScreen;

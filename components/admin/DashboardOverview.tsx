@@ -31,9 +31,10 @@ import {
     SchoolLogoIcon,
 } from '../../constants';
 // import { mockSavedTimetable } from '../../data'; // Mock removed
+import { mockStudents, mockTeachers, mockParents } from '../../data';
 import { AuditLog } from '../../types';
 import DonutChart from '../ui/DonutChart';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 
 // --- NEW, REFINED UI/UX COMPONENTS ---
@@ -291,6 +292,15 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
 
     const fetchCounts = async () => {
         setIsLoadingCounts(true);
+
+        if (!isSupabaseConfigured) {
+            setTotalStudents(mockStudents.length);
+            setTotalStaff(mockTeachers.length);
+            setTotalParents(mockParents.length);
+            setIsLoadingCounts(false);
+            return;
+        }
+
         try {
             // Fetch student count
             const { count: studentCount, error: studentError } = await supabase
@@ -320,6 +330,15 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
     };
 
     const fetchDashboardData = async () => {
+        if (!isSupabaseConfigured) {
+            // Mock Data Fallbacks
+            setOverdueFees(0);
+            setUnpublishedReports(0);
+            setAttendancePercentage(0);
+            // Could populate more mocks here if needed, but 0 is fine for "Clean Slate"
+            return;
+        }
+
         try {
             // Fetch overdue fees count
             const { count: overdueCount } = await supabase
