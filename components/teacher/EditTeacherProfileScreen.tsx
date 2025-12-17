@@ -5,9 +5,11 @@ import { supabase } from '../../lib/supabase';
 
 interface EditTeacherProfileScreenProps {
     onProfileUpdate?: (data?: { name: string; avatarUrl: string }) => void;
+    teacherId?: number | null;
+    currentUser?: any;
 }
 
-const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onProfileUpdate }) => {
+const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onProfileUpdate, teacherId, currentUser }) => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -17,22 +19,26 @@ const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onP
     const [phone, setPhone] = useState('');
     const [avatar, setAvatar] = useState('');
     const [subject, setSubject] = useState('');
-    const [teacherId, setTeacherId] = useState<number | null>(null);
+    const [loadedTeacherId, setLoadedTeacherId] = useState<number | null>(null);
 
     // Fetch Profile Data
     useEffect(() => {
         const fetchProfile = async () => {
-            // Use static ID '2' to match dashboard logic and ensure consistency
-            const teacherId = 2;
+            let query = supabase.from('teachers').select('*');
 
-            const { data, error } = await supabase
-                .from('teachers')
-                .select('*')
-                .eq('id', teacherId)
-                .single();
+            if (teacherId) {
+                query = query.eq('id', teacherId);
+            } else if (currentUser?.email) {
+                query = query.eq('email', currentUser.email);
+            } else {
+                // Fallback
+                query = query.eq('email', 'f.akintola@school.com');
+            }
+
+            const { data, error } = await query.single();
 
             if (data) {
-                setTeacherId(data.id);
+                setLoadedTeacherId(data.id);
                 setName(data.name || '');
                 setEmail(data.email || '');
                 setPhone(data.phone || '');
@@ -97,7 +103,7 @@ const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onP
                     phone: phone,
                     avatar_url: avatar // Updating avatar URL (base64 or link)
                 })
-                .eq('id', teacherId);
+                .eq('id', loadedTeacherId);
 
             if (error) throw error;
 

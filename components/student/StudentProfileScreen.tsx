@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Student } from '../../types';
 // mockStudents removed
 import { BookOpenIcon, ClipboardListIcon, SUBJECT_COLORS, CakeIcon, UserIcon, NotificationIcon, SecurityIcon, LogoutIcon, SettingsIcon, ChevronLeftIcon, ChevronRightIcon, CameraIcon, LockIcon, ExamIcon } from '../../constants';
@@ -14,6 +15,7 @@ interface StudentProfileScreenProps {
 
 const StudentEditProfile: React.FC<{ student: Student }> = ({ student }) => {
     const [avatar, setAvatar] = useState(student.avatarUrl);
+    const [saving, setSaving] = useState(false);
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -22,6 +24,29 @@ const StudentEditProfile: React.FC<{ student: Student }> = ({ student }) => {
             reader.readAsDataURL(event.target.files[0]);
         }
     };
+
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+            const updates = {
+                avatar_url: avatar
+            };
+
+            const { error } = await supabase
+                .from('students')
+                .update(updates)
+                .eq('id', student.id);
+
+            if (error) throw error;
+            alert('Profile updated successfully!');
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            alert('Failed to update profile.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div className="p-4 space-y-4">
             <div className="flex justify-center">
@@ -34,7 +59,13 @@ const StudentEditProfile: React.FC<{ student: Student }> = ({ student }) => {
                 </div>
             </div>
             <div className="text-center">
-                <button onClick={() => alert('Profile picture updated!')} className="px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg">Save</button>
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className={`px-4 py-2 text-white font-semibold rounded-lg ${saving ? 'bg-orange-300' : 'bg-orange-500 hover:bg-orange-600'}`}
+                >
+                    {saving ? 'Saving...' : 'Save'}
+                </button>
             </div>
         </div>
     );

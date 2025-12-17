@@ -150,7 +150,7 @@ const Toast: React.FC<{ message: string; onClear: () => void; }> = ({ message, o
 
 // --- MAIN COMPONENT ---
 
-const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, props?: any) => void; }> = ({ navigateTo }) => {
+const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, props?: any) => void; teacherId?: number | null; }> = ({ navigateTo, teacherId }) => {
     const [subject, setSubject] = useState('');
     const [className, setClassName] = useState('');
     const [term1Scheme, setTerm1Scheme] = useState<SchemeWeek[]>([]);
@@ -164,13 +164,13 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
     const [isGeneratedHistoryOpen, setIsGeneratedHistoryOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
 
-    const TEACHER_ID = 2; // Hardcoced for now, pending real auth context
+    const effectiveTeacherId = teacherId || 2; // Fallback to 2 only if no auth provided (dev mode)
 
     const fetchHistory = useCallback(async () => {
         const { data, error } = await supabase
             .from('generated_resources')
             .select('*')
-            .eq('teacher_id', TEACHER_ID)
+            .eq('teacher_id', effectiveTeacherId)
             .order('updated_at', { ascending: false });
 
         if (error) {
@@ -201,7 +201,7 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
                 }));
             setGeneratedHistory(generated);
         }
-    }, [TEACHER_ID]);
+    }, [effectiveTeacherId]);
 
     useEffect(() => {
         fetchHistory();
@@ -230,7 +230,7 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
         const { data: existing } = await supabase
             .from('generated_resources')
             .select('id')
-            .eq('teacher_id', TEACHER_ID)
+            .eq('teacher_id', effectiveTeacherId)
             .eq('subject', subject)
             .eq('class_name', className)
             .maybeSingle();
@@ -249,7 +249,7 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
             const { error: insertError } = await supabase
                 .from('generated_resources')
                 .insert([{
-                    teacher_id: TEACHER_ID,
+                    teacher_id: effectiveTeacherId,
                     subject,
                     class_name: className,
                     term: 'All', // Defaulting as we store all 3
@@ -265,7 +265,7 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
             setToastMessage('Scheme of work saved to database!');
             fetchHistory(); // Refresh
         }
-    }, [subject, className, term1Scheme, term2Scheme, term3Scheme, TEACHER_ID, fetchHistory]);
+    }, [subject, className, term1Scheme, term2Scheme, term3Scheme, effectiveTeacherId, fetchHistory]);
 
     const handleLoadFromSchemeHistory = useCallback((entry: HistoryEntry) => {
         setSubject(entry.subject);
@@ -468,7 +468,7 @@ Return a single JSON object matching the required schema.`;
             const { data: existing } = await supabase
                 .from('generated_resources')
                 .select('id')
-                .eq('teacher_id', TEACHER_ID)
+                .eq('teacher_id', effectiveTeacherId)
                 .eq('subject', resources.subject)
                 .eq('class_name', resources.className)
                 .maybeSingle();
@@ -485,7 +485,7 @@ Return a single JSON object matching the required schema.`;
                 await supabase
                     .from('generated_resources')
                     .insert([{
-                        teacher_id: TEACHER_ID,
+                        teacher_id: effectiveTeacherId,
                         subject: resources.subject,
                         class_name: resources.className,
                         term: 'All', // Default

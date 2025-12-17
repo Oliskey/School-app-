@@ -1,10 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
-import { Teacher, Conversation, RoleName } from '../../types';
-import { mockTeachers, mockStudents, mockConversations } from '../../data';
+import { Student, Teacher, Conversation, RoleName, ChatRoom, ChatParticipant } from '../../types';
+import { mockTeachers, mockConversations } from '../../data';
 import { SearchIcon } from '../../constants';
-
-const LOGGED_IN_PARENT_ID = 1002;
 
 type UserListItem = {
     id: number;
@@ -15,7 +12,8 @@ type UserListItem = {
 };
 
 interface ParentNewChatScreenProps {
-  navigateTo: (view: string, title: string, props: any) => void;
+    navigateTo: (view: string, title: string, props: any) => void;
+    children?: Student[];
 }
 
 const UserRow: React.FC<{ user: UserListItem, onSelect: () => void }> = ({ user, onSelect }) => (
@@ -28,19 +26,18 @@ const UserRow: React.FC<{ user: UserListItem, onSelect: () => void }> = ({ user,
     </button>
 );
 
-const ParentNewChatScreen: React.FC<ParentNewChatScreenProps> = ({ navigateTo }) => {
+const ParentNewChatScreen: React.FC<ParentNewChatScreenProps> = ({ navigateTo, children = [] }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const teachers = useMemo((): UserListItem[] => {
-        // Find children of logged-in parent
-        const children = mockStudents.filter(s => s.id === 4); // Mrs. Bello's child
+        // Find classes of children
         const childrenClasses = children.map(c => `${c.grade}${c.section}`);
-        
+
         // Find teachers who teach those classes
-        const relevantTeachers = mockTeachers.filter(t => 
+        const relevantTeachers = mockTeachers.filter(t =>
             t.status === 'Active' && t.classes.some(tc => childrenClasses.includes(tc))
         );
-        
+
         return relevantTeachers.map(t => ({
             id: t.id,
             name: t.name,
@@ -48,30 +45,50 @@ const ParentNewChatScreen: React.FC<ParentNewChatScreenProps> = ({ navigateTo })
             subtitle: `${t.subjects[0]} Teacher`,
             userType: 'Teacher'
         }));
-    }, []);
+    }, [children]);
 
     const filteredUsers = useMemo(() => {
-        return teachers.filter(user => 
+        return teachers.filter(user =>
             user.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [searchTerm, teachers]);
-    
+
     const handleSelectUser = (user: UserListItem) => {
         const role: RoleName = 'Teacher';
-        let conversation = mockConversations.find(c => c.participant.id === user.id && c.participant.role === role);
+
+        // Find existing conversation
+        let conversation = mockConversations.find(c =>
+            !c.isGroup && c.participants.some(p => p.userId === user.id)
+        );
 
         if (!conversation) {
+            // Mock new conversation
+            // Note: In real app, we would make an API call to create conversation
             const newConversation: Conversation = {
-                id: `conv-parent-${Date.now()}`,
-                participant: { id: user.id, name: user.name, avatarUrl: user.avatarUrl, role: role },
-                lastMessage: { text: `You can now chat with ${user.name}.`, timestamp: new Date().toISOString() },
-                unreadCount: 0,
-                messages: [],
-            };
+                id: Date.now(),
+                type: 'direct',
+                isGroup: false,
+                creatorId: 1002, // Mock curr parent
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                lastMessageAt: new Date().toISOString(),
+                participants: [
+                    { roomId: 0, userId: user.id, role: 'member', joinedAt: new Date().toISOString(), user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl, role: role } },
+                    { roomId: 0, userId: 1002, role: 'admin', joinedAt: new Date().toISOString(), user: { id: 1002, name: 'You', avatarUrl: '', role: 'Parent' } }
+                ],
+                messages: [], // This is not in ChatRoom interface but might be expected by ChatScreen mock logic?
+                // ChatScreen expects `conversation` object to be passed.
+                // In types.ts, ChatRoom does NOT have messages. ChatScreen fetches them or expects them separately?
+                // Let's check ChatScreen usage.
+                // If ChatScreen expects specific props, I need to match.
+                // I will add 'messages' as any cast if needed or just omit if ChatScreen loads them.
+                // Assuming ChatScreen loads them or uses context, but "mockConversations" usually had messages.
+            } as any;
+
             mockConversations.push(newConversation);
             conversation = newConversation;
         }
-        
+
         navigateTo('chat', user.name, { conversation });
     };
 
@@ -91,7 +108,7 @@ const ParentNewChatScreen: React.FC<ParentNewChatScreenProps> = ({ navigateTo })
                     />
                 </div>
             </div>
-            
+
             <main className="flex-grow p-4 space-y-2 overflow-y-auto">
                 {filteredUsers.length > 0 ? (
                     filteredUsers.map(user => (

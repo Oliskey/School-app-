@@ -1,16 +1,16 @@
 
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { DashboardType, Student, BehaviorNote, StudentAttendance, AttendanceStatus, StudentAssignment, ProgressReport } from '../../types';
-import { 
-    THEME_CONFIG, 
-    ChevronRightIcon, 
-    BusVehicleIcon, 
-    ReceiptIcon, 
-    ReportIcon, 
-    PhoneIcon, 
-    ChartBarIcon, 
-    ClipboardListIcon, 
-    MegaphoneIcon, 
+import {
+    THEME_CONFIG,
+    ChevronRightIcon,
+    BusVehicleIcon,
+    ReceiptIcon,
+    ReportIcon,
+    PhoneIcon,
+    ChartBarIcon,
+    ClipboardListIcon,
+    MegaphoneIcon,
     AttendanceSummaryIcon,
     ClockIcon,
     BookOpenIcon,
@@ -29,17 +29,18 @@ import {
 import Header from '../ui/Header';
 import { ParentBottomNav } from '../ui/DashboardBottomNav';
 import { useProfile } from '../../context/ProfileContext';
-import { 
-    mockStudentFees, 
-    mockStudents, 
-    mockAssignments, 
-    mockSubmissions, 
+import {
+    mockStudentFees,
+    mockStudents,
+    mockAssignments,
+    mockSubmissions,
     mockNotices,
     mockStudentAttendance,
     mockTimetableData,
     mockNotifications,
     mockProgressReports,
 } from '../../data';
+import { fetchParentByEmail, fetchChildrenForParent } from '../../lib/database';
 import DonutChart from '../ui/DonutChart';
 import GlobalSearchScreen from '../shared/GlobalSearchScreen';
 
@@ -76,14 +77,14 @@ import MessagingLayout from '../shared/MessagingLayout';
 
 const DashboardSuspenseFallback = () => (
     <div className="flex justify-center items-center h-full p-8">
-      <div className="w-10 h-10 border-4 border-t-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-t-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
     </div>
-  );
+);
 
 interface ViewStackItem {
-  view: string;
-  props?: any;
-  title: string;
+    view: string;
+    props?: any;
+    title: string;
 }
 
 const StatItem = ({ icon, label, value, colorClass }: { icon: React.ReactNode, label: string, value: string | React.ReactNode, colorClass: string }) => (
@@ -107,29 +108,29 @@ const ChildStatCard: React.FC<{ data: any, navigateTo: (view: string, title: str
             {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(feeInfo.totalFee - feeInfo.paidAmount)} due
         </span>
     ) : "All Paid";
-    
+
     return (
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
             <div className="p-4" style={{ backgroundColor: `${colorTheme.bg}1A` }}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                        <img src={student.avatarUrl} alt={student.name} className="w-14 h-14 rounded-full object-cover border-2" style={{borderColor: colorTheme.bg}}/>
+                        <img src={student.avatarUrl} alt={student.name} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: colorTheme.bg }} />
                         <div>
                             <h3 className="font-bold text-lg text-gray-800">{student.name}</h3>
-                            <p className="text-sm font-semibold" style={{color: colorTheme.text}}>{formattedClassName}</p>
+                            <p className="text-sm font-semibold" style={{ color: colorTheme.text }}>{formattedClassName}</p>
                         </div>
                     </div>
                     <button onClick={() => navigateTo('childDetail', student.name, { student: student })} className="bg-white p-2 rounded-full shadow-sm hover:bg-gray-100">
-                        <ChevronRightIcon className="text-gray-600"/>
+                        <ChevronRightIcon className="text-gray-600" />
                     </button>
                 </div>
             </div>
 
             <div className="px-4 py-3 grid grid-cols-2 gap-4 border-t border-gray-100">
-                <StatItem icon={<AttendanceSummaryIcon className="h-5 w-5 text-green-600"/>} label="Attendance" value={`${attendancePercentage}%`} colorClass="bg-green-100" />
-                <StatItem icon={<ReceiptIcon className="h-5 w-5 text-red-600"/>} label="Fees Due" value={feeStatus} colorClass="bg-red-100" />
-                {nextHomework && <StatItem icon={<ClipboardListIcon className="h-5 w-5 text-purple-600"/>} label="Homework" value={`${nextHomework.subject}`} colorClass="bg-purple-100" />}
-                <StatItem icon={<ReportIcon className="h-5 w-5 text-sky-600"/>} label="Report Card" value="View" colorClass="bg-sky-100" />
+                <StatItem icon={<AttendanceSummaryIcon className="h-5 w-5 text-green-600" />} label="Attendance" value={`${attendancePercentage}%`} colorClass="bg-green-100" />
+                <StatItem icon={<ReceiptIcon className="h-5 w-5 text-red-600" />} label="Fees Due" value={feeStatus} colorClass="bg-red-100" />
+                {nextHomework && <StatItem icon={<ClipboardListIcon className="h-5 w-5 text-purple-600" />} label="Homework" value={`${nextHomework.subject}`} colorClass="bg-purple-100" />}
+                <StatItem icon={<ReportIcon className="h-5 w-5 text-sky-600" />} label="Report Card" value="View" colorClass="bg-sky-100" />
             </div>
         </div>
     );
@@ -177,15 +178,15 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                 avg = Math.round(grades.reduce((acc, curr) => acc + curr.score, 0) / grades.length);
             }
         }
-        
+
         const homework = mockAssignments
             .map(a => ({
                 ...a,
                 submission: mockSubmissions.find(s => s.assignmentId === a.id && s.student.id === student.id)
             }))
             .filter(a => new Date(a.dueDate) > new Date())
-            .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-            
+            .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
         // Use mockProgressReports explicitly typed
         const progress = mockProgressReports.find((p: ProgressReport) => p.studentId === student.id);
 
@@ -200,11 +201,11 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                     <h3 className="font-bold text-lg">Personalized Advice</h3>
                     <p className="text-sm opacity-90">Get AI-powered tips for your child.</p>
                 </div>
-                <button 
-                    onClick={() => navigateTo('aiParentingTips', 'AI Parenting Tips', { student })} 
+                <button
+                    onClick={() => navigateTo('aiParentingTips', 'AI Parenting Tips', { student })}
                     className="bg-white/20 px-4 py-2 rounded-lg font-semibold hover:bg-white/30 transition-colors flex items-center space-x-2"
                 >
-                    <SparklesIcon className="h-5 w-5"/>
+                    <SparklesIcon className="h-5 w-5" />
                     <span>Get Tips</span>
                 </button>
             </div>
@@ -235,7 +236,7 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                         </div>
                     )}
                 </div>
-                
+
                 {/* Homework */}
                 <div className="bg-white p-4 rounded-xl shadow-sm">
                     <h4 className="font-bold text-gray-800 mb-3">Upcoming Homework</h4>
@@ -249,7 +250,7 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                                         <p className="text-sm text-gray-700">{hw.subject} &bull; Due {new Date(hw.dueDate).toLocaleDateString('en-GB')}</p>
                                     </div>
                                     <div className={`flex items-center space-x-2 text-xs font-semibold px-2 py-1 rounded-full ${status.bg} ${status.color}`}>
-                                        {React.cloneElement(status.icon, {className: `h-4 w-4 ${status.isComplete ? 'animate-checkmark-pop' : ''}`.trim()})}
+                                        {React.cloneElement(status.icon, { className: `h-4 w-4 ${status.isComplete ? 'animate-checkmark-pop' : ''}`.trim() })}
                                         <span>{status.text}</span>
                                     </div>
                                 </div>
@@ -263,20 +264,20 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
             {progressReport && (
                 <div className="bg-white p-4 rounded-xl shadow-sm">
                     <div className="flex items-center space-x-2 mb-3">
-                        <SparklesIcon className="text-green-500"/>
+                        <SparklesIcon className="text-green-500" />
                         <h4 className="font-bold text-gray-800">AI Progress Insights</h4>
                     </div>
-                     <div className="space-y-3 text-sm">
+                    <div className="space-y-3 text-sm">
                         <div>
                             <h5 className="font-semibold text-green-700 mb-1">Strengths</h5>
                             <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                {progressReport.strengths.map((s,i) => <li key={i}>{s}</li>)}
+                                {progressReport.strengths.map((s, i) => <li key={i}>{s}</li>)}
                             </ul>
                         </div>
                         <div>
                             <h5 className="font-semibold text-amber-700 mb-1">Areas for Improvement</h5>
-                             <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                {progressReport.areasForImprovement.map((s,i) => <li key={i}>{s}</li>)}
+                            <ul className="list-disc list-inside text-gray-600 space-y-1">
+                                {progressReport.areasForImprovement.map((s, i) => <li key={i}>{s}</li>)}
                             </ul>
                         </div>
                     </div>
@@ -290,7 +291,7 @@ const BehaviorTab = ({ student }: { student: Student }) => {
     return (
         <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {student.behaviorNotes && student.behaviorNotes.length > 0 ? [...student.behaviorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(note => {
+                {student.behaviorNotes && student.behaviorNotes.length > 0 ? [...student.behaviorNotes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(note => {
                     const isPositive = note.type === 'Positive';
                     return (
                         <div key={note.id} className={`p-4 rounded-xl border-l-4 ${isPositive ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'}`}>
@@ -317,10 +318,10 @@ const BehaviorTab = ({ student }: { student: Student }) => {
 };
 
 const AttendanceTab = ({ student }: { student: Student }) => {
-    const studentAttendance = useMemo(() => 
+    const studentAttendance = useMemo(() =>
         mockStudentAttendance.filter(att => att.studentId === student.id)
-    , [student.id]);
-    
+        , [student.id]);
+
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const attendanceMap = useMemo(() => {
@@ -335,7 +336,7 @@ const AttendanceTab = ({ student }: { student: Student }) => {
 
     const goToPreviousMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     const goToNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-    
+
     const attendanceColors: { [key in AttendanceStatus]: string } = {
         Present: 'bg-green-400 text-white',
         Absent: 'bg-red-400 text-white',
@@ -380,18 +381,17 @@ type ChildDetailTab = 'academics' | 'behavior' | 'attendance';
 
 const ChildDetailScreen = ({ student, initialTab, navigateTo }: { student: Student, initialTab?: ChildDetailTab, navigateTo: (view: string, title: string, props?: any) => void }) => {
     const [activeTab, setActiveTab] = useState<ChildDetailTab>(initialTab || 'academics');
-    
+
     const TabButton = ({ id, label }: { id: ChildDetailTab, label: string }) => (
         <button
-          onClick={() => setActiveTab(id)}
-          className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${
-            activeTab === id ? 'bg-green-500 text-white shadow' : 'text-gray-800'
-          }`}
+            onClick={() => setActiveTab(id)}
+            className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === id ? 'bg-green-500 text-white shadow' : 'text-gray-800'
+                }`}
         >
-          {label}
+            {label}
         </button>
     );
-    
+
     return (
         <div className="flex flex-col h-full bg-gray-50">
             {/* Child Header */}
@@ -402,7 +402,7 @@ const ChildDetailScreen = ({ student, initialTab, navigateTo }: { student: Stude
                     <p className="text-gray-700 font-medium">{getFormattedClassName(student.grade, student.section)}</p>
                 </div>
             </div>
-            
+
             {/* Tabs */}
             <div className="px-4 py-2 bg-white">
                 <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg">
@@ -421,34 +421,42 @@ const ChildDetailScreen = ({ student, initialTab, navigateTo }: { student: Stude
     );
 };
 
-const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, props?: any) => void }) => {
+const Dashboard = ({ navigateTo, children, parentId }: { navigateTo: (view: string, title: string, props?: any) => void, children: Student[], parentId: number }) => {
     const theme = THEME_CONFIG[DashboardType.Parent];
-    const parentChildrenIds = [3, 4]; // Mock: This parent has two children
-    
-    const childrenData = useMemo(() => mockStudents
-        .filter(s => parentChildrenIds.includes(s.id))
+
+    // Process children data (mix of real student data and mocked performance/fee data for now until those tables are populated)
+    const childrenData = useMemo(() => children
         .map(student => {
-            const feeInfo = mockStudentFees.find(f => f.id === student.id);
+            // In a real app, we would fetch these specifically for the student. 
+            // For now, we try to find a match in mocks or return default/empty.
+            const feeInfo = mockStudentFees.find(f => f.id === student.id) || {
+                id: student.id, name: student.name, avatarUrl: student.avatarUrl, grade: student.grade, section: student.section,
+                totalFee: 100000, paidAmount: 0, dueDate: '2024-12-31', status: 'Unpaid'
+            } as any;
+
             const nextHomework = mockAssignments
-                .filter(a => !mockSubmissions.some(sub => sub.assignmentId === a.id && sub.student.id === student.id))
-                .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
-            const recentGrades = student.academicPerformance?.filter(p => p.term === 'Term 2').slice(0,1) || [];
-            
+                .filter(a => !mockSubmissions.some(sub => sub.assignmentId === a.id && sub.student.id === student.id)) // This check is weak with mocks but ok for now
+                .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+
+            // Try to find performance in mocks, else empty
+            const recentGrades = student.academicPerformance?.filter(p => p.term === 'Term 2').slice(0, 1) || [];
+
+            // Attendance
             const attendanceRecords = mockStudentAttendance.filter(a => a.studentId === student.id && a.status !== 'Leave');
             const presentCount = attendanceRecords.filter(a => a.status === 'Present' || a.status === 'Late').length;
             const attendancePercentage = attendanceRecords.length > 0 ? Math.round((presentCount / attendanceRecords.length) * 100) : 100;
 
             return { student, feeInfo, nextHomework, recentGrades, attendancePercentage };
-        }), []);
+        }), [children]);
 
     const quickAccessItems = [
-        { label: 'Bus Route', icon: <BusVehicleIcon className="h-7 w-7"/>, action: () => navigateTo('busRoute', 'Bus Route') },
-        { label: 'Calendar', icon: <CalendarIcon className="h-7 w-7"/>, action: () => navigateTo('calendar', 'School Calendar') },
-        { label: 'Noticeboard', icon: <MegaphoneIcon className="h-7 w-7"/>, action: () => navigateTo('noticeboard', 'Noticeboard') },
-        { label: 'Appointments', icon: <CalendarPlusIcon className="h-7 w-7"/>, action: () => navigateTo('appointments', 'Book Appointment') },
+        { label: 'Bus Route', icon: <BusVehicleIcon className="h-7 w-7" />, action: () => navigateTo('busRoute', 'Bus Route') },
+        { label: 'Calendar', icon: <CalendarIcon className="h-7 w-7" />, action: () => navigateTo('calendar', 'School Calendar') },
+        { label: 'Noticeboard', icon: <MegaphoneIcon className="h-7 w-7" />, action: () => navigateTo('noticeboard', 'Noticeboard') },
+        { label: 'Appointments', icon: <CalendarPlusIcon className="h-7 w-7" />, action: () => navigateTo('appointments', 'Book Appointment') },
     ];
-    
-    const childColorThemes = [{bg: '#3b82f6', text: '#1e40af'}, {bg: '#ec4899', text: '#831843'}];
+
+    const childColorThemes = [{ bg: '#3b82f6', text: '#1e40af' }, { bg: '#ec4899', text: '#831843' }];
 
     return (
         <div className="p-4 lg:p-6 bg-gray-50">
@@ -461,7 +469,7 @@ const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, p
                 </div>
                 {/* Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
-                     <div>
+                    <div>
                         <h3 className="text-lg font-bold text-gray-800 mb-2 px-1">School Utilities</h3>
                         <div className="grid grid-cols-2 gap-3">
                             {quickAccessItems.map((item) => (
@@ -483,15 +491,54 @@ interface ParentDashboardProps {
     setIsHomePage: (isHome: boolean) => void;
 }
 
-const LOGGED_IN_PARENT_ID = 1002; // Mrs. Bello
-
 const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePage }) => {
     const { profile } = useProfile();
     const [viewStack, setViewStack] = useState<ViewStackItem[]>([{ view: 'dashboard', title: 'Parent Dashboard' }]);
     const [activeBottomNav, setActiveBottomNav] = useState('home');
     const [version, setVersion] = useState(0);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+    // Data State
+    const [parent, setParent] = useState<any>(null);
+    const [children, setChildren] = useState<Student[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+
     const forceUpdate = () => setVersion(v => v + 1);
+
+    // Fetch Parent Data
+    useEffect(() => {
+        const loadPyarentData = async () => {
+            if (!profile.email) return;
+            setIsLoadingData(true);
+            try {
+                const parentData = await fetchParentByEmail(profile.email);
+                if (parentData) {
+                    setParent(parentData);
+                    const childrenData = await fetchChildrenForParent(parentData.id);
+                    setChildren(childrenData);
+                } else {
+                    // Fallback to demo parent if not found in DB (for development/demo consistency)
+                    console.warn("Parent not found in DB, using fallback mock ID 1002");
+                    // We could set a mock parent here or just leave it empty.
+                    // For "Production Ready", we should probably handle the error or redirect to setup.
+                    // But for this session, let's try to map the demo user.
+                    if (profile.email === 'parent@school.com') {
+                        setParent({ id: 1002, name: 'Mrs. Bello', email: 'parent@school.com', avatarUrl: 'https://i.pravatar.cc/150?u=parent' });
+                        // Mock children for demo user
+                        // children are handled by Dashboard logic usually, but here we need them.
+                        // Let's assume the mock students 3 and 4.
+                        const mockKids = mockStudents.filter(s => [3, 4].includes(s.id));
+                        setChildren(mockKids);
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading parent data:", e);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        loadPyarentData();
+    }, [profile]);
 
     useEffect(() => {
         const currentView = viewStack[viewStack.length - 1];
@@ -503,16 +550,16 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
     const navigateTo = (view: string, title: string, props: any = {}) => {
         setViewStack(stack => [...stack, { view, props, title }]);
     };
-    
+
     const handleBack = () => {
         if (viewStack.length > 1) {
             setViewStack(stack => stack.slice(0, -1));
         }
     };
-    
-     const handleBottomNavClick = (screen: string) => {
+
+    const handleBottomNavClick = (screen: string) => {
         setActiveBottomNav(screen);
-        switch(screen) {
+        switch (screen) {
             case 'home':
                 setViewStack([{ view: 'dashboard', title: 'Parent Dashboard' }]);
                 break;
@@ -529,13 +576,13 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 setViewStack([{ view: 'dashboard', title: 'Parent Dashboard' }]);
         }
     };
-    
+
     const handleNotificationClick = () => {
         navigateTo('notifications', 'Notifications', {});
     };
 
     const viewComponents: { [key: string]: React.ComponentType<any> } = {
-        dashboard: Dashboard,
+        dashboard: (props: any) => <Dashboard {...props} children={children} parentId={parent?.id} />,
         childDetail: ChildDetailScreen,
         examSchedule: ExamSchedule,
         noticeboard: (props: any) => <NoticeboardScreen {...props} userType="parent" />,
@@ -543,12 +590,12 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         calendar: CalendarScreen,
         library: LibraryScreen,
         busRoute: BusRouteScreen,
-        feeStatus: (props: any) => <FeeStatusScreen {...props} childrenIds={[3, 4]} />,
-        selectReport: SelectChildForReportScreen,
+        feeStatus: (props: any) => <FeeStatusScreen {...props} parentId={parent?.id} />,
+        selectReport: (props: any) => <SelectChildForReportScreen {...props} parentId={parent?.id} />,
         reportCard: ReportCardScreen,
         timetable: TimetableScreen,
-        more: ParentProfileScreen,
-        editParentProfile: EditParentProfileScreen,
+        more: (props: any) => <ParentProfileScreen {...props} parentId={parent?.id} />,
+        editParentProfile: (props: any) => <EditParentProfileScreen {...props} parentId={parent?.id} onProfileUpdate={forceUpdate} />,
         feedback: FeedbackScreen,
         notificationSettings: ParentNotificationSettingsScreen,
         securitySettings: ParentSecurityScreen,
@@ -558,16 +605,16 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         photoGallery: ParentPhotoGalleryScreen,
         volunteering: VolunteeringScreen,
         permissionSlips: PermissionSlipScreen,
-        appointments: AppointmentScreen,
+        appointments: (props: any) => <AppointmentScreen {...props} parentId={parent?.id} />,
         aiParentingTips: AIParentingTipsScreen,
-        messages: (props: any) => <MessagingLayout {...props} dashboardType={DashboardType.Parent} />,
-        newChat: ParentNewChatScreen,
-        chat: (props: any) => <ChatScreen {...props} currentUserId={LOGGED_IN_PARENT_ID} />,
+        messages: (props: any) => <MessagingLayout {...props} dashboardType={DashboardType.Parent} currentUserId={parent?.id} />,
+        newChat: (props: any) => <ParentNewChatScreen {...props} children={children} />,
+        chat: (props: any) => <ChatScreen {...props} currentUserId={parent?.id || 0} />,
     };
-    
+
     const currentNavigation = viewStack[viewStack.length - 1];
     const ComponentToRender = viewComponents[currentNavigation.view];
-    
+
     const commonProps = {
         navigateTo,
         onLogout,
@@ -575,11 +622,15 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         forceUpdate,
     };
 
+    if (isLoadingData) {
+        return <DashboardSuspenseFallback />;
+    }
+
     return (
         <div className="flex flex-col h-full bg-gray-100 relative">
-             <Header
+            <Header
                 title={currentNavigation.title}
-                avatarUrl={profile.avatarUrl}
+                avatarUrl={parent?.avatarUrl || profile.avatarUrl}
                 bgColor={THEME_CONFIG[DashboardType.Parent].mainBg}
                 onLogout={onLogout}
                 onBack={viewStack.length > 1 ? handleBack : undefined}
@@ -587,20 +638,20 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 notificationCount={notificationCount}
                 onSearchClick={() => setIsSearchOpen(true)}
             />
-            <div className="flex-grow overflow-y-auto" style={{marginTop: '-4rem'}}>
+            <div className="flex-grow overflow-y-auto" style={{ marginTop: '-4rem' }}>
                 <div className="pt-16">
                     <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
                         {ComponentToRender ? (
                             <ComponentToRender {...currentNavigation.props} {...commonProps} />
                         ) : (
-                             <div className="p-6">View not found: {currentNavigation.view}</div>
+                            <div className="p-6">View not found: {currentNavigation.view}</div>
                         )}
                     </div>
                 </div>
             </div>
-             <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+            <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
             {isSearchOpen && (
-                <GlobalSearchScreen 
+                <GlobalSearchScreen
                     dashboardType={DashboardType.Parent}
                     navigateTo={navigateTo}
                     onClose={() => setIsSearchOpen(false)}

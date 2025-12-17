@@ -7,6 +7,7 @@ import ConfirmationModal from '../ui/ConfirmationModal';
 
 interface CBTManagementScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
+    teacherId?: number | null;
 }
 
 const SUBJECTS = [
@@ -15,7 +16,7 @@ const SUBJECTS = [
     'Geography', 'Civic Education', 'Computer Studies', 'General'
 ];
 
-const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo }) => {
+const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo, teacherId }) => {
     const [tests, setTests] = useState<CBTTest[]>([]);
 
     // Configuration State
@@ -67,10 +68,13 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo })
             }
 
             // 2. Fetch Tests from DB
-            const { data: testData, error: testError } = await supabase
-                .from('cbt_tests')
-                .select('*')
-                .order('created_at', { ascending: false });
+            let query = supabase.from('cbt_tests').select('*').order('created_at', { ascending: false });
+
+            if (teacherId) {
+                query = query.eq('teacher_id', teacherId);
+            }
+
+            const { data: testData, error: testError } = await query;
 
             // 3. Merge with Offline Queue
             const offlineTests = JSON.parse(localStorage.getItem('cbt_upload_queue') || '[]');
@@ -203,7 +207,7 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo })
                 attempts: attempts,
                 total_mark: totalMarks,
                 questions: parsedQuestions,
-                teacher_id: 2,
+                teacher_id: teacherId || 2, // Use passed ID or fallback
                 is_published: false
             };
 

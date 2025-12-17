@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { supabase } from '../../lib/supabase';
+import { fetchStudentByEmail } from '../../lib/database';
 import { DashboardType, Student, StudentAssignment } from '../../types';
 import { THEME_CONFIG, ClockIcon, ClipboardListIcon, BellIcon, ChartBarIcon, ChevronRightIcon, SUBJECT_COLORS, BookOpenIcon, MegaphoneIcon, AttendanceSummaryIcon, CalendarIcon, ElearningIcon, StudyBuddyIcon, SparklesIcon, ReceiptIcon, AwardIcon, HelpIcon, GameControllerIcon } from '../../constants';
 import Header from '../ui/Header';
@@ -236,56 +237,35 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
     useEffect(() => {
         const fetchStudent = async () => {
+            if (!profile.email) return;
+
             try {
-                // Hardcoded login simulation
-                // In real app, we get user from auth context
-                const { data, error } = await supabase
-                    .from('students')
-                    .select('*')
-                    .limit(1);
+                const data = await fetchStudentByEmail(profile.email);
 
-                if (error) {
-                    console.error('Error fetching student:', error);
-                    // Set default student for demo
-                    setStudent({
-                        id: 'demo-student-1',
-                        name: 'Demo Student',
-                        grade: '10',
-                        section: 'A',
-                        avatarUrl: 'https://i.pravatar.cc/150?u=student'
-                    });
-                    return;
-                }
-
-                if (data && data.length > 0) {
-                    setStudent({
-                        ...data[0],
-                        avatarUrl: data[0].avatar_url || 'https://i.pravatar.cc/150?u=student'
-                    });
+                if (data) {
+                    setStudent(data);
                 } else {
-                    // Set default student for demo
-                    setStudent({
-                        id: 'demo-student-1',
-                        name: 'Demo Student',
-                        grade: '10',
-                        section: 'A',
-                        avatarUrl: 'https://i.pravatar.cc/150?u=student'
-                    });
+                    console.warn("Student not found for email:", profile.email);
+                    // Fallback to demo student if local email doesn't match DB (e.g. 'student@school.com')
+                    if (profile.email === 'student@school.com') {
+                        // Assuming ID 4 matches the mock student used elsewhere or a real ID in DB for demo
+                        setStudent({
+                            id: 4,
+                            name: 'Sade Olubayo',
+                            grade: 10,
+                            section: 'A',
+                            avatarUrl: 'https://i.pravatar.cc/150?u=student4',
+                            email: 'student@school.com',
+                            department: 'Science'
+                        });
+                    }
                 }
             } catch (err) {
                 console.error('Error loading student:', err);
-                // Set default student for demo
-                setStudent({
-                    id: 'demo-student-1',
-                    name: 'Demo Student',
-                    grade: '10',
-                    section: 'A',
-                    avatarUrl: 'https://i.pravatar.cc/150?u=student'
-                });
             }
         };
         fetchStudent();
-    }, []);
+    }, [profile]);
 
     useEffect(() => {
         const currentView = viewStack[viewStack.length - 1];
@@ -346,7 +326,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         results: ResultsScreen,
         finances: StudentFinanceScreen,
         achievements: AchievementsScreen,
-        messages: StudentMessagesScreen,
+        messages: (props: any) => <MessagingLayout {...props} dashboardType={DashboardType.Student} currentUserId={student?.id} />,
         newChat: StudentNewChatScreen,
         profile: StudentProfileScreen,
         videoLesson: VideoLessonScreen,

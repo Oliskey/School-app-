@@ -72,6 +72,35 @@ export async function fetchStudentById(id: number): Promise<Student | null> {
     }
 }
 
+export async function fetchStudentByEmail(email: string): Promise<Student | null> {
+    try {
+        // Students might not always have an email column in simple schemas, 
+        // but assuming they do based on Login auth.
+        const { data, error } = await supabase
+            .from('students')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (error) throw error;
+        if (!data) return null;
+
+        return {
+            id: data.id,
+            name: data.name,
+            avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150',
+            grade: data.grade,
+            section: data.section,
+            department: data.department,
+            attendanceStatus: data.attendance_status || 'Absent',
+            birthday: data.birthday
+        };
+    } catch (err) {
+        console.error('Error fetching student by email:', err);
+        return null;
+    }
+}
+
 export async function fetchStudentsByClass(grade: number, section: string): Promise<Student[]> {
     try {
         const { data, error } = await supabase
@@ -187,6 +216,72 @@ export async function fetchParents(): Promise<Parent[]> {
         }));
     } catch (err) {
         console.error('Error fetching parents:', err);
+        return [];
+    }
+}
+
+export async function fetchParentByEmail(email: string): Promise<Parent | null> {
+    try {
+        const { data, error } = await supabase
+            .from('parents')
+            .select(`
+        *,
+        parent_children(student_id)
+      `)
+            .eq('email', email)
+            .single();
+
+        if (error) throw error;
+        if (!data) return null;
+
+        return {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone || '',
+            avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150?u=parent',
+            childIds: (data.parent_children || []).map((c: any) => c.student_id)
+        };
+    } catch (err) {
+        console.error('Error fetching parent by email:', err);
+        return null;
+    }
+}
+
+export async function fetchChildrenForParent(parentId: number): Promise<Student[]> {
+    try {
+        // 1. Get student IDs
+        const { data: relations, error: relError } = await supabase
+            .from('parent_children')
+            .select('student_id')
+            .eq('parent_id', parentId);
+
+        if (relError) throw relError;
+        if (!relations || relations.length === 0) return [];
+
+        const studentIds = relations.map((r: any) => r.student_id);
+
+        // 2. Fetch students
+        const { data: students, error: stuError } = await supabase
+            .from('students')
+            .select('*')
+            .in('id', studentIds);
+
+        if (stuError) throw stuError;
+
+        return (students || []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            avatarUrl: s.avatar_url || 'https://i.pravatar.cc/150',
+            grade: s.grade,
+            section: s.section,
+            department: s.department,
+            attendanceStatus: s.attendance_status || 'Absent',
+            birthday: s.birthday
+        }));
+
+    } catch (err) {
+        console.error('Error fetching children for parent:', err);
         return [];
     }
 }

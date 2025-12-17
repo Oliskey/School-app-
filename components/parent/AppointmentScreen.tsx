@@ -1,16 +1,51 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Teacher, AppointmentSlot } from '../../types';
-import { mockTeachers, mockAppointmentSlots } from '../../data';
+import { mockAppointmentSlots } from '../../data';
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon, CheckCircleIcon, CalendarIcon, UserIcon } from '../../constants';
 
-const AppointmentScreen: React.FC = () => {
+interface AppointmentScreenProps {
+    parentId?: number | null;
+    navigateTo: (view: string, title: string, props?: any) => void;
+}
+
+const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigateTo }) => {
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [reason, setReason] = useState('');
     const [isBooked, setIsBooked] = useState(false);
 
-    const activeTeachers = useMemo(() => mockTeachers.filter(t => t.status === 'Active'), []);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [loadingTeachers, setLoadingTeachers] = useState(true);
+
+    useEffect(() => {
+        const fetchTeachers = async () => {
+            const { data, error } = await supabase
+                .from('teachers')
+                .select('*')
+                .eq('status', 'Active');
+
+            if (data) {
+                const mappedTeachers = data.map((t: any) => ({
+                    id: t.id,
+                    name: t.name,
+                    avatarUrl: t.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random`,
+                    subjects: [], // Fetch or mock subjects if needed
+                    classes: [],
+                    status: t.status,
+                    bio: '',
+                    email: t.email || '',
+                    phone: t.phone || ''
+                } as Teacher));
+                setTeachers(mappedTeachers);
+            }
+            setLoadingTeachers(false);
+        };
+        fetchTeachers();
+    }, []);
+
+    const activeTeachers = teachers;
 
     // Generate next 7 days for the date picker
     const calendarDays = useMemo(() => {
@@ -30,13 +65,37 @@ const AppointmentScreen: React.FC = () => {
         return mockAppointmentSlots;
     }, [selectedTeacher, selectedDate]);
 
-    const handleBooking = (e: React.FormEvent) => {
+    const handleBooking = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedTeacher || !selectedSlot || !reason) {
             alert("Please select a teacher, time slot, and provide a reason.");
             return;
         }
-        setIsBooked(true);
+
+        if (!parentId) {
+            alert("You must be logged in as a parent to book appointments.");
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('appointments')
+                .insert([{
+                    parent_id: parentId,
+                    teacher_id: selectedTeacher.id,
+                    date: selectedDate,
+                    time: selectedSlot,
+                    reason: reason,
+                    status: 'Pending'
+                }]);
+
+            if (error) throw error;
+            setIsBooked(true);
+
+        } catch (err) {
+            console.error("Booking error:", err);
+            alert("Failed to book appointment. Please try again.");
+        }
     };
 
     if (isBooked) {
@@ -103,8 +162,8 @@ const AppointmentScreen: React.FC = () => {
                                     key={teacher.id}
                                     onClick={() => setSelectedTeacher(teacher)}
                                     className={`flex-none w-40 p-4 rounded-2xl border transition-all duration-300 text-center relative group ${selectedTeacher?.id === teacher.id
-                                            ? 'bg-white border-green-500 ring-2 ring-green-200 shadow-lg scale-105'
-                                            : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-md'
+                                        ? 'bg-white border-green-500 ring-2 ring-green-200 shadow-lg scale-105'
+                                        : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-md'
                                         }`}
                                 >
                                     <div className="relative inline-block mb-3">
@@ -145,8 +204,8 @@ const AppointmentScreen: React.FC = () => {
                                                 key={idx}
                                                 onClick={() => setSelectedDate(date)}
                                                 className={`flex flex-col items-center justify-center min-w-[3.5rem] py-3 rounded-xl transition-all ${isSelected
-                                                        ? 'bg-green-600 text-white shadow-md transform scale-105'
-                                                        : 'text-gray-500 hover:bg-gray-50'
+                                                    ? 'bg-green-600 text-white shadow-md transform scale-105'
+                                                    : 'text-gray-500 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <span className="text-xs font-medium uppercase">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
@@ -167,10 +226,10 @@ const AppointmentScreen: React.FC = () => {
                                             onClick={() => !slot.isBooked && setSelectedSlot(slot.time)}
                                             disabled={slot.isBooked}
                                             className={`py-2 px-3 text-sm font-semibold rounded-lg border transition-all ${slot.isBooked
-                                                    ? 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed decoration-slice line-through'
-                                                    : selectedSlot === slot.time
-                                                        ? 'bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600'
+                                                ? 'bg-gray-50 border-gray-100 text-gray-300 cursor-not-allowed decoration-slice line-through'
+                                                : selectedSlot === slot.time
+                                                    ? 'bg-green-50 border-green-500 text-green-700 ring-1 ring-green-500'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600'
                                                 }`}
                                         >
                                             {slot.time}

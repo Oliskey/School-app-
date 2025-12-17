@@ -207,9 +207,10 @@ const Overview: React.FC<{ navigateTo: (view: string, title: string, props?: any
 interface StudentDashboardProps {
     onLogout: () => void;
     setIsHomePage: (isHome: boolean) => void;
+    currentUser: any;
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHomePage }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHomePage, currentUser }) => {
     const [viewStack, setViewStack] = useState<ViewStackItem[]>([{ view: 'overview', title: 'Student Dashboard' }]);
     const [activeBottomNav, setActiveBottomNav] = useState('home');
     const [version, setVersion] = useState(0);
@@ -225,78 +226,81 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
     useEffect(() => {
         const fetchStudentAndNotifications = async () => {
             try {
-                // Fetch student
-                // In a real app, we would get the ID from auth context. 
-                // Here we default to the first student found or a specific ID for demo.
-                const { data: students, error: studentsError } = await supabase
-                    .from('students')
-                    .select('*')
-                    .limit(1);
-
-                if (studentsError) {
-                    console.error('Error fetching students:', studentsError);
+                if (!currentUser?.email) {
                     setLoadingStudent(false);
                     return;
                 }
 
-                if (students && students.length > 0) {
-                    // Map DB fields to Student interface if necessary (camelCase vs snake_case)
-                    // Assuming they match for now or just casting
-                    const s = students[0];
-                    const mappedStudent: Student = {
-                        ...s,
-                        id: s.id,
-                        name: s.name,
-                        grade: s.grade,
-                        section: s.section,
-                        avatarUrl: s.avatar_url || s.avatarUrl || 'https://i.pravatar.cc/150?img=4',
-                        // ... other fields
-                    } as any;
-                    setStudent(mappedStudent);
+                const { data: students, error: studentsError } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('user_id', currentUser.id) // Assuming user_id link exists
+                    .maybeSingle();
 
-                    // Fetch notifications
-                    try {
-                        const { count, error: notifError } = await supabase
-                            .from('notifications')
-                            .select('*', { count: 'exact', head: true })
-                            .eq('is_read', false);
+                // If not found by user_id, optionally try email matching on user table join?
+                // But for now assume linked via user_id or email lookup if needed.
+                // Let's try matching via user_id first as per schema.
 
-                        if (!notifError) {
-                            setNotificationCount(count || 0);
-                        }
-                    } catch (notifErr) {
-                        console.error('Error fetching notifications:', notifErr);
-                    }
+                let studentData = students;
 
-                } else {
-                    console.warn('No students found in database');
-                    // Set a default student for demo purposes
-                    const demoStudent: Student = {
-                        id: 'demo-1',
-                        name: 'Student Name',
-                        grade: '10',
-                        section: 'A',
-                        avatarUrl: 'https://i.pravatar.cc/150?img=4',
-                    } as any;
-                    setStudent(demoStudent);
+                if (studentsError && !studentData) {
+                    console.error('Error fetching student:', studentsError);
                 }
+
+                if (!studentData) {
+                    // Fallback check by email if user_id link missing but email matches student record (unlikely in prod but good for dev)
+                    const { data: byEmail } = await supabase
+                        .from('students')
+                        .select('*, users!inner(email)')
+                        .eq('users.email', currentUser.email)
+                        .maybeSingle();
+
+                    if (byEmail) studentData = byEmail;
+                }
+
+
+                // Fallback for dev/demo if absolutely no student found
+                // Note: In production we might want to redirect to a "Profile Setup" or "Contact Admin" page
+                if (!studentData) {
+                    console.warn('No linked student profile found for user.');
+                    setLoadingStudent(false);
+                    return;
+                }
+
+                const mappedStudent: Student = {
+                    ...studentData,
+                    id: studentData.id,
+                    name: studentData.name,
+                    grade: studentData.grade,
+                    section: studentData.section,
+                    avatarUrl: studentData.avatar_url || 'https://i.pravatar.cc/150?img=12',
+                } as any;
+
+                setStudent(mappedStudent);
+
+                // Fetch notifications
+                try {
+                    const { count, error: notifError } = await supabase
+                        .from('notifications')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('user_id', currentUser.id)
+                        .eq('is_read', false);
+
+                    if (!notifError) {
+                        setNotificationCount(count || 0);
+                    }
+                } catch (notifErr) {
+                    console.error('Error fetching notifications:', notifErr);
+                }
+
             } catch (e) {
                 console.error('Error loading dashboard:', e);
-                // Set a default student to prevent infinite loading
-                const demoStudent: Student = {
-                    id: 'demo-1',
-                    name: 'Student Name',
-                    grade: '10',
-                    section: 'A',
-                    avatarUrl: 'https://i.pravatar.cc/150?img=4',
-                } as any;
-                setStudent(demoStudent);
             } finally {
                 setLoadingStudent(false);
             }
         };
         fetchStudentAndNotifications();
-    }, []);
+    }, [currentUser]);
 
     useEffect(() => {
         const currentView = viewStack[viewStack.length - 1];

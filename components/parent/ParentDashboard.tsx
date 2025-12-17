@@ -420,7 +420,7 @@ const ChildDetailScreen = ({ student, initialTab, navigateTo }: { student: Stude
 
 import { supabase } from '../../lib/supabase';
 
-const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, props?: any) => void }) => {
+const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title: string, props?: any) => void, parentId?: number | null }) => {
     const theme = THEME_CONFIG[DashboardType.Parent];
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -428,24 +428,22 @@ const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, p
     useEffect(() => {
         const fetchChildren = async () => {
             try {
-                // 1. Get Parent ID from User ID (LOGGED_IN_PARENT_ID)
-                // Assuming LOGGED_IN_PARENT_ID is a user_id. 
-                // If the user table says role is parent, there should be a parent record.
-                // For demo purposes, we'll try to find a parent with this user_id.
+                if (!parentId) {
+                    // Fallback for demo/dev if no parentId passed yet
+                    const { data: fallbackParent } = await supabase
+                        .from('parents')
+                        .select('id')
+                        .limit(1)
+                        .single();
 
-                const { data: parentData, error: parentError } = await supabase
-                    .from('parents')
-                    .select('id')
-                    .eq('user_id', LOGGED_IN_PARENT_ID)
-                    .single();
-
-                if (parentError || !parentData) {
-                    // Fallback or handle error. If no parent record found, maybe LOGGED_IN_PARENT_ID is the 'parent' table id?
-                    // Let's assume for this specific flow/mock setup we might need to be flexible.
-                    // But cleanly:
-                    console.error("Error fetching parent profile:", parentError);
-                    // If failing, let's just try to fetch students directly if we want to simulate or use fallback
-                    setStudents(mockStudents.filter(s => [3, 4].includes(s.id))); // Fallback to mocks
+                    if (fallbackParent) {
+                        // Use first found parent as fallback
+                        const { data: relations } = await supabase.from('parent_children').select('student_id').eq('parent_id', fallbackParent.id);
+                        if (relations) {
+                            const studentIds = relations.map(r => r.student_id);
+                            fetchStudents(studentIds);
+                        }
+                    }
                     setLoading(false);
                     return;
                 }
@@ -454,20 +452,17 @@ const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, p
                 const { data: relations, error: relationError } = await supabase
                     .from('parent_children')
                     .select('student_id')
-                    .eq('parent_id', parentData.id);
+                    .eq('parent_id', parentId);
 
                 if (relationError) throw relationError;
 
                 const studentIds = relations.map(r => r.student_id);
 
-                if (studentIds.length === 0) {
-                    setStudents([]);
-                } else {
-                    // 3. Fetch Students Details
+                const fetchStudents = async (ids: number[]) => {
                     const { data: studentsData, error: studentsError } = await supabase
                         .from('students')
                         .select('*')
-                        .in('id', studentIds);
+                        .in('id', ids);
 
                     if (studentsError) throw studentsError;
 
@@ -481,12 +476,18 @@ const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, p
                         department: s.department,
                         attendanceStatus: s.attendance_status || 'Present',
                         birthday: s.birthday,
-                        // Attach generic mocks for arrays not yet in DB or fetch them later
-                        academicPerformance: [], // Could fetch
-                        behaviorNotes: [], // Could fetch
+                        academicPerformance: [],
+                        behaviorNotes: [],
                         reportCards: []
                     }));
                     setStudents(mappedStudents);
+                };
+
+                if (relations.length > 0) {
+                    const studentIds = relations.map(r => r.student_id);
+                    await fetchStudents(studentIds);
+                } else {
+                    setStudents([]);
                 }
 
             } catch (err) {
@@ -498,7 +499,7 @@ const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, p
         };
 
         fetchChildren();
-    }, []);
+    }, [parentId]);
 
     const childrenData = useMemo(() => students
         .map(student => {
@@ -570,16 +571,56 @@ const Dashboard = ({ navigateTo }: { navigateTo: (view: string, title: string, p
 interface ParentDashboardProps {
     onLogout: () => void;
     setIsHomePage: (isHome: boolean) => void;
+    currentUser?: { userId: string; email: string; userType: string };
 }
 
-const LOGGED_IN_PARENT_ID = 1002; // Mrs. Bello
-
-const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePage }) => {
+const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePage, currentUser }) => {
     const [viewStack, setViewStack] = useState<ViewStackItem[]>([{ view: 'dashboard', title: 'Parent Dashboard' }]);
     const [activeBottomNav, setActiveBottomNav] = useState('home');
     const [version, setVersion] = useState(0);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [parentId, setParentId] = useState<number | null>(null);
+    const [parentProfile, setParentProfile] = useState<{ name: string; avatarUrl: string }>({
+        name: 'Parent',
+        avatarUrl: 'https://i.pravatar.cc/150?u=parent'
+    });
+
     const forceUpdate = () => setVersion(v => v + 1);
+
+    const fetchProfile = async () => {
+        let query = supabase.from('parents').select('id, name, email, phone, avatar_url');
+
+        if (currentUser?.email) {
+            query = query.eq('email', currentUser.email);
+        } else {
+            // Fallback for dev/demo if no user is passed
+            const { data: demo } = await supabase.from('parents').select('id, name, email, phone').limit(1).single();
+            if (demo) {
+                setParentId(demo.id);
+                setParentProfile({ name: demo.name || 'Parent', avatarUrl: 'https://i.pravatar.cc/150?u=parent' });
+                return;
+            }
+        }
+
+        const { data, error } = await query.single();
+
+        if (error) {
+            console.error('Error fetching parent profile:', error);
+            return;
+        }
+
+        if (data) {
+            setParentId(data.id);
+            setParentProfile({
+                name: data.name || 'Parent',
+                avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150?u=parent'
+            });
+        }
+    };
+
+    useEffect(() => {
+        fetchProfile();
+    }, [currentUser]);
 
     useEffect(() => {
         const currentView = viewStack[viewStack.length - 1];
@@ -631,8 +672,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         calendar: CalendarScreen,
         library: LibraryScreen,
         busRoute: BusRouteScreen,
-        feeStatus: (props: any) => <FeeStatusScreen {...props} childrenIds={[3, 4]} />,
-        selectReport: SelectChildForReportScreen,
+        feeStatus: (props: any) => <FeeStatusScreen {...props} parentId={parentId} />,
+        selectReport: (props: any) => <SelectChildForReportScreen {...props} parentId={parentId} />,
         reportCard: ReportCardScreen,
         timetable: TimetableScreen,
         more: ParentProfileScreen,
@@ -650,7 +691,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         aiParentingTips: AIParentingTipsScreen,
         messages: ParentMessagesScreen,
         newChat: ParentNewChatScreen,
-        chat: (props: any) => <ChatScreen {...props} currentUserId={LOGGED_IN_PARENT_ID} />,
+        chat: (props: any) => <ChatScreen {...props} currentUserId={parentId ?? 100} />,
         schoolUtilities: SchoolUtilitiesScreen,
     };
 
@@ -662,13 +703,15 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         onLogout,
         handleBack,
         forceUpdate,
+        parentId,
+        currentUser
     };
 
     return (
         <div className="flex flex-col h-full bg-gray-100 relative">
             <Header
                 title={currentNavigation.title}
-                avatarUrl="https://i.pravatar.cc/150?u=parent1"
+                avatarUrl={parentProfile.avatarUrl}
                 bgColor={THEME_CONFIG[DashboardType.Parent].mainBg}
                 onLogout={onLogout}
                 onBack={viewStack.length > 1 ? handleBack : undefined}

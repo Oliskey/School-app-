@@ -77,19 +77,20 @@ interface ViewStackItem {
 interface TeacherDashboardProps {
   onLogout: () => void;
   setIsHomePage: (isHome: boolean) => void;
+  currentUser?: { userId: string; email: string; userType: string };
 }
 
-const LOGGED_IN_TEACHER_ID = 2;
 
 import { supabase } from '../../lib/supabase';
 
 // ... (imports remain)
 
-const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHomePage }) => {
+const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHomePage, currentUser }) => {
   const [viewStack, setViewStack] = useState<ViewStackItem[]>([{ view: 'overview', title: 'Teacher Dashboard', props: {} }]);
   const [activeBottomNav, setActiveBottomNav] = useState('home');
   const [version, setVersion] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [teacherId, setTeacherId] = useState<number | null>(null);
 
   // Profile State
   const [teacherProfile, setTeacherProfile] = useState({
@@ -100,18 +101,20 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
   const fetchProfile = async (optimisticData?: { name: string; avatarUrl: string }) => {
     if (optimisticData) {
       setTeacherProfile(optimisticData);
-      // Trust the optimistic update and updated DB from the child component.
-      // Skip fetching to avoid race conditions with potential stale reads.
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('teachers')
-        .select('name, avatar_url')
-        .eq('id', LOGGED_IN_TEACHER_ID)
-        .single();
-      // ... (rest of fetch logic)
+      let query = supabase.from('teachers').select('id, name, avatar_url, email');
+
+      if (currentUser?.email) {
+        query = query.eq('email', currentUser.email);
+      } else {
+        // Fallback for dev/demo if no user is passed, though we should avoid this in production
+        query = query.eq('id', 2);
+      }
+
+      const { data, error } = await query.single();
 
       if (error) {
         console.error('Error fetching dashboard profile:', error);
@@ -119,6 +122,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
       }
 
       if (data) {
+        setTeacherId(data.id);
         setTeacherProfile({
           name: data.name || 'Teacher',
           avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150?u=teacher'
@@ -131,7 +135,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [currentUser]);
 
   const forceUpdate = () => setVersion(v => v + 1);
 
@@ -206,8 +210,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     reportCardInput: ReportCardInputScreen,
     collaborationForum: CollaborationForumScreen,
     forumTopic: ForumTopicScreen,
-    timetable: (props: any) => <TimetableScreen {...props} context={{ userType: 'teacher', userId: LOGGED_IN_TEACHER_ID }} />,
-    chat: (props: any) => <ChatScreen {...props} currentUserId={LOGGED_IN_TEACHER_ID} />,
+    timetable: (props: any) => <TimetableScreen {...props} context={{ userType: 'teacher', userId: teacherId ?? 2 }} />,
+    chat: (props: any) => <ChatScreen {...props} currentUserId={teacherId ?? 2} />,
     reports: TeacherReportsScreen,
     reportCardPreview: TeacherReportCardPreviewScreen,
     settings: (props: any) => <TeacherSettingsScreen {...props} dashboardProfile={teacherProfile} refreshDashboardProfile={fetchProfile} />,
@@ -237,13 +241,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
   const currentNavigation = viewStack[viewStack.length - 1];
   const ComponentToRender = viewComponents[currentNavigation.view as keyof typeof viewComponents];
 
+  // Pass teacherId to children via props or context. Usually props here.
+  // We need to inject teacherId into all components that need it.
+
   const commonProps = {
     navigateTo,
     handleBack,
     onLogout,
     forceUpdate,
     teacherProfile, // Make profile available to all screens
-    refreshProfile: fetchProfile // Allow any screen to trigger refresh
+    refreshProfile: fetchProfile, // Allow any screen to trigger refresh
+    teacherId, // Pass the dynamic teacher ID
+    currentUser
   };
 
   return (

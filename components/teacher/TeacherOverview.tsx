@@ -18,6 +18,8 @@ import { supabase } from '../../lib/supabase';
 
 interface TeacherOverviewProps {
   navigateTo: (view: string, title: string, props?: any) => void;
+  currentUser?: { userId: string; email: string; userType: string };
+  teacherId?: number | null;
 }
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: React.ReactElement<{ className?: string }>; }> = ({ label, value, icon }) => {
@@ -42,7 +44,7 @@ const parseClassName = (name: string) => {
   return { grade: 0, section: '' };
 };
 
-const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo }) => {
+const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo, currentUser, teacherId }) => {
   const theme = THEME_CONFIG[DashboardType.Teacher];
 
   const [teacherName, setTeacherName] = useState('Teacher');
@@ -54,12 +56,19 @@ const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1. Get Logged In Teacher (Hardcoded email for demo/dev)
-        const { data: teacher, error: teacherError } = await supabase
-          .from('teachers')
-          .select('id, name')
-          .eq('email', 'f.akintola@school.com') // Using Mrs. Funke from seed
-          .single();
+        // 1. Get Logged In Teacher
+        const query = supabase.from('teachers').select('id, name');
+
+        if (teacherId) {
+          query.eq('id', teacherId);
+        } else if (currentUser?.email) {
+          query.eq('email', currentUser.email);
+        } else {
+          // Fallback
+          query.eq('email', 'f.akintola@school.com');
+        }
+
+        const { data: teacher, error: teacherError } = await query.single();
 
         if (teacherError || !teacher) {
           console.error('Teacher not found', teacherError);
@@ -125,7 +134,7 @@ const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo }) => {
     };
 
     fetchData();
-  }, []);
+  }, [currentUser, teacherId]);
 
   const formatTime12Hour = (timeStr: string) => {
     if (!timeStr) return '';

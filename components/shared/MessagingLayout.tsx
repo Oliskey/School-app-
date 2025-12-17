@@ -10,43 +10,48 @@ import ChatHeader from './ChatHeader';
 
 interface MessagingLayoutProps {
     dashboardType: DashboardType;
+    currentUserId?: number;
+    navigateTo: (view: string, title: string, props?: any) => void;
 }
 
-const MessagingLayout: React.FC<MessagingLayoutProps> = ({ dashboardType }) => {
+const MessagingLayout: React.FC<MessagingLayoutProps> = ({ dashboardType, currentUserId: propUserId, navigateTo }) => {
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
     const handleSelectConversation = (conversation: Conversation) => {
         setSelectedConversation(conversation);
     };
-    
+
     const handleBackToList = () => {
         setSelectedConversation(null);
     };
 
-    const ChatListComponent = useMemo(() => {
-        switch (dashboardType) {
-            case DashboardType.Admin:
-                return <AdminMessagesScreen onSelectChat={handleSelectConversation} />;
-            case DashboardType.Teacher:
-                return <TeacherMessagesScreen onSelectChat={handleSelectConversation} />;
-            case DashboardType.Parent:
-                return <ParentMessagesScreen onSelectChat={handleSelectConversation} />;
-            case DashboardType.Student:
-                return <StudentMessagesScreen onSelectChat={handleSelectConversation} />;
-            default:
-                return <div>Error: Invalid user type</div>;
-        }
-    }, [dashboardType]);
-    
     const currentUserId = useMemo(() => {
-        switch(dashboardType) {
+        if (propUserId) return propUserId;
+
+        switch (dashboardType) {
             case DashboardType.Admin: return 0;
             case DashboardType.Teacher: return 2; // Mock ID from data
             case DashboardType.Parent: return 1002; // Mock ID from data
             case DashboardType.Student: return 4; // Mock ID from data
             default: return -1;
         }
-    }, [dashboardType]);
+    }, [dashboardType, propUserId]);
+    const ChatListComponent = useMemo(() => {
+        switch (dashboardType) {
+            case DashboardType.Admin:
+                return <AdminMessagesScreen onSelectChat={handleSelectConversation} navigateTo={navigateTo} />;
+            case DashboardType.Teacher:
+                return <TeacherMessagesScreen onSelectChat={handleSelectConversation} navigateTo={navigateTo} />;
+            case DashboardType.Parent:
+                return <ParentMessagesScreen onSelectChat={handleSelectConversation} navigateTo={navigateTo} />;
+            case DashboardType.Student:
+                return <StudentMessagesScreen onSelectChat={handleSelectConversation} studentId={currentUserId} navigateTo={navigateTo} />;
+            default:
+                return <div>Error: Invalid user type</div>;
+        }
+    }, [dashboardType, currentUserId, navigateTo]);
+
+
 
     return (
         <div className="flex w-full h-full bg-gray-100 overflow-hidden">
@@ -67,7 +72,7 @@ const MessagingLayout: React.FC<MessagingLayoutProps> = ({ dashboardType }) => {
                     <>
                         <ChatHeader conversation={selectedConversation} onBack={handleBackToList} />
                         <div className="flex-grow overflow-y-auto relative">
-                             <div className="absolute inset-0 whatsapp-bg-light"></div>
+                            <div className="absolute inset-0 whatsapp-bg-light"></div>
                             <ChatScreen conversation={selectedConversation} currentUserId={currentUserId} />
                         </div>
                     </>

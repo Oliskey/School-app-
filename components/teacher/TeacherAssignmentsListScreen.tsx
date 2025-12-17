@@ -7,9 +7,10 @@ interface TeacherAssignmentsListScreenProps {
     navigateTo: (view: string, title: string, props: any) => void;
     handleBack: () => void;
     forceUpdate: () => void;
+    teacherId?: number | null;
 }
 
-const TeacherAssignmentsListScreen: React.FC<TeacherAssignmentsListScreenProps> = ({ navigateTo, handleBack, forceUpdate }) => {
+const TeacherAssignmentsListScreen: React.FC<TeacherAssignmentsListScreenProps> = ({ navigateTo, handleBack, forceUpdate, teacherId }) => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -25,10 +26,23 @@ const TeacherAssignmentsListScreen: React.FC<TeacherAssignmentsListScreenProps> 
     const fetchAssignments = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('assignments')
-                .select('*')
-                .order('id', { ascending: false });
+
+            let query = supabase.from('assignments').select('*').order('id', { ascending: false });
+
+            // If we have a teacherId, restrict to classes taught by this teacher
+            if (teacherId) {
+                const { data: classes } = await supabase
+                    .from('teacher_classes')
+                    .select('class_name')
+                    .eq('teacher_id', teacherId);
+
+                if (classes && classes.length > 0) {
+                    const classNames = classes.map(c => c.class_name);
+                    query = query.in('class_name', classNames);
+                }
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -55,7 +69,7 @@ const TeacherAssignmentsListScreen: React.FC<TeacherAssignmentsListScreenProps> 
 
     useEffect(() => {
         fetchAssignments();
-    }, [forceUpdate]); // Re-fetch when forceUpdate changes
+    }, [forceUpdate, teacherId]); // Re-fetch when forceUpdate or teacherId changes
 
     const handleAssignmentAdded = (newAssignmentData: Omit<Assignment, 'id'>) => {
         // Optimistic update or simple re-fetch
@@ -129,7 +143,7 @@ const TeacherAssignmentsListScreen: React.FC<TeacherAssignmentsListScreenProps> 
             )}
             <div className="absolute bottom-6 right-6">
                 <button
-                    onClick={() => navigateTo('createAssignment', 'Create Assignment', { onAssignmentAdded: handleAssignmentAdded, handleBack: handleBack })}
+                    onClick={() => navigateTo('createAssignment', 'Create Assignment', { onAssignmentAdded: handleAssignmentAdded, handleBack: handleBack, teacherId })}
                     className="bg-purple-600 text-white p-4 rounded-full shadow-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                     aria-label="Create new assignment"
                 >

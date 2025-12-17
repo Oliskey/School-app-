@@ -6,7 +6,7 @@ import { checkSupabaseConnection } from '../../lib/database';
 import { authenticateUser } from '../../lib/auth';
 
 interface LoginProps {
-  onLogin: (dashboard: DashboardType) => void;
+  onLogin: (dashboard: DashboardType, user?: any) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -52,20 +52,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         const result = await authenticateUser(user, pass);
         if (result.success && result.userType) {
           const dashboardType = getDashboardTypeFromUserType(result.userType);
-          onLogin(dashboardType);
+          onLogin(dashboardType, { userId: result.userId, email: result.email, userType: result.userType });
           return;
         }
       }
 
       // Fallback to demo credentials
       if (user === 'admin' && pass === 'admin') {
-        onLogin(DashboardType.Admin);
+        onLogin(DashboardType.Admin, { userId: 'admin', email: 'admin@school.com', userType: 'Admin' });
       } else if (user === 'teacher' && pass === 'teacher') {
-        onLogin(DashboardType.Teacher);
+        onLogin(DashboardType.Teacher, { userId: 'teacher', email: 'teacher@school.com', userType: 'Teacher' });
       } else if (user === 'parent' && pass === 'parent') {
-        onLogin(DashboardType.Parent);
+        onLogin(DashboardType.Parent, { userId: 'parent', email: 'parent@school.com', userType: 'Parent' });
       } else if (user === 'student' && pass === 'student') {
-        onLogin(DashboardType.Student);
+        onLogin(DashboardType.Student, { userId: 'student', email: 'student@school.com', userType: 'Student' });
       } else {
         setError('Invalid credentials. Please try again.');
       }

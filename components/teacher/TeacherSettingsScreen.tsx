@@ -27,6 +27,8 @@ interface TeacherSettingsScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
     dashboardProfile?: { name: string; avatarUrl: string; };
     refreshDashboardProfile?: (data?: { name: string; avatarUrl: string }) => void;
+    teacherId?: number | null;
+    currentUser?: any;
 }
 
 type SettingView = 'editTeacherProfile' | 'teacherNotificationSettings' | 'teacherSecurity' | 'professionalDevelopment' | 'cbtManagement' | null;
@@ -42,7 +44,7 @@ const SettingsPlaceholder: React.FC = () => (
 );
 
 
-const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout, navigateTo, dashboardProfile, refreshDashboardProfile }) => {
+const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout, navigateTo, dashboardProfile, refreshDashboardProfile, teacherId, currentUser }) => {
     const theme = THEME_CONFIG[DashboardType.Teacher];
     const [activeSetting, setActiveSetting] = useState<SettingView>(null);
 
@@ -69,9 +71,9 @@ const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout,
     const renderActiveSetting = () => {
         switch (activeSetting) {
             case 'editTeacherProfile':
-                return <EditTeacherProfileScreen onProfileUpdate={refreshDashboardProfile} />;
+                return <EditTeacherProfileScreen onProfileUpdate={refreshDashboardProfile} teacherId={teacherId} currentUser={currentUser} />;
             case 'cbtManagement':
-                return <CBTManagementScreen navigateTo={navigateTo} />;
+                return <CBTManagementScreen navigateTo={navigateTo} teacherId={teacherId} />;
             case 'professionalDevelopment':
                 return <ProfessionalDevelopmentScreen />;
             case 'teacherNotificationSettings':

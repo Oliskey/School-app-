@@ -19,11 +19,12 @@ const formatTimestamp = (isoDate: string): string => {
 };
 
 interface StudentMessagesScreenProps {
-    navigateTo: (view: string, title: string, props?: any) => void;
-    studentId: number;
+    navigateTo?: (view: string, title: string, props?: any) => void;
+    studentId?: number; // Made optional to support MessagingLayout which might need to pass it
+    onSelectChat?: (conversation: any) => void;
 }
 
-const StudentMessagesScreen: React.FC<StudentMessagesScreenProps> = ({ navigateTo, studentId }) => {
+const StudentMessagesScreen: React.FC<StudentMessagesScreenProps> = ({ navigateTo, studentId, onSelectChat }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<'All' | 'Unread'>('All');
     const [rooms, setRooms] = useState<any[]>([]);
@@ -31,14 +32,24 @@ const StudentMessagesScreen: React.FC<StudentMessagesScreenProps> = ({ navigateT
 
     useEffect(() => {
         const fetchRooms = async () => {
-            if (!studentId) return;
+            if (!studentId) {
+                // If no studentId, we might be in a layout that hasn't passed it yet or waiting
+                return;
+            }
 
             try {
+                // ... (rest of logic same)
                 // 1. Get rooms I am in
                 const { data: myParticipations, error: partError } = await supabase
                     .from('chat_participants')
                     .select('room_id, last_read_message_id')
                     .eq('user_id', studentId);
+                // ...
+                // ...
+                // (We need to keep the fetch logic intact, but I'll use target/replacement carefully)
+
+                // ...
+
 
                 if (partError || !myParticipations) {
                     console.error('Error fetching participations:', partError);
@@ -164,7 +175,11 @@ const StudentMessagesScreen: React.FC<StudentMessagesScreenProps> = ({ navigateT
     }, [searchTerm, activeFilter, rooms]);
 
     const handleChatClick = (room: any) => {
-        navigateTo('chat', room.displayName, { conversationId: room.id, roomDetails: room });
+        if (onSelectChat) {
+            onSelectChat(room);
+        } else if (navigateTo) {
+            navigateTo('chat', room.displayName, { conversationId: room.id, roomDetails: room });
+        }
     };
 
     const handleNewChat = () => {

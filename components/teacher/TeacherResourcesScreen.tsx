@@ -3,6 +3,7 @@ import { BookOpenIcon, SparklesIcon, UserGroupIcon, GameControllerIcon } from '.
 
 interface TeacherResourcesScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
+    teacherId?: number | null;
 }
 
 const ResourceCard: React.FC<{ title: string, description: string, icon: React.ReactNode, onClick: () => void, color: string }> = ({ title, description, icon, onClick, color }) => (
@@ -14,42 +15,42 @@ const ResourceCard: React.FC<{ title: string, description: string, icon: React.R
 );
 
 
-const TeacherResourcesScreen: React.FC<TeacherResourcesScreenProps> = ({ navigateTo }) => {
+const TeacherResourcesScreen: React.FC<TeacherResourcesScreenProps> = ({ navigateTo, teacherId }) => {
     const resources = [
-        { 
-            title: "AI Lesson Planner", 
+        {
+            title: "AI Lesson Planner",
             description: "Generate schemes, lesson plans, and assessments.",
-            icon: <SparklesIcon className="w-7 h-7 text-white"/>,
+            icon: <SparklesIcon className="w-7 h-7 text-white" />,
             color: "bg-gradient-to-br from-purple-500 to-indigo-600",
-            action: () => navigateTo('lessonPlanner', 'AI Lesson Planner', {}) 
+            action: () => navigateTo('lessonPlanner', 'AI Lesson Planner', { teacherId })
         },
-        { 
-            title: "E-Learning Library", 
+        {
+            title: "E-Learning Library",
             description: "Access videos, PDFs, and shared resources.",
-            icon: <BookOpenIcon className="w-7 h-7 text-white"/>,
+            icon: <BookOpenIcon className="w-7 h-7 text-white" />,
             color: "bg-gradient-to-br from-sky-500 to-blue-600",
-            action: () => navigateTo('library', 'E-Learning Library', {}) 
+            action: () => navigateTo('library', 'E-Learning Library', {})
         },
-        { 
-            title: "Collaboration Forum", 
+        {
+            title: "Collaboration Forum",
             description: "Share ideas and strategies with other teachers.",
-            icon: <UserGroupIcon className="w-7 h-7 text-white"/>,
+            icon: <UserGroupIcon className="w-7 h-7 text-white" />,
             color: "bg-gradient-to-br from-teal-500 to-green-600",
-            action: () => navigateTo('collaborationForum', 'Collaboration Forum', {}) 
+            action: () => navigateTo('collaborationForum', 'Collaboration Forum', {})
         },
-        { 
-            title: "Educational Games", 
+        {
+            title: "Educational Games",
             description: "Find and create games for your students.",
-            icon: <GameControllerIcon className="w-7 h-7 text-white"/>,
+            icon: <GameControllerIcon className="w-7 h-7 text-white" />,
             color: "bg-gradient-to-br from-amber-500 to-orange-600",
-            action: () => navigateTo('educationalGames', 'Educational Games', {}) 
+            action: () => navigateTo('educationalGames', 'Educational Games', {})
         },
     ];
 
     return (
         <div className="p-4 space-y-4 bg-gray-100 h-full overflow-y-auto">
             {resources.map(res => (
-                <ResourceCard 
+                <ResourceCard
                     key={res.title}
                     title={res.title}
                     description={res.description}

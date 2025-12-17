@@ -1,16 +1,57 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Student } from '../../types';
-import { mockStudents } from '../../data';
 import { ChevronRightIcon, ReportIcon } from '../../constants';
 
 interface SelectChildForReportScreenProps {
   navigateTo: (view: string, title: string, props?: any) => void;
+  parentId?: number | null;
 }
 
-const SelectChildForReportScreen: React.FC<SelectChildForReportScreenProps> = ({ navigateTo }) => {
-  const parentChildrenIds = [3, 4]; // In a real app, this would come from parent's data
-  const children = mockStudents.filter(s => parentChildrenIds.includes(s.id));
+const SelectChildForReportScreen: React.FC<SelectChildForReportScreenProps> = ({ navigateTo, parentId }) => {
+  const [children, setChildren] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChildren = async () => {
+      if (!parentId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const { data: relations } = await supabase
+          .from('parent_children')
+          .select('student_id')
+          .eq('parent_id', parentId);
+
+        if (relations && relations.length > 0) {
+          const studentIds = relations.map(r => r.student_id);
+          const { data: students } = await supabase
+            .from('students')
+            .select('*')
+            .in('id', studentIds);
+
+          if (students) {
+            const mappedStudents = students.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
+              grade: s.grade,
+              section: s.section
+            } as Student));
+            setChildren(mappedStudents);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching children for report:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChildren();
+  }, [parentId]);
+
+  if (loading) return <div className="p-8 text-center">Loading children...</div>;
 
   const handleSelectChild = (student: Student) => {
     navigateTo('reportCard', `${student.name}'s Report`, { student });

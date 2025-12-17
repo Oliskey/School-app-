@@ -5,7 +5,7 @@ import { SearchIcon, PlusIcon, DotsVerticalIcon, ChevronLeftIcon } from '../../c
 import ChatScreen from '../shared/ChatScreen';
 import NewChatScreen from '../shared/NewChatScreen';
 
-const LOGGED_IN_PARENT_ID = 1002;
+
 
 interface Conversation {
     id: number;
@@ -42,9 +42,10 @@ const formatTimestamp = (isoDate: string): string => {
 interface ParentMessagesScreenProps {
     onSelectChat?: (conversation: any) => void;
     navigateTo?: (view: string, title: string, props?: any) => void;
+    parentId?: number | null;
 }
 
-const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectChat, navigateTo }) => {
+const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectChat, navigateTo, parentId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<'All' | 'Unread'>('All');
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -55,6 +56,11 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
     const fetchConversations = async () => {
         try {
             setLoading(true);
+
+            if (!parentId) {
+                setLoading(false);
+                return;
+            }
 
             // 1. Get all rooms I am in
             // utilizing standard explicit join syntax for safety or !inner for filtering
@@ -69,7 +75,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
                         last_message_at
                     )
                 `)
-                .eq('user_id', LOGGED_IN_PARENT_ID)
+                .eq('user_id', parentId)
                 .order('last_message_at', { foreignTable: 'chat_rooms', ascending: false });
 
             if (roomsError) throw roomsError;
@@ -108,14 +114,22 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
                 const participants = allParticipants?.filter((p: any) => p.room_id === roomId) || [];
 
                 // Determine the "other" participant to display (or self if it's a self-chat)
-                let displayParticipant = participants.find((p: any) => p.user_id !== LOGGED_IN_PARENT_ID);
+                let displayParticipant = participants.find((p: any) => p.user_id !== parentId);
 
                 // Handle Self Chat / Only me in room
-                if (!displayParticipant && participants.some((p: any) => p.user_id === LOGGED_IN_PARENT_ID)) {
-                    displayParticipant = participants.find((p: any) => p.user_id === LOGGED_IN_PARENT_ID);
+                if (!displayParticipant && participants.some((p: any) => p.user_id === parentId)) {
+                    displayParticipant = participants.find((p: any) => p.user_id === parentId);
                 }
 
                 if (!displayParticipant) continue;
+
+                // Safely access nested user object (Supabase returns object for single relation, array for multiple)
+                // Since this view is `users (...)`, it effectively returns a single user object per participant row
+                const participantUser = Array.isArray(displayParticipant.users) ? displayParticipant.users[0] : displayParticipant.users;
+
+                // Safely access chat_rooms info
+                const chatRoomInfo = Array.isArray(room.chat_rooms) ? room.chat_rooms[0] : room.chat_rooms;
+
 
                 // Get last message info
                 // Optimization: In a real app, this should be part of the chat_rooms query or proper view.
@@ -134,14 +148,14 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
                 fetchedConversations.push({
                     id: roomId,
                     participant: {
-                        id: displayParticipant.users.id,
-                        name: displayParticipant.users.name, // Display name
-                        avatarUrl: displayParticipant.users.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayParticipant.users.name)}&background=random`,
-                        role: displayParticipant.users.role
+                        id: participantUser.id,
+                        name: participantUser.name, // Display name
+                        avatarUrl: participantUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(participantUser.name)}&background=random`,
+                        role: participantUser.role
                     },
                     lastMessage: {
                         text: lastMsg?.content || 'No messages yet',
-                        timestamp: lastMsg?.created_at || room.chat_rooms.last_message_at || new Date().toISOString(),
+                        timestamp: lastMsg?.created_at || chatRoomInfo?.last_message_at || new Date().toISOString(),
                         senderId: lastMsg?.sender_id || 0
                     },
                     unreadCount: 0 // Placeholder
@@ -174,7 +188,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [parentId]);
 
     const filteredConversations = useMemo(() => {
         return conversations.filter(convo => {
@@ -215,7 +229,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
 
                 {showNewChat ? (
                     <NewChatScreen
-                        currentUserId={LOGGED_IN_PARENT_ID}
+                        currentUserId={parentId ?? 0}
                         onBack={() => setShowNewChat(false)}
                         onChatCreated={handleNewChatCreated}
                     />
@@ -337,7 +351,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ onSelectCha
                         {/* Chat Content */}
                         <div className="flex-grow overflow-hidden relative">
                             {/* Pass selectedConversation.id as conversationId */}
-                            <ChatScreen currentUserId={LOGGED_IN_PARENT_ID} conversationId={selectedConversation.id} />
+                            <ChatScreen currentUserId={parentId ?? 0} conversationId={selectedConversation.id} />
                         </div>
                     </>
                 ) : (
