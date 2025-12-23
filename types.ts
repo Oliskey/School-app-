@@ -98,7 +98,7 @@ export interface Teacher {
   classes: string[];
   email: string;
   phone: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'On Leave';
 }
 
 export interface ClassInfo {

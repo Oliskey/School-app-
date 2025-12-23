@@ -135,6 +135,19 @@ const StudentListScreen: React.FC<StudentListScreenProps> = ({ filter, navigateT
   // Fetch students from Supabase
   useEffect(() => {
     fetchStudents();
+
+    // Realtime Subscription
+    const subscription = supabase
+      .channel('public:students')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, (payload) => {
+        console.log('Student change received:', payload);
+        fetchStudents();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const fetchStudents = async () => {

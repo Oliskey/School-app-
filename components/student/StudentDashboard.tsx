@@ -305,6 +305,28 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
     useEffect(() => {
         const currentView = viewStack[viewStack.length - 1];
         setIsHomePage(currentView.view === 'overview' && !isSearchOpen);
+
+        // Sync bottom nav state
+        const viewToNavMap: Record<string, string> = {
+            overview: 'home',
+            subjects: 'home',
+            timetable: 'home',
+            results: 'results',
+            gamesHub: 'games',
+            mathSprintLobby: 'games',
+            mathSprintGame: 'games',
+            mathSprintResults: 'games',
+            gamePlayer: 'games',
+            messages: 'messages',
+            newChat: 'messages',
+            chat: 'messages',
+            profile: 'profile',
+        };
+
+        const targetNav = viewToNavMap[currentView.view];
+        if (targetNav) {
+            setActiveBottomNav(targetNav);
+        }
     }, [viewStack, isSearchOpen, setIsHomePage]);
 
     const navigateTo = (view: string, title: string, props: any = {}) => {

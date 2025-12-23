@@ -106,6 +106,31 @@ const TeacherDetailAdminView: React.FC<TeacherDetailAdminViewProps> = ({ teacher
                                 <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${teacher.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                     {teacher.status}
                                 </span>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const newStatus = teacher.status === 'Active' ? 'On Leave' : 'Active';
+                                            const { error } = await supabase
+                                                .from('teachers')
+                                                .update({ status: newStatus })
+                                                .eq('id', teacher.id);
+
+                                            if (error) throw error;
+
+                                            setTeacher({ ...teacher, status: newStatus });
+                                            // Update mock data for immediate consistency
+                                            const index = mockTeachers.findIndex(t => t.id === teacher.id);
+                                            if (index > -1) mockTeachers[index].status = newStatus;
+
+                                            forceUpdate();
+                                        } catch (err: any) {
+                                            alert('Failed to update status: ' + err.message);
+                                        }
+                                    }}
+                                    className="ml-2 text-xs text-indigo-600 hover:text-indigo-800 font-semibold underline"
+                                >
+                                    Change
+                                </button>
                             </div>
                             <p className={`text-sm font-semibold inline-block px-2 py-0.5 rounded ${SUBJECT_COLORS[teacher.subjects[0]] || 'bg-gray-200'}`}>{teacher.subjects.join(', ')}</p>
                             <div className="flex space-x-4 mt-2">

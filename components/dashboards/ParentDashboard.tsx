@@ -28,6 +28,7 @@ import {
 } from '../../constants';
 import Header from '../ui/Header';
 import { ParentBottomNav } from '../ui/DashboardBottomNav';
+import { ParentSideNav } from '../ui/DashboardSideNav';
 import { useProfile } from '../../context/ProfileContext';
 import {
     mockStudentFees,
@@ -642,29 +643,39 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
     }
 
     return (
-        <div className="flex flex-col h-full bg-gray-100 relative">
-            <Header
-                title={currentNavigation.title}
-                avatarUrl={parent?.avatarUrl || profile.avatarUrl}
-                bgColor={THEME_CONFIG[DashboardType.Parent].mainBg}
-                onLogout={onLogout}
-                onBack={viewStack.length > 1 ? handleBack : undefined}
-                onNotificationClick={handleNotificationClick}
-                notificationCount={notificationCount}
-                onSearchClick={() => setIsSearchOpen(true)}
-            />
-            <div className="flex-grow overflow-y-auto" style={{ marginTop: '-4rem' }}>
-                <div className="pt-16">
-                    <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
-                        {ComponentToRender ? (
-                            <ComponentToRender {...currentNavigation.props} {...commonProps} />
-                        ) : (
-                            <div className="p-6">View not found: {currentNavigation.view}</div>
-                        )}
+        <div className="flex h-full bg-gray-100 relative overflow-hidden">
+            {/* Sidebar for desktop */}
+            <ParentSideNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
+            {/* Main Content Area */}
+            <div className="flex flex-col flex-1 h-full relative overflow-hidden">
+                <Header
+                    title={currentNavigation.title}
+                    avatarUrl={parent?.avatarUrl || profile.avatarUrl}
+                    bgColor={THEME_CONFIG[DashboardType.Parent].mainBg}
+                    onLogout={onLogout}
+                    onBack={viewStack.length > 1 ? handleBack : undefined}
+                    onNotificationClick={handleNotificationClick}
+                    notificationCount={notificationCount}
+                    onSearchClick={() => setIsSearchOpen(true)}
+                />
+                <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
+                    <div className="h-full pt-16">
+                        <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+                            {ComponentToRender ? (
+                                <ComponentToRender {...currentNavigation.props} {...commonProps} />
+                            ) : (
+                                <div className="p-6">View not found: {currentNavigation.view}</div>
+                            )}
+                        </div>
                     </div>
                 </div>
+                {/* Bottom Nav for mobile */}
+                <div className="lg:hidden">
+                    <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+                </div>
             </div>
-            <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
             {isSearchOpen && (
                 <GlobalSearchScreen
                     dashboardType={DashboardType.Parent}

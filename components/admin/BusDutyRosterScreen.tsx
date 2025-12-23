@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BusRoute, Driver, BusRosterEntry } from '../../types';
 import { mockBusRoutes, mockDrivers, mockBusRoster } from '../../data';
 import { BusVehicleIcon } from '../../constants';
@@ -27,8 +27,8 @@ const RosterRow: React.FC<{
                 <p className="text-sm text-gray-500">{route.description}</p>
             </div>
             <div className="flex items-center space-x-3">
-                <select 
-                    value={selectedDriverId} 
+                <select
+                    value={selectedDriverId}
                     onChange={e => setSelectedDriverId(e.target.value)}
                     className="flex-grow p-2 bg-gray-50 border border-gray-300 rounded-lg"
                 >
@@ -37,7 +37,7 @@ const RosterRow: React.FC<{
                         <option key={driver.id} value={driver.id}>{driver.name}</option>
                     ))}
                 </select>
-                <button 
+                <button
                     onClick={handleSave}
                     className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300"
                     disabled={selectedDriverId === (currentDriver?.id.toString() || '')}
@@ -50,32 +50,50 @@ const RosterRow: React.FC<{
 };
 
 const BusDutyRosterScreen: React.FC = () => {
-    const [roster, setRoster] = useState(mockBusRoster);
-    
+    const [roster, setRoster] = useState<BusRosterEntry[]>(mockBusRoster);
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('schoolApp_busRoster');
+        if (saved) {
+            try {
+                setRoster(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to parse roster from storage");
+            }
+        }
+    }, []);
+
     const handleAssignDriver = (routeId: string, driverId: number | null) => {
         const today = new Date().toISOString().split('T')[0];
-        
-        const existingEntryIndex = mockBusRoster.findIndex(r => r.routeId === routeId && r.date === today);
-        
+        const newRoster = [...roster];
+
+        const existingEntryIndex = newRoster.findIndex(r => r.routeId === routeId && r.date === today);
+
         if (existingEntryIndex > -1) {
-            mockBusRoster[existingEntryIndex].driverId = driverId;
+            newRoster[existingEntryIndex] = { ...newRoster[existingEntryIndex], driverId };
         } else {
-            mockBusRoster.push({ routeId, driverId, date: today });
+            newRoster.push({ routeId, driverId, date: today });
         }
-        
-        setRoster([...mockBusRoster]);
+
+        setRoster(newRoster);
+        localStorage.setItem('schoolApp_busRoster', JSON.stringify(newRoster));
+
+        // Trigger a storage event for other tabs immediately (optional, but good practice)
+        window.dispatchEvent(new Event('storage'));
+
         alert(`Driver assigned successfully for ${routeId}.`);
     };
 
     return (
         <div className="p-4 space-y-4 bg-gray-100 h-full overflow-y-auto">
             <div className="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-200">
-                <BusVehicleIcon className="h-10 w-10 mx-auto text-indigo-400 mb-2"/>
+                <BusVehicleIcon className="h-10 w-10 mx-auto text-indigo-400 mb-2" />
                 <h3 className="font-bold text-lg text-indigo-800">Bus Duty Roster for Today</h3>
                 <p className="text-sm text-indigo-700">Assign drivers to routes for the current day.</p>
             </div>
             {mockBusRoutes.map(route => (
-                <RosterRow 
+                <RosterRow
                     key={route.id}
                     route={route}
                     roster={roster}

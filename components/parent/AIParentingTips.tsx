@@ -31,7 +31,7 @@ const AIParentingTipsScreen: React.FC<AIParentingTipsScreenProps> = ({ student }
                     ?.slice(-4) // get latest 4 records
                     .map(p => `${p.subject}: ${p.score}%`)
                     .join(', ');
-                
+
                 const behaviorSummary = student.behaviorNotes
                     ?.map(n => `${n.type} note - ${n.title}: ${n.note}`)
                     .join('; ');
@@ -49,7 +49,7 @@ const AIParentingTipsScreen: React.FC<AIParentingTipsScreenProps> = ({ student }
                 `;
 
                 const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
+                    model: 'gemini-2.0-flash',
                     contents: prompt,
                     config: {
                         responseMimeType: "application/json",
@@ -103,15 +103,15 @@ const AIParentingTipsScreen: React.FC<AIParentingTipsScreenProps> = ({ student }
     if (isLoading) {
         return (
             <div className="p-6 flex flex-col items-center justify-center h-full text-center bg-gray-50">
-                <SparklesIcon className="w-12 h-12 text-green-400 animate-pulse mb-4"/>
+                <SparklesIcon className="w-12 h-12 text-green-400 animate-pulse mb-4" />
                 <h2 className="text-xl font-bold text-gray-700">Generating Personalized Tips...</h2>
                 <p className="text-gray-500 mt-2">Our AI is analyzing {student.name}'s progress to provide helpful insights.</p>
             </div>
         );
     }
-    
+
     if (error) {
-         return (
+        return (
             <div className="p-6 flex flex-col items-center justify-center h-full text-center bg-gray-50">
                 <h2 className="text-xl font-bold text-red-600">Oops!</h2>
                 <p className="text-gray-600 mt-2">{error}</p>
@@ -121,8 +121,8 @@ const AIParentingTipsScreen: React.FC<AIParentingTipsScreenProps> = ({ student }
 
     return (
         <div className="p-4 space-y-4 bg-gray-50">
-             <div className="bg-green-50 p-4 rounded-xl text-center border border-green-200">
-                <SparklesIcon className="h-10 w-10 mx-auto text-green-400 mb-2"/>
+            <div className="bg-green-50 p-4 rounded-xl text-center border border-green-200">
+                <SparklesIcon className="h-10 w-10 mx-auto text-green-400 mb-2" />
                 <h3 className="font-bold text-lg text-green-800">Parenting Tips for {student.name}</h3>
                 <p className="text-sm text-green-700">Powered by AI to help your child thrive.</p>
             </div>
@@ -134,7 +134,7 @@ const AIParentingTipsScreen: React.FC<AIParentingTipsScreenProps> = ({ student }
                     </div>
                     <ul className="space-y-2 list-disc list-inside text-gray-700">
                         {tipSection.content.map((item, idx) => (
-                           <li key={idx} className="prose prose-sm max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{item}</ReactMarkdown></li>
+                            <li key={idx} className="prose prose-sm max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{item}</ReactMarkdown></li>
                         ))}
                     </ul>
                 </div>

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Conversation } from '../../types';
+import ChatScreen from '../shared/ChatScreen';
 import { mockConversations } from '../../data';
 import { SearchIcon, PlusIcon, DotsVerticalIcon, FilterIcon, MessagesIcon } from '../../constants';
 
@@ -22,162 +23,202 @@ const formatTimestamp = (isoDate: string): string => {
 
 interface AdminMessagesScreenProps {
     onSelectChat: (conversation: Conversation) => void;
-    onNewChat: () => void; // Added prop to handle "New Chat" action
+    onNewChat?: () => void;
+    navigateTo?: (view: string, title: string, props?: any) => void;
 }
 
-const AdminMessagesScreen: React.FC<AdminMessagesScreenProps> = ({ onSelectChat, onNewChat }) => {
+const AdminMessagesScreen: React.FC<AdminMessagesScreenProps> = ({ onSelectChat, onNewChat, navigateTo }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Groups' | 'Favourites'>('All');
 
-    const filteredConversations = useMemo(() => {
-        return mockConversations
-            .filter(convo => {
-                const isParticipant = convo.messages.some(msg => msg.senderId === ADMIN_ID) || convo.participant.id === ADMIN_ID;
-                if (!isParticipant) return false;
+    // Map mock conversations to UI structure
+    const rooms = useMemo(() => {
+        return (mockConversations as any[]).map(c => ({
+            id: c.id,
+            displayName: c.participant.name,
+            displayAvatar: c.participant.avatarUrl,
+            lastMessage: {
+                content: c.lastMessage.text,
+                created_at: c.lastMessage.timestamp,
+                sender_id: c.messages && c.messages.length > 0 ? c.messages[c.messages.length - 1].senderId : 0
+            },
+            unreadCount: c.unreadCount,
+            updated_at: c.lastMessage.timestamp,
+            is_group: false
+        }));
+    }, []);
 
-                const nameMatch = convo.participant.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+    const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
+
+    useEffect(() => {
+        const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const filteredConversations = useMemo(() => {
+        return rooms
+            .filter(convo => {
+                const nameMatch = convo.displayName.toLowerCase().includes(searchTerm.toLowerCase());
                 if (!nameMatch) return false;
 
                 if (activeFilter === 'Unread') {
-                    // This logic is slightly different for admin/teacher vs parent/student in mock data
-                    const unreadForAdmin = convo.messages.length > 0 && convo.messages[convo.messages.length - 1].senderId !== ADMIN_ID;
-                    return unreadForAdmin;
+                    return convo.unreadCount > 0;
                 }
-                // Placeholder for other filters if data supported them
-                if (activeFilter === 'Groups') return false;
-                if (activeFilter === 'Favourites') return false;
-
                 return true;
             })
-            .sort((a, b) => new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime());
-    }, [searchTerm, activeFilter]);
+            .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }, [searchTerm, activeFilter, rooms]);
+
+    const handleChatClick = (convo: any) => {
+        // Find original or use mapped
+        if (onSelectChat) {
+            // Find original for type safety if needed, or cast
+            const original = (mockConversations as any[]).find(c => c.id === convo.id);
+            if (original) {
+                onSelectChat(original);
+                setSelectedConversation(original); // For desktop highlighting
+            }
+            return;
+        }
+
+        if (isDesktop) {
+            const original = (mockConversations as any[]).find(c => c.id === convo.id);
+            setSelectedConversation(original);
+        } else {
+            // For admin navigateTo might not be fully set up for mobile detail view?
+            // Assuming current generic handler works if we pass new structure
+            navigateTo?.('chat', convo.displayName, {
+                conversationId: convo.id,
+                participantName: convo.displayName,
+                participantAvatar: convo.displayAvatar
+            });
+        }
+    };
 
     return (
-        <div className="flex flex-col h-full bg-white relative">
-            {/* Header section */}
-            <header className="px-6 py-5 bg-white border-b border-gray-100 flex-shrink-0 z-10 sticky top-0">
-                <div className="flex justify-between items-center mb-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Messages</h1>
-                        <p className="text-sm text-gray-500 font-medium">Manage your conversations</p>
+        <div className="flex h-full bg-white border-r border-gray-200 overflow-hidden">
+            {/* Sidebar / List - Full width on mobile, 1/3 on desktop if standalone */}
+            <div className={`flex flex-col h-full bg-white border-r border-gray-200 ${isDesktop && !onSelectChat ? 'w-2/5 max-w-sm' : 'w-full'}`}>
+                <header className="p-4 bg-gray-50/50 backdrop-blur-md border-b border-gray-100 flex-shrink-0">
+                    <div className="flex justify-between items-center mb-4">
+                        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Messages</h1>
+                        <div className="flex items-center space-x-1">
+                            <button
+                                onClick={() => onNewChat ? onNewChat() : navigateTo?.('newChat', 'New Message')}
+                                className="p-2 rounded-full hover:bg-indigo-100 text-indigo-600 transition-colors"
+                                title="New Message">
+                                <PlusIcon className="w-6 h-6" />
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={onNewChat}
-                            className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform active:scale-95 flex items-center gap-2"
-                            title="Start New Chat"
-                        >
-                            <PlusIcon className="w-5 h-5" />
-                            <span className="hidden sm:inline font-bold text-sm">New Chat</span>
-                        </button>
-                    </div>
-                </div>
 
-                {/* Search & Filter Bar */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-grow group">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                            <SearchIcon className="text-gray-400 w-5 h-5 group-focus-within:text-indigo-500 transition-colors" />
+                    <div className="relative mb-4">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <SearchIcon className="text-gray-400 w-4 h-4" />
                         </span>
                         <input
                             type="search"
-                            placeholder="Search conversations..."
+                            placeholder="Search..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                            className="w-full pl-9 pr-4 py-2 text-sm text-gray-700 bg-gray-100 border-none rounded-xl focus:ring-2 focus:ring-indigo-200 focus:bg-white transition-all outline-none placeholder-gray-400"
                         />
                     </div>
 
-                    <div className="flex bg-gray-100/80 p-1 rounded-xl overflow-x-auto no-scrollbar sm:flex-shrink-0">
+                    <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
                         {(['All', 'Unread', 'Groups'] as const).map(filter => (
-                            <button
-                                key={filter}
-                                onClick={() => setActiveFilter(filter as any)}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${activeFilter === filter
-                                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5'
-                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-                                    }`}
-                            >
+                            <button key={filter} onClick={() => setActiveFilter(filter as 'All' | 'Unread')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all whitespace-nowrap ${activeFilter === filter
+                                    ? 'bg-gray-800 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                    }`}>
                                 {filter}
                             </button>
                         ))}
                     </div>
-                </div>
-            </header>
+                </header>
 
-            {/* Conversation List */}
-            <main className="flex-grow overflow-y-auto">
-                {filteredConversations.length > 0 ? (
-                    <div className="divide-y divide-gray-50">
-                        {filteredConversations.map(convo => {
-                            const hasUnread = convo.unreadCount > 0;
-                            return (
-                                <button
-                                    key={convo.id}
-                                    onClick={() => onSelectChat(convo)}
-                                    className={`w-full text-left px-6 py-4 flex items-start gap-4 transition-all hover:bg-gray-50 group ${hasUnread ? 'bg-indigo-50/30' : ''}`}
-                                >
-                                    {/* Avatar with Status Dot */}
-                                    <div className="relative flex-shrink-0">
-                                        <img
-                                            src={convo.participant.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(convo.participant.name)}&background=random`}
-                                            alt={convo.participant.name}
-                                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm group-hover:border-indigo-100 transition-colors"
-                                        />
-                                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
-                                    </div>
+                <main className="flex-grow overflow-y-auto custom-scrollbar">
+                    {filteredConversations.length === 0 ? (
+                        <div className="p-8 text-center bg-gray-50/30 h-full flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                <MessagesIcon className="w-6 h-6 text-gray-300" />
+                            </div>
+                            <p className="text-gray-500 font-medium">No conversations found.</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-50">
+                            {filteredConversations.map(room => {
+                                const ts = room.updated_at;
+                                const hasUnread = room.unreadCount > 0;
+                                const isSelected = isDesktop && selectedConversation?.id === room.id;
 
-                                    {/* Content */}
-                                    <div className="flex-grow min-w-0">
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <h3 className={`font-bold truncate text-base ${hasUnread ? 'text-gray-900' : 'text-gray-700'}`}>
-                                                {convo.participant.name}
-                                            </h3>
-                                            <span className={`text-xs ml-2 font-medium flex-shrink-0 ${hasUnread ? 'text-indigo-600' : 'text-gray-400'}`}>
-                                                {formatTimestamp(convo.lastMessage.timestamp)}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex justify-between items-center">
-                                            <p className={`text-sm truncate pr-4 ${hasUnread ? 'font-semibold text-gray-800' : 'text-gray-500'}`}>
-                                                {convo.messages[convo.messages.length - 1]?.senderId === ADMIN_ID && <span className="text-indigo-500 mr-1">You:</span>}
-                                                {convo.lastMessage.text}
-                                            </p>
-
-                                            {hasUnread && (
-                                                <span className="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 shadow-sm shadow-indigo-200 animate-pulse-soft">
-                                                    {convo.unreadCount > 9 ? '9+' : convo.unreadCount}
-                                                </span>
+                                return (
+                                    <button
+                                        key={room.id}
+                                        onClick={() => handleChatClick(room)}
+                                        className={`w-full text-left px-4 py-3 flex items-center space-x-4 transition-all hover:bg-gray-50 active:bg-gray-100 ${isSelected ? 'bg-indigo-50/60 border-l-4 border-indigo-500' : 'border-l-4 border-transparent'
+                                            }`}
+                                    >
+                                        <div className="relative flex-shrink-0">
+                                            <img src={room.displayAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(room.displayName)}&background=random`} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            {room.is_group && (
+                                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                                    <div className="bg-indigo-100 rounded-full p-1">
+                                                        <SearchIcon className="w-2 h-2 text-indigo-500" />
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                    </div>
-                                </button>
-                            )
-                        })}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8 animate-fade-in">
-                        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                            <MessagesIcon className="w-10 h-10 text-gray-300" />
+
+                                        <div className="flex-grow min-w-0">
+                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                <h4 className={`font-bold truncate text-sm text-gray-900 ${hasUnread ? '' : ''}`}>{room.displayName}</h4>
+                                                <span className={`text-[10px] flex-shrink-0 ml-2 font-medium ${hasUnread ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                                    {formatTimestamp(ts)}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <p className={`text-xs truncate pr-2 ${hasUnread ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                                                    {room.lastMessage?.sender_id === ADMIN_ID && <span className="text-gray-400 font-normal">You: </span>}
+                                                    {room.lastMessage?.content || 'Started a conversation'}
+                                                </p>
+                                                {hasUnread && (
+                                                    <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 shadow-sm shadow-indigo-200"></div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                )
+                            })}
                         </div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">No messages found</h3>
-                        <p className="text-gray-500 max-w-xs mx-auto mb-8">
-                            {searchTerm
-                                ? `No conversations matching "${searchTerm}"`
-                                : activeFilter !== 'All'
-                                    ? `No ${activeFilter.toLowerCase()} messages`
-                                    : "You haven't started any conversations yet."}
-                        </p>
-                        <button
-                            onClick={onNewChat}
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all transform active:scale-95 flex items-center gap-2"
-                        >
-                            <PlusIcon className="w-5 h-5" />
-                            Start a Conversation
-                        </button>
-                    </div>
-                )}
-            </main>
+                    )}
+                </main>
+            </div>
+
+            {/* Desktop Only: Chat Area - Only show if standalone (no onSelectChat prop) */}
+            {isDesktop && !onSelectChat && (
+                <div className="flex-grow h-full bg-gray-50 hidden md:block">
+                    {selectedConversation ? (
+                        <div className="h-full">
+                            <ChatScreen
+                                currentUserId={ADMIN_ID}
+                                conversationId={selectedConversation.id}
+                                roomDetails={rooms.find(r => r.id === selectedConversation.id)}
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-50/50">
+                            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6">
+                                <SearchIcon className="w-10 h-10 text-indigo-300" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">Select a conversation</h2>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

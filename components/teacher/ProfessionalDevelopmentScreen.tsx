@@ -56,7 +56,7 @@ const ProfessionalDevelopmentScreen: React.FC = () => {
         try {
             const prompt = `As an expert educational coach, provide a list of 3-5 actionable strategies for a teacher facing this challenge: "${challenge}". The strategies should be practical for a modern classroom. Format the response as a markdown list.`;
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.0-flash',
                 contents: prompt,
             });
             setSuggestions(response.text);

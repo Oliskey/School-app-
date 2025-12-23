@@ -4,7 +4,7 @@ import { SparklesIcon, AIIcon } from '../../constants';
 import { GoogleGenAI, Type } from "@google/genai";
 
 // A custom microphone icon
-const MicrophoneIcon = ({className}: {className?: string}) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 2m0 3a3 3 0 0 1 3 -3h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3z" /><path d="M5 10a7 7 0 0 0 14 0" /><path d="M8 21l8 0" /><path d="M12 17l0 4" /></svg>;
+const MicrophoneIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 2m0 3a3 3 0 0 1 3 -3h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3z" /><path d="M5 10a7 7 0 0 0 14 0" /><path d="M8 21l8 0" /><path d="M12 17l0 4" /></svg>;
 
 
 interface GradeSubmissionScreenProps {
@@ -77,7 +77,7 @@ const GradeSubmissionScreen: React.FC<GradeSubmissionScreenProps> = ({ submissio
       The feedback should be encouraging and specific to the score. Provide the feedback in a JSON object with a single key "suggestions" which is an array of strings.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -94,7 +94,7 @@ const GradeSubmissionScreen: React.FC<GradeSubmissionScreenProps> = ({ submissio
           }
         }
       });
-      
+
       const jsonResponse = JSON.parse(response.text.trim());
       if (jsonResponse.suggestions && Array.isArray(jsonResponse.suggestions)) {
         setAiSuggestions(jsonResponse.suggestions);
@@ -143,14 +143,14 @@ const GradeSubmissionScreen: React.FC<GradeSubmissionScreenProps> = ({ submissio
               {/* Submission Preview */}
               {submission.textSubmission && (
                 <div className="bg-white p-4 rounded-xl shadow-sm">
-                    <h3 className="font-bold text-gray-800 mb-2">Student's Submission</h3>
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-96 overflow-y-auto">
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.textSubmission}</p>
-                    </div>
+                  <h3 className="font-bold text-gray-800 mb-2">Student's Submission</h3>
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-96 overflow-y-auto">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.textSubmission}</p>
+                  </div>
                 </div>
               )}
             </div>
-            
+
             <div className="lg:col-span-2">
               {/* Grading Form */}
               <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
@@ -172,47 +172,47 @@ const GradeSubmissionScreen: React.FC<GradeSubmissionScreenProps> = ({ submissio
                   <label htmlFor="feedback-input" className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
                   <div className="relative">
                     <textarea
-                        id="feedback-input"
-                        value={feedback}
-                        onChange={e => setFeedback(e.target.value)}
-                        rows={6}
-                        placeholder="Provide constructive feedback for the student..."
-                        className="w-full px-3 py-2 pr-12 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                      />
-                      {recognitionRef.current && (
-                        <button 
-                          type="button" 
-                          onClick={handleToggleRecording} 
-                          className={`absolute top-2 right-2 p-2 rounded-full transition-colors ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                          aria-label={isRecording ? 'Stop recording' : 'Start recording feedback'}
-                        >
-                          <MicrophoneIcon className="h-5 w-5" />
-                        </button>
-                      )}
+                      id="feedback-input"
+                      value={feedback}
+                      onChange={e => setFeedback(e.target.value)}
+                      rows={6}
+                      placeholder="Provide constructive feedback for the student..."
+                      className="w-full px-3 py-2 pr-12 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                    />
+                    {recognitionRef.current && (
+                      <button
+                        type="button"
+                        onClick={handleToggleRecording}
+                        className={`absolute top-2 right-2 p-2 rounded-full transition-colors ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                        aria-label={isRecording ? 'Stop recording' : 'Start recording feedback'}
+                      >
+                        <MicrophoneIcon className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
-                
+
                 {/* AI Feedback Section */}
                 <div>
-                  <button 
-                    type="button" 
-                    onClick={handleGenerateFeedback} 
+                  <button
+                    type="button"
+                    onClick={handleGenerateFeedback}
                     disabled={isGenerating || !grade}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-100 hover:border-purple-400 hover:text-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      <AIIcon className="h-5 w-5" />
-                      <span className="font-semibold">{isGenerating ? 'Generating...' : 'Generate Feedback with AI'}</span>
+                    <AIIcon className="h-5 w-5" />
+                    <span className="font-semibold">{isGenerating ? 'Generating...' : 'Generate Feedback with AI'}</span>
                   </button>
                   {aiSuggestions.length > 0 && (
                     <div className="mt-3 space-y-2">
                       <h4 className="text-xs font-semibold text-gray-500">AI Suggestions (Click to use):</h4>
                       {aiSuggestions.map((suggestion, index) => (
-                        <button 
+                        <button
                           type="button"
                           key={index}
                           onClick={() => setFeedback(suggestion)}
                           className="w-full text-left p-2 bg-purple-50 text-purple-800 text-sm rounded-lg hover:bg-purple-100 transition-colors flex items-start space-x-2">
-                            <SparklesIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-purple-500" />
-                            <span>{suggestion}</span>
+                          <SparklesIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-purple-500" />
+                          <span>{suggestion}</span>
                         </button>
                       ))}
                     </div>

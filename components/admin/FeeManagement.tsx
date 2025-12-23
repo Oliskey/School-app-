@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SearchIcon } from '../../constants';
 import { StudentFeeInfo } from '../../types';
-import { mockStudentFees } from '../../data';
+import { supabase } from '../../lib/supabase';
 
 const statusStyles: { [key in StudentFeeInfo['status']]: { bg: string, text: string, progress: string } } = {
   Paid: { bg: 'bg-green-100', text: 'text-green-800', progress: 'bg-green-500' },
@@ -15,21 +15,84 @@ const formatter = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 
 const FeeManagement: React.FC<{ navigateTo: (view: string, title: string, props?: any) => void; }> = ({ navigateTo }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'All' | 'Paid' | 'Unpaid' | 'Overdue'>('All');
+  const [studentFees, setStudentFees] = useState<StudentFeeInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFees();
+
+    // Realtime subscription
+    const subscription = supabase
+      .channel('public:student_fees')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_fees' }, () => {
+        console.log('Fee change detected');
+        fetchFees();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const fetchFees = async () => {
+    setLoading(true);
+    try {
+      const { data: feesData, error: feesError } = await supabase
+        .from('student_fees')
+        .select(`
+          *,
+          student:students (
+            id,
+            name,
+            grade,
+            section,
+            avatar_url
+          )
+        `);
+
+      if (feesError) throw feesError;
+
+      if (feesData) {
+        const mapped: StudentFeeInfo[] = feesData.map((f: any) => ({
+          id: f.id,
+          name: f.student?.name || 'Unknown Student',
+          grade: f.student?.grade || 0,
+          section: f.student?.section || '',
+          avatarUrl: f.student?.avatar_url || 'https://i.pravatar.cc/150',
+          totalFee: f.total_fee || 0,
+          paidAmount: f.paid_amount || 0,
+          status: f.status || 'Unpaid',
+          dueDate: f.due_date,
+          term: f.term || 'Term 1'
+        }));
+        setStudentFees(mapped);
+      }
+    } catch (err) {
+      console.error('Error fetching fees:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const summary = useMemo(() => {
-    const totalCollected = mockStudentFees.reduce((sum, s) => sum + s.paidAmount, 0);
-    const totalExpected = mockStudentFees.reduce((sum, s) => sum + s.totalFee, 0);
+    const totalCollected = studentFees.reduce((sum, s) => sum + s.paidAmount, 0);
+    const totalExpected = studentFees.reduce((sum, s) => sum + s.totalFee, 0);
     const totalOutstanding = totalExpected - totalCollected;
     const compliance = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
     return { totalCollected, totalOutstanding, compliance };
-  }, []);
+  }, [studentFees]);
 
   const filteredStudents = useMemo(() =>
-    mockStudentFees
+    studentFees
       .filter(student => activeTab === 'All' || student.status === activeTab)
       .filter(student => student.name.toLowerCase().includes(searchTerm.toLowerCase())),
-    [activeTab, searchTerm]
+    [activeTab, searchTerm, studentFees]
   );
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div></div>;
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-100">
@@ -62,9 +125,8 @@ const FeeManagement: React.FC<{ navigateTo: (view: string, title: string, props?
           <div className="flex space-x-2 border-b border-gray-200">
             {(['All', 'Paid', 'Unpaid', 'Overdue'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-3 py-2 text-sm font-semibold transition-colors ${
-                  activeTab === tab ? 'border-b-2 border-sky-500 text-sky-600' : 'text-gray-500 hover:text-gray-700'
-                }`}>
+                className={`px-3 py-2 text-sm font-semibold transition-colors ${activeTab === tab ? 'border-b-2 border-sky-500 text-sky-600' : 'text-gray-500 hover:text-gray-700'
+                  }`}>
                 {tab}
               </button>
             ))}
@@ -72,32 +134,38 @@ const FeeManagement: React.FC<{ navigateTo: (view: string, title: string, props?
         </div>
 
         <div className="flex-grow p-4 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredStudents.map(student => (
-              <button key={student.id} onClick={() => navigateTo('feeDetails', 'Fee Details', { student })} className="w-full bg-white rounded-xl shadow-sm p-3 flex flex-col space-y-2 text-left hover:ring-2 hover:ring-sky-200">
-                <div className="flex items-center space-x-3">
-                  <img src={student.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-grow">
-                    <p className="font-bold text-gray-800">{student.name}</p>
-                    <p className="text-sm text-gray-500">Grade {student.grade}{student.section}</p>
+          {filteredStudents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredStudents.map(student => (
+                <button key={student.id} onClick={() => navigateTo('feeDetails', 'Fee Details', { student })} className="w-full bg-white rounded-xl shadow-sm p-3 flex flex-col space-y-2 text-left hover:ring-2 hover:ring-sky-200">
+                  <div className="flex items-center space-x-3">
+                    <img src={student.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
+                    <div className="flex-grow">
+                      <p className="font-bold text-gray-800">{student.name}</p>
+                      <p className="text-sm text-gray-500">Grade {student.grade}{student.section}</p>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusStyles[student.status].bg} ${statusStyles[student.status].text}`}>
+                      {student.status}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusStyles[student.status].bg} ${statusStyles[student.status].text}`}>
-                    {student.status}
-                  </span>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-medium text-gray-600 mb-1">
-                    <span>{formatter.format(student.paidAmount)}</span>
-                    <span>{formatter.format(student.totalFee)}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${statusStyles[student.status].progress}`}
+                  <div>
+                    <div className="flex justify-between text-xs font-medium text-gray-600 mb-1">
+                      <span>{formatter.format(student.paidAmount)}</span>
+                      <span>{formatter.format(student.totalFee)}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div className={`h-1.5 rounded-full ${statusStyles[student.status].progress}`}
                         style={{ width: `${(student.paidAmount / student.totalFee) * 100}%` }}></div>
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 text-gray-500">
+              No fee records found.
+            </div>
+          )}
         </div>
       </main>
     </div>

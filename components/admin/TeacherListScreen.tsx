@@ -12,6 +12,7 @@ import {
 } from '../../constants';
 import { Teacher } from '../../types';
 import { fetchTeachers } from '../../lib/database';
+import { supabase } from '../../lib/supabase';
 
 interface TeacherListScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
@@ -59,6 +60,19 @@ const TeacherListScreen: React.FC<TeacherListScreenProps> = ({ navigateTo }) => 
     // Fetch teachers from Supabase
     useEffect(() => {
         loadTeachers();
+
+        // Realtime Subscription
+        const subscription = supabase
+            .channel('public:teachers')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, (payload) => {
+                console.log('Teacher change received:', payload);
+                loadTeachers();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(subscription);
+        };
     }, []);
 
     const loadTeachers = async () => {

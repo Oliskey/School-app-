@@ -295,11 +295,35 @@ const AddParentScreen: React.FC<AddParentScreenProps> = ({ parentToEdit, forceUp
                             </label>
                         </div>
                     </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
-                        <InputField id="name" label="Full Name" value={name} onChange={setName} icon={<UserIcon className="w-5 h-5" />} />
-                        <InputField id="email" label="Email" value={email} onChange={setEmail} icon={<MailIcon className="w-5 h-5" />} type="email" />
-                        <InputField id="phone" label="Phone" value={phone} onChange={setPhone} icon={<PhoneIcon className="w-5 h-5" />} type="tel" />
-                        <InputField id="childIds" label="Child Student IDs (comma separated)" value={childIds} onChange={setChildIds} icon={<StudentsIcon className="w-5 h-5" />} />
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+
+                        {/* Personal Information Section */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Personal Details</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <InputField id="name" label="Full Name" value={name} onChange={setName} icon={<UserIcon className="w-5 h-5" />} placeholder="e.g. John Doe" />
+                                <InputField id="phone" label="Phone Number" value={phone} onChange={setPhone} icon={<PhoneIcon className="w-5 h-5" />} type="tel" placeholder="+1234567890" />
+                            </div>
+                            <InputField id="email" label="Email Address" value={email} onChange={setEmail} icon={<MailIcon className="w-5 h-5" />} type="email" placeholder="john.doe@example.com" />
+                        </div>
+
+                        {/* Student Linking Section */}
+                        <div className="space-y-4 pt-2">
+                            <div className="flex items-center justify-between border-b pb-2">
+                                <h3 className="text-lg font-semibold text-gray-800">Link Students</h3>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Optional</span>
+                            </div>
+                            <p className="text-sm text-gray-500">Enter the IDs of students this parent is responsible for.</p>
+                            <InputField
+                                id="childIds"
+                                label="Student IDs (Comma Separated)"
+                                value={childIds}
+                                onChange={setChildIds}
+                                icon={<StudentsIcon className="w-5 h-5" />}
+                                placeholder="e.g. 101, 102"
+                                required={false}
+                            />
+                        </div>
                     </div>
                 </main>
                 <div className="p-4 mt-auto bg-gray-50">
@@ -333,12 +357,30 @@ const AddParentScreen: React.FC<AddParentScreenProps> = ({ parentToEdit, forceUp
     );
 };
 
-const InputField: React.FC<{ id: string, label: string, value: string, onChange: (val: string) => void, icon: React.ReactNode, type?: string }> = ({ id, label, value, onChange, icon, type = 'text' }) => (
+const InputField: React.FC<{
+    id: string,
+    label: string,
+    value: string,
+    onChange: (val: string) => void,
+    icon: React.ReactNode,
+    type?: string,
+    placeholder?: string,
+    required?: boolean
+}> = ({ id, label, value, onChange, icon, type = 'text', placeholder, required = true }) => (
     <div>
-        <label htmlFor={id} className="text-sm font-medium text-gray-600 sr-only">{label}</label>
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label} {required && <span className="text-red-500">*</span>}</label>
         <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">{icon}</span>
-            <input type={type} name={id} id={id} value={value} onChange={e => onChange(e.target.value)} className="w-full pl-10 pr-3 py-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" placeholder={label} required />
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">{icon}</span>
+            <input
+                type={type}
+                name={id}
+                id={id}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 text-gray-900 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all placeholder-gray-400 focus:bg-white"
+                placeholder={placeholder || label}
+                required={required}
+            />
         </div>
     </div>
 );

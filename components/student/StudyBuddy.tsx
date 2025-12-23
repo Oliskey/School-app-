@@ -8,20 +8,20 @@ import { THEME_CONFIG } from '../../constants';
 import { DashboardType } from '../../types';
 
 interface Message {
-  role: 'user' | 'model';
-  text: string;
-  imageUrl?: string;
+    role: 'user' | 'model';
+    text: string;
+    imageUrl?: string;
 }
 
 const fileToGenerativePart = async (file: File) => {
-  const base64EncodedDataPromise = new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-    reader.readAsDataURL(file);
-  });
-  return {
-    inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-  };
+    const base64EncodedDataPromise = new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+    });
+    return {
+        inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+    };
 };
 
 const LoadingBubble = () => (
@@ -44,9 +44,16 @@ const StudyBuddy: React.FC = () => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ''; // Use Vite env var
+
+        if (!apiKey) {
+            setMessages(prev => [...prev, { role: 'model', text: "⚠️ API Key missing. Please set VITE_GEMINI_API_KEY in your .env file to use the AI Study Buddy." }]);
+            return;
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
         chatRef.current = ai.chats.create({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash',
             config: {
                 systemInstruction: 'You are a friendly and encouraging study buddy for a high school student. Help them understand concepts without giving away the direct answer. Use simple language and lots of examples. Format your responses with markdown.',
             },
@@ -62,7 +69,7 @@ const StudyBuddy: React.FC = () => {
 
         setIsLoading(true);
         setInputText('');
-        
+
         let userMessage: Message;
         if (imageFile) {
             const imageUrl = URL.createObjectURL(imageFile);
@@ -101,9 +108,9 @@ const StudyBuddy: React.FC = () => {
         } catch (error) {
             console.error(error);
             setMessages(prev => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1].text = "Sorry, something went wrong. Please try again.";
-              return newMessages;
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1].text = "Sorry, something went wrong. Please try again.";
+                return newMessages;
             });
         } finally {
             setIsLoading(false);
@@ -125,7 +132,7 @@ const StudyBuddy: React.FC = () => {
             handleSendMessage("Can you help me with this problem?", file);
         }
     };
-    
+
     return (
         <div className="flex flex-col h-full" style={{ backgroundImage: "url('https://i.pinimg.com/736x/8c/98/99/8c98994518b575bfd8c949e91d20548b.jpg')", backgroundRepeat: 'repeat', backgroundSize: 'auto' }}>
             {/* Chat Area */}
@@ -133,10 +140,10 @@ const StudyBuddy: React.FC = () => {
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-xs md:max-w-md lg:max-w-lg px-3 py-2 shadow flex flex-col ${msg.role === 'user' ? 'bg-orange-200 text-gray-800 rounded-t-xl rounded-bl-xl' : 'bg-white text-gray-800 rounded-t-xl rounded-br-xl'}`}>
-                           {msg.imageUrl && (
+                            {msg.imageUrl && (
                                 <img src={msg.imageUrl} alt="User upload" className="rounded-lg mb-2 max-h-48" />
-                           )}
-                           <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+                            )}
+                            <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
                                 {msg.role === 'model' && !msg.text && index === messages.length - 1 && isLoading ? (
                                     <LoadingBubble />
                                 ) : (
@@ -144,7 +151,7 @@ const StudyBuddy: React.FC = () => {
                                         {msg.text || ''}
                                     </ReactMarkdown>
                                 )}
-                           </div>
+                            </div>
                         </div>
                     </div>
                 ))}

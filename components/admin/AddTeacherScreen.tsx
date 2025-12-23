@@ -105,7 +105,7 @@ const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forc
     const [phone, setPhone] = useState('');
     const [subjects, setSubjects] = useState<string[]>([]);
     const [classes, setClasses] = useState<string[]>([]);
-    const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
+    const [status, setStatus] = useState<'Active' | 'Inactive' | 'On Leave'>('Active');
     const [avatar, setAvatar] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showCredentialsModal, setShowCredentialsModal] = useState(false);
@@ -463,8 +463,9 @@ const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forc
 
                         <div>
                             <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select id="status" value={status} onChange={e => setStatus(e.target.value as 'Active' | 'Inactive')} className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
+                            <select id="status" value={status} onChange={e => setStatus(e.target.value as 'Active' | 'Inactive' | 'On Leave')} className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
                                 <option value="Active">Active</option>
+                                <option value="On Leave">On Leave</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>

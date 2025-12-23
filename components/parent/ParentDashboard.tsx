@@ -719,9 +719,9 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 notificationCount={notificationCount}
                 onSearchClick={() => setIsSearchOpen(true)}
             />
-            <div className="flex-grow overflow-y-auto" style={{ marginTop: '-4rem' }}>
-                <div className="pt-16">
-                    <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
+            <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
+                <div className="pt-16 h-full">
+                    <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
                         {ComponentToRender ? (
                             <ComponentToRender {...currentNavigation.props} {...commonProps} />
                         ) : (

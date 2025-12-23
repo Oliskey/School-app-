@@ -9,73 +9,90 @@ import ErrorBoundary from '../shared/ErrorBoundary';
 // Lazy load GlobalSearchScreen
 const GlobalSearchScreen = lazy(() => import('../shared/GlobalSearchScreen'));
 
-// Static Imports (All Components)
-import DashboardOverview from './DashboardOverview';
-import AnalyticsScreen from './AnalyticsScreen';
-import ClassListScreen from './ClassListScreen';
-import StudentListScreen from './StudentListScreen';
-import AddStudentScreen from './AddStudentScreen';
-import TeacherListScreen from './TeacherListScreen';
-import TeacherPerformanceScreen from './TeacherPerformanceScreen';
-import TimetableEditor from './TimetableEditor';
-import TeacherAttendanceScreen from './TeacherAttendanceScreen';
-import FeeManagement from './FeeManagement';
-import FeeDetailsScreen from './FeeDetailsScreen';
-import ExamManagement from './ExamManagement';
-import AddExamScreen from './AddExamScreen';
-import ReportCardPublishing from './ReportCardPublishing';
-import UserRolesScreen from './UserRolesScreen';
-import AuditLogScreen from './AuditLogScreen';
-import ProfileSettings from './ProfileSettings';
-import CommunicationHub from './CommunicationHub';
-import ReportsScreen from './ReportsScreen';
-import StudentProfileAdminView from './StudentProfileAdminView';
-import EditProfileScreen from './EditProfileScreen';
-import NotificationsSettingsScreen from './NotificationsSettingsScreen';
-import SecuritySettingsScreen from './SecuritySettingsScreen';
-import ChangePasswordScreen from './ChangePasswordScreen';
-import OnlineStoreScreen from './OnlineStoreScreen';
-import AdminSelectClassForReport from './AdminSelectClassForReport';
-import AdminStudentListForReport from './AdminStudentListForReport';
-import AdminStudentReportCardScreen from './AdminStudentReportCardScreen';
-import SystemSettingsScreen from './SystemSettingsScreen';
-import AcademicSettingsScreen from './AcademicSettingsScreen';
-import FinancialSettingsScreen from './FinancialSettingsScreen';
-import CommunicationSettingsScreen from './CommunicationSettingsScreen';
-import BrandingSettingsScreen from './BrandingSettingsScreen';
-import PersonalSecuritySettingsScreen from './PersonalSecuritySettingsScreen';
-import TeacherDetailAdminView from './TeacherDetailAdminView';
-import TeacherAttendanceDetail from './TeacherAttendanceDetail';
-import AttendanceOverviewScreen from './AttendanceOverviewScreen';
-import ClassAttendanceDetailScreen from './ClassAttendanceDetailScreen';
-import AdminSelectTermForReport from './AdminSelectTermForReport';
-import AdminMessagesScreen from './AdminMessagesScreen';
-import AdminNewChatScreen from './AdminNewChatScreen';
-import HealthLogScreen from './HealthLogScreen';
-import TimetableGeneratorScreen from './TimetableGeneratorScreen';
-import BusDutyRosterScreen from './BusDutyRosterScreen';
+// Static Imports (Converted to Lazy for Performance)
+const DashboardOverview = lazy(() => import('./DashboardOverview'));
+const AnalyticsScreen = lazy(() => import('./AnalyticsScreen'));
+const ClassListScreen = lazy(() => import('./ClassListScreen'));
+const StudentListScreen = lazy(() => import('./StudentListScreen'));
+const AddStudentScreen = lazy(() => import('./AddStudentScreen'));
+const TeacherListScreen = lazy(() => import('./TeacherListScreen'));
+const TeacherPerformanceScreen = lazy(() => import('./TeacherPerformanceScreen'));
+const TimetableEditor = lazy(() => import('./TimetableEditor'));
+const TeacherAttendanceScreen = lazy(() => import('./TeacherAttendanceScreen'));
+const FeeManagement = lazy(() => import('./FeeManagement'));
+const FeeDetailsScreen = lazy(() => import('./FeeDetailsScreen'));
+const ExamManagement = lazy(() => import('./ExamManagement'));
+const AddExamScreen = lazy(() => import('./AddExamScreen'));
+const ReportCardPublishing = lazy(() => import('./ReportCardPublishing'));
+const UserRolesScreen = lazy(() => import('./UserRolesScreen'));
+const AuditLogScreen = lazy(() => import('./AuditLogScreen'));
+const ProfileSettings = lazy(() => import('./ProfileSettings'));
+const CommunicationHub = lazy(() => import('./CommunicationHub'));
+const ReportsScreen = lazy(() => import('./ReportsScreen'));
+const StudentProfileAdminView = lazy(() => import('./StudentProfileAdminView'));
+const EditProfileScreen = lazy(() => import('./EditProfileScreen'));
+const NotificationsSettingsScreen = lazy(() => import('./NotificationsSettingsScreen'));
+const SecuritySettingsScreen = lazy(() => import('./SecuritySettingsScreen'));
+const ChangePasswordScreen = lazy(() => import('./ChangePasswordScreen'));
+const OnlineStoreScreen = lazy(() => import('./OnlineStoreScreen'));
+const AdminSelectClassForReport = lazy(() => import('./AdminSelectClassForReport'));
+const AdminStudentListForReport = lazy(() => import('./AdminStudentListForReport'));
+const AdminStudentReportCardScreen = lazy(() => import('./AdminStudentReportCardScreen'));
+const SystemSettingsScreen = lazy(() => import('./SystemSettingsScreen'));
+const AcademicSettingsScreen = lazy(() => import('./AcademicSettingsScreen'));
+const FinancialSettingsScreen = lazy(() => import('./FinancialSettingsScreen'));
+const CommunicationSettingsScreen = lazy(() => import('./CommunicationSettingsScreen'));
+const BrandingSettingsScreen = lazy(() => import('./BrandingSettingsScreen'));
+const PersonalSecuritySettingsScreen = lazy(() => import('./PersonalSecuritySettingsScreen'));
+const TeacherDetailAdminView = lazy(() => import('./TeacherDetailAdminView'));
+const TeacherAttendanceDetail = lazy(() => import('./TeacherAttendanceDetail'));
+const AttendanceOverviewScreen = lazy(() => import('./AttendanceOverviewScreen'));
+const ClassAttendanceDetailScreen = lazy(() => import('./ClassAttendanceDetailScreen'));
+const AdminSelectTermForReport = lazy(() => import('./AdminSelectTermForReport'));
+const AdminMessagesScreen = lazy(() => import('./AdminMessagesScreen'));
+const AdminNewChatScreen = lazy(() => import('./AdminNewChatScreen'));
+const HealthLogScreen = lazy(() => import('./HealthLogScreen'));
+const TimetableGeneratorScreen = lazy(() => import('./TimetableGeneratorScreen'));
+const BusDutyRosterScreen = lazy(() => import('./BusDutyRosterScreen'));
 
 // Shared Imports
-import CalendarScreen from '../shared/CalendarScreen';
-import NotificationsScreen from '../shared/NotificationsScreen';
-import ChatScreen from '../shared/ChatScreen';
-import ReportCardInputScreen from '../teacher/ReportCardInputScreen';
+const CalendarScreen = lazy(() => import('../shared/CalendarScreen'));
+const NotificationsScreen = lazy(() => import('../shared/NotificationsScreen'));
+const ChatScreen = lazy(() => import('../shared/ChatScreen'));
+const ReportCardInputScreen = lazy(() => import('../teacher/ReportCardInputScreen'));
 
 // User Management Imports
-import SelectUserTypeToAddScreen from './SelectUserTypeToAddScreen';
-import AddTeacherScreen from './AddTeacherScreen';
-import AddParentScreen from './AddParentScreen';
-import ParentListScreen from './ParentListScreen';
-import ParentDetailAdminView from './ParentDetailAdminView';
+const SelectUserTypeToAddScreen = lazy(() => import('./SelectUserTypeToAddScreen'));
+const AddTeacherScreen = lazy(() => import('./AddTeacherScreen'));
+const AddParentScreen = lazy(() => import('./AddParentScreen'));
+const ParentListScreen = lazy(() => import('./ParentListScreen'));
+const ParentDetailAdminView = lazy(() => import('./ParentDetailAdminView'));
 
 // Content Management - STATIC IMPORTS to verify resolution
-import ManagePoliciesScreen from './ManagePoliciesScreen';
-import ManageVolunteeringScreen from './ManageVolunteeringScreen';
-import ManagePermissionSlipsScreen from './ManagePermissionSlipsScreen';
-import ManageLearningResourcesScreen from './ManageLearningResourcesScreen';
-import ManagePTAMeetingsScreen from './ManagePTAMeetingsScreen';
-import SchoolInfoScreen from './SchoolInfoScreen';
-import UserAccountsScreen from './UserAccountsScreen';
+// Content Management - Lazy Loaded to prevent circular dependencies
+const ManagePoliciesScreen = lazy(() => import('./ManagePoliciesScreen'));
+const ManageVolunteeringScreen = lazy(() => import('./ManageVolunteeringScreen'));
+const ManagePermissionSlipsScreen = lazy(() => import('./ManagePermissionSlipsScreen'));
+const ManageLearningResourcesScreen = lazy(() => import('./ManageLearningResourcesScreen'));
+const ManagePTAMeetingsScreen = lazy(() => import('./ManagePTAMeetingsScreen'));
+const SchoolInfoScreen = lazy(() => import('./SchoolInfoScreen'));
+const UserAccountsScreen = lazy(() => import('./UserAccountsScreen'));
+
+const AdminReportCardInputWrapper = (props: any) => <ReportCardInputScreen {...props} isAdmin={true} />;
+
+const AdminMessagesWrapper = (props: any) => {
+    // navigateTo is passed via commonProps
+    const { navigateTo } = props;
+    return (
+        <AdminMessagesScreen
+            {...props}
+            onSelectChat={(conversation: any) => navigateTo('chat', conversation.participant.name, { conversation })}
+            onNewChat={() => navigateTo('adminNewChat', 'New Chat')}
+        />
+    );
+};
+
+const ChatWrapper = (props: any) => <ChatScreen {...props} currentUserId={0} />;
 
 interface ViewStackItem {
     view: string;
@@ -174,16 +191,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
         adminSelectTermForReport: AdminSelectTermForReport,
 
         // Wrappers
-        adminReportCardInput: (props: any) => <ReportCardInputScreen {...props} isAdmin={true} />,
-        adminMessages: (props: any) => (
-            <AdminMessagesScreen
-                {...props}
-                onSelectChat={(conversation: any) => navigateTo('chat', conversation.participant.name, { conversation })}
-                onNewChat={() => navigateTo('adminNewChat', 'New Chat')}
-            />
-        ),
+        adminReportCardInput: AdminReportCardInputWrapper,
+        adminMessages: AdminMessagesWrapper,
         adminNewChat: AdminNewChatScreen,
-        chat: (props: any) => <ChatScreen {...props} currentUserId={0} />,
+        chat: ChatWrapper,
 
         healthLog: HealthLogScreen,
         busDutyRoster: BusDutyRosterScreen,
@@ -292,9 +303,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
             />
             <div className="flex-grow overflow-y-auto relative">
                 <ErrorBoundary key={`${viewStack.length}-${currentNavigation.view}`}>
-                    <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
-                        {renderContent()}
-                    </div>
+                    <Suspense fallback={<DashboardSuspenseFallback />}>
+                        <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+                            {renderContent()}
+                        </div>
+                    </Suspense>
                 </ErrorBoundary>
             </div>
             <AdminBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />

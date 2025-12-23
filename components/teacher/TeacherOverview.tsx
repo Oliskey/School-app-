@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 interface TeacherOverviewProps {
   navigateTo: (view: string, title: string, props?: any) => void;
   currentUser?: { userId: string; email: string; userType: string };
+  profile?: any;
   teacherId?: number | null;
 }
 
@@ -44,7 +45,7 @@ const parseClassName = (name: string) => {
   return { grade: 0, section: '' };
 };
 
-const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo, currentUser, teacherId }) => {
+const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo, currentUser, profile, teacherId }) => {
   const theme = THEME_CONFIG[DashboardType.Teacher];
 
   const [teacherName, setTeacherName] = useState('Teacher');
@@ -57,21 +58,28 @@ const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo, currentUs
     const fetchData = async () => {
       try {
         // 1. Get Logged In Teacher
-        const query = supabase.from('teachers').select('id, name');
+        let query = supabase.from('teachers').select('id, name');
 
         if (teacherId) {
-          query.eq('id', teacherId);
-        } else if (currentUser?.email) {
-          query.eq('email', currentUser.email);
+          // Direct ID override (e.g. admin viewing)
+          query = query.eq('id', teacherId);
+        } else if (profile?.id) {
+          // Best: Query by User ID
+          query = query.eq('user_id', profile.id);
+        } else if (currentUser?.email || profile?.email) {
+          // Fallback: Query by Email
+          const email = currentUser?.email || profile?.email;
+          query = query.eq('email', email);
         } else {
-          // Fallback
-          query.eq('email', 'f.akintola@school.com');
+          // Ultimate Fallback (Demo)
+          query = query.eq('email', 'f.akintola@school.com');
         }
 
-        const { data: teacher, error: teacherError } = await query.single();
+        const { data: teacher, error: teacherError } = await query.maybeSingle();
 
         if (teacherError || !teacher) {
-          console.error('Teacher not found', teacherError);
+          if (teacherError) console.error('Teacher fetch error', teacherError);
+          else console.log('Teacher profile not found for user');
           return;
         }
 

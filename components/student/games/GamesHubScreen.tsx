@@ -4,8 +4,9 @@ import { educationalGamesData, EducationalGame } from '../../../data/gamesData';
 import { mockStudents, mockCustomAIGames } from '../../../data';
 import { Student, AIGame } from '../../../types';
 
-// Assuming logged-in student is Fatima Bello for this demo
-const loggedInStudent: Student = mockStudents.find(s => s.id === 4)!;
+
+// Mock imports removed or kept if needed for other things
+
 
 const getStudentLevel = (grade: number): EducationalGame['level'] | null => {
     if (grade >= 1 && grade <= 3) return 'Lower Primary (6-8 years)';
@@ -96,10 +97,12 @@ const FeaturedGameCard: React.FC<{ title: string; description: string; icon: Rea
 
 interface GamesHubScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
+    student: Student;
 }
 
-const GamesHubScreen: React.FC<GamesHubScreenProps> = ({ navigateTo }) => {
-    const studentLevel = getStudentLevel(loggedInStudent.grade);
+const GamesHubScreen: React.FC<GamesHubScreenProps> = ({ navigateTo, student }) => {
+    const studentLevel = getStudentLevel(student?.grade || 1);
+
 
     const customGamesForLevel = useMemo(() => {
         return mockCustomAIGames.filter(game => game.level === studentLevel && game.status === 'Published');

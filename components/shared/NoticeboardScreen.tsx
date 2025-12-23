@@ -1,7 +1,7 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { PinIcon } from '../../constants';
-import { mockNotices } from '../../data';
+import { supabase } from '../../lib/supabase';
 import { Notice, AnnouncementCategory } from '../../types';
 
 interface NoticeboardScreenProps {
@@ -24,17 +24,17 @@ const NoticeCard: React.FC<{ notice: Notice }> = ({ notice }) => {
     <div className={`rounded-xl shadow-sm border ${styles.border} overflow-hidden`}>
       <div className={`${styles.bg} p-4`}>
         {notice.videoUrl ? (
-            <video src={notice.videoUrl} controls className="w-full h-40 object-cover rounded-lg mb-3 bg-black"></video>
+          <video src={notice.videoUrl} controls className="w-full h-40 object-cover rounded-lg mb-3 bg-black"></video>
         ) : notice.imageUrl && (
-            <img src={notice.imageUrl} alt={notice.title} className="w-full h-32 object-cover rounded-lg mb-3" />
+          <img src={notice.imageUrl} alt={notice.title} className="w-full h-32 object-cover rounded-lg mb-3" />
         )}
         <div className="flex justify-between items-start">
-            <h3 className={`font-bold text-lg ${styles.text}`}>{notice.title}</h3>
-            {notice.isPinned && (
-                <div className="flex-shrink-0 ml-2">
-                    <PinIcon className={`w-5 h-5 -rotate-45 ${styles.text}`} />
-                </div>
-            )}
+          <h3 className={`font-bold text-lg ${styles.text}`}>{notice.title}</h3>
+          {notice.isPinned && (
+            <div className="flex-shrink-0 ml-2">
+              <PinIcon className={`w-5 h-5 -rotate-45 ${styles.text}`} />
+            </div>
+          )}
         </div>
         <p className="text-sm text-gray-700 mt-1">
           {new Date(notice.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -43,7 +43,7 @@ const NoticeCard: React.FC<{ notice: Notice }> = ({ notice }) => {
       <div className="p-4 bg-white">
         <p className="text-gray-800">{notice.content}</p>
         {notice.videoUrl && !notice.content && (
-            <p className="text-gray-800">Please watch the video announcement above.</p>
+          <p className="text-gray-800">Please watch the video announcement above.</p>
         )}
       </div>
     </div>
@@ -52,11 +52,62 @@ const NoticeCard: React.FC<{ notice: Notice }> = ({ notice }) => {
 
 
 const NoticeboardScreen: React.FC<NoticeboardScreenProps> = ({ userType }) => {
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchNotices();
+
+    // Realtime subscription
+    const subscription = supabase
+      .channel('public:notices')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, () => {
+        console.log('Notice change detected');
+        fetchNotices();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const fetchNotices = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const mapped: Notice[] = data.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          timestamp: n.timestamp,
+          category: n.category,
+          isPinned: n.is_pinned || false,
+          audience: n.audience || ['all'],
+          imageUrl: n.image_url,
+          videoUrl: n.video_url
+        }));
+        setNotices(mapped);
+      }
+    } catch (err) {
+      console.error('Error fetching notices:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const relevantNotices = useMemo(() => {
-    return mockNotices
-      .filter(notice => 
-          notice.audience.includes('all') || 
-          notice.audience.includes(`${userType}s` as 'parents' | 'students' | 'teachers')
+    return notices
+      .filter(notice =>
+        notice.audience.includes('all') ||
+        notice.audience.includes(`${userType}s` as 'parents' | 'students' | 'teachers')
       )
       .sort((a, b) => {
         // Pinned items first, then by date
@@ -64,7 +115,11 @@ const NoticeboardScreen: React.FC<NoticeboardScreenProps> = ({ userType }) => {
         if (!a.isPinned && b.isPinned) return 1;
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       });
-  }, [userType]);
+  }, [userType, notices]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div></div>;
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-100">

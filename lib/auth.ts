@@ -61,31 +61,9 @@ export const createUserAccount = async (
     }
 
 
-    // 2. Create auth account record in our custom table for backup
-    if (authData.user) {
-      const now = new Date();
-      const expires = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-      const { error: dbError } = await supabase
-        .from('auth_accounts')
-        .insert([
-          {
-            username: username,
-            password: hashedPassword, // Store hashed password
-            user_type: userType,
-            email: email,
-            user_id: userId || null,
-            is_active: true,
-            is_verified: false,
-            verification_sent_at: now.toISOString(),
-            verification_expires_at: expires.toISOString(),
-          }
-        ]);
-
-      if (dbError) {
-        console.error('Warning: Could not save to auth_accounts table:', dbError);
-        // Don't fail - the Supabase Auth user was created successfully
-      }
-    }
+    // 2. (Removed) We no longer insert into auth_accounts manually as it is now a View managed by the sync script.
+    // The previous logic attempted to insert into 'auth_accounts' which caused an error. 
+    // The Sync Script (03_setup_auth.sql) handles the view population.
 
     return { username, password };
   } catch (err: any) {

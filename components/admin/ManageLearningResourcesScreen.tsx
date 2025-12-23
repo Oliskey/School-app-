@@ -85,6 +85,11 @@ const ManageLearningResourcesScreen: React.FC = () => {
         return matchesSearch && matchesType;
     });
 
+    const ensureProtocol = (url: string) => {
+        if (!url) return '';
+        return url.startsWith('http') ? url : `https://${url}`;
+    };
+
     const getTypeIcon = (type: string) => {
         switch (type) {
             case 'Video': return <VideoIcon className="w-5 h-5" />;
@@ -241,7 +246,7 @@ const ManageLearningResourcesScreen: React.FC = () => {
                                             </div>
                                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
                                                 <a
-                                                    href={res.url}
+                                                    href={ensureProtocol(res.url)}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="p-2 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform"

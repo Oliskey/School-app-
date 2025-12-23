@@ -4,13 +4,39 @@ import { mockDrivers, mockPickupPoints, mockBusRoster } from '../../data';
 import { Driver } from '../../types';
 
 const BusRouteScreen: React.FC = () => {
-  // Determine today's driver
-  const today = new Date().toISOString().split('T')[0];
-  const todaysAssignment = mockBusRoster.find(r => r.routeId === 'route-a' && r.date === today);
-  // Fallback to first driver if no assignment found (for demo purposes)
-  const driver = mockDrivers.find(d => d.id === todaysAssignment?.driverId) || mockDrivers[0];
-
+  const [driver, setDriver] = useState<Driver | undefined>(undefined);
   const [eta, setEta] = useState('12 min');
+
+  // Load driver data and listen for changes
+  useEffect(() => {
+    const loadDriver = () => {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Try to get from localStorage first (for live sync), else fall back to mock
+      let roster = mockBusRoster;
+      const saved = localStorage.getItem('schoolApp_busRoster');
+      if (saved) {
+        try { roster = JSON.parse(saved); } catch (e) { console.error(e); }
+      }
+
+      const assignment = roster.find((r: any) => r.routeId === 'R1' && r.date === today);
+      const d = mockDrivers.find(d => d.id === assignment?.driverId) || mockDrivers[0];
+      setDriver(d);
+    };
+
+    loadDriver(); // Initial load
+
+    // Listen for storage changes (cross-tab)
+    window.addEventListener('storage', loadDriver);
+
+    // Poll for changes (same-tab or fail-safe)
+    const interval = setInterval(loadDriver, 1000);
+
+    return () => {
+      window.removeEventListener('storage', loadDriver);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Simulate ETA update
   useEffect(() => {

@@ -150,6 +150,20 @@ const TeacherMarkAttendanceScreen: React.FC<TeacherMarkAttendanceScreenProps> = 
 
     const formattedClassName = getFormattedClassName(classInfo.grade, classInfo.section);
 
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const dateVal = e.target.value;
+        if (!dateVal) return;
+
+        const date = new Date(dateVal);
+        const day = date.getDay();
+
+        if (day === 0 || day === 6) {
+            alert("Weekends are disabled! Please select a working day (Mon-Fri).");
+            return;
+        }
+        setSelectedDate(dateVal);
+    };
+
     return (
         <div className="flex flex-col h-full bg-gray-100">
             {/* Header with Date Picker */}
@@ -163,8 +177,8 @@ const TeacherMarkAttendanceScreen: React.FC<TeacherMarkAttendanceScreenProps> = 
                         <input
                             type="date"
                             value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md bg-gray-50"
+                            onChange={handleDateChange}
+                            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md bg-gray-50 bg-white"
                         />
                     </div>
                 </div>

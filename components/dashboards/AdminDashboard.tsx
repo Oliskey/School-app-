@@ -2,6 +2,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Header from '../ui/Header';
 import { AdminBottomNav } from '../ui/DashboardBottomNav';
+import { AdminSideNav } from '../ui/DashboardSideNav';
 import { mockNotifications } from '../../data';
 import { DashboardType } from '../../types';
 import MessagingLayout from '../shared/MessagingLayout';
@@ -207,23 +208,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-100 relative">
-            <Header
-                title={currentNavigation.title}
-                avatarUrl={profile.avatarUrl}
-                bgColor="bg-indigo-800"
-                onLogout={onLogout}
-                onBack={viewStack.length > 1 ? handleBack : undefined}
-                onNotificationClick={handleNotificationClick}
-                notificationCount={notificationCount}
-                onSearchClick={() => setIsSearchOpen(true)}
-            />
-            <div className={`flex-grow ${isMessagesView ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-                <div key={`${viewStack.length}-${version}`} className={`animate-slide-in-up ${isMessagesView ? 'h-full' : ''}`}>
-                    {ComponentToRender ? <ComponentToRender {...currentNavigation.props} {...commonProps} /> : <div>View not found: {currentNavigation.view}</div>}
+        <div className="flex h-full bg-gray-100 relative overflow-hidden">
+            {/* Sidebar for desktop */}
+            <AdminSideNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
+            {/* Main Content Area */}
+            <div className="flex flex-col flex-1 h-full relative overflow-hidden">
+                <Header
+                    title={currentNavigation.title}
+                    avatarUrl={profile.avatarUrl}
+                    bgColor="bg-indigo-800"
+                    onLogout={onLogout}
+                    onBack={viewStack.length > 1 ? handleBack : undefined}
+                    onNotificationClick={handleNotificationClick}
+                    notificationCount={notificationCount}
+                    onSearchClick={() => setIsSearchOpen(true)}
+                />
+
+                {/* Content Container */}
+                <div className={`flex-grow ${isMessagesView ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                    <div key={`${viewStack.length}-${version}`} className={`animate-slide-in-up ${isMessagesView ? 'h-full' : ''}`}>
+                        {ComponentToRender ? <ComponentToRender {...currentNavigation.props} {...commonProps} /> : <div>View not found: {currentNavigation.view}</div>}
+                    </div>
+                </div>
+
+                {/* Bottom Nav for mobile */}
+                <div className="lg:hidden">
+                    <AdminBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
                 </div>
             </div>
-            <AdminBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
             <Suspense fallback={<DashboardSuspenseFallback />}>
                 {isSearchOpen && (
                     <GlobalSearchScreen

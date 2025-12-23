@@ -31,7 +31,7 @@ import {
     SchoolLogoIcon,
 } from '../../constants';
 // import { mockSavedTimetable } from '../../data'; // Mock removed
-import { mockStudents, mockTeachers, mockParents } from '../../data';
+import { mockStudents, mockTeachers, mockParents, mockBusRoster } from '../../data';
 import { AuditLog } from '../../types';
 import DonutChart from '../ui/DonutChart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -288,7 +288,50 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
     useEffect(() => {
         fetchCounts();
         fetchDashboardData();
+        fetchBusRosterLocal(); // Initial load for bus roster
+
+        // 1. SUPABASE REALTIME SUBSCRIPTION (Global Refresh)
+        const channel = supabase.channel('dashboard-global-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public' },
+                (payload) => {
+                    console.log('Real-time change detected:', payload);
+                    // Re-fetch data instantly
+                    fetchCounts();
+                    fetchDashboardData();
+                }
+            )
+            .subscribe();
+
+        // 2. LOCAL STORAGE LISTENER (For Bus Roster Sync)
+        const loadBusRoster = () => fetchBusRosterLocal();
+        window.addEventListener('storage', loadBusRoster);
+
+        // 3. BUS ROSTER POLLING (Fail-safe for same-tab updates if storage event doesn't fire)
+        const busInterval = setInterval(loadBusRoster, 2000);
+
+        return () => {
+            supabase.removeChannel(channel);
+            window.removeEventListener('storage', loadBusRoster);
+            clearInterval(busInterval);
+        };
     }, []);
+
+    const fetchBusRosterLocal = () => {
+        // Sync with LocalStorage (managed by Admin Page), fallback to Mock
+        const saved = localStorage.getItem('schoolApp_busRoster');
+        let currentRoster = mockBusRoster;
+        if (saved) {
+            try { currentRoster = JSON.parse(saved); } catch (e) { console.error(e); }
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const assigned = currentRoster.filter((r: any) => r.date === today && r.driverId).length;
+        // Total routes is static 4 from mock for now, or fetch from data.ts
+        setBusRosterAssigned(assigned);
+        setBusRosterTotal(4); // Hardcoded 4 routes as per data.ts
+    };
 
     const fetchCounts = async () => {
         setIsLoadingCounts(true);
@@ -369,20 +412,9 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
                 setRecentActivities(transformed);
             }
 
-            // Fetch bus roster stats
-            const today = new Date().toISOString().split('T')[0];
-            const { count: assignedCount } = await supabase
-                .from('bus_roster')
-                .select('*', { count: 'exact', head: true })
-                .eq('date', today)
-                .not('driver_id', 'is', null);
-
-            const { count: totalRoutes } = await supabase
-                .from('bus_routes')
-                .select('*', { count: 'exact', head: true });
-
-            setBusRosterAssigned(assignedCount || 0);
-            setBusRosterTotal(totalRoutes || 0);
+            // Fetch bus roster stats - DEPRECATED: Switched to LocalStorage syc
+            // const today = new Date().toISOString().split('T')[0];
+            // const { count: assignedCount } = await supabase...
 
             // Fetch latest health log
             const { data: healthData } = await supabase

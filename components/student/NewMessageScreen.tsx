@@ -32,10 +32,12 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
     const [teachers, setTeachers] = useState<UserListItem[]>([]);
     const [classmates, setClassmates] = useState<UserListItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchUsers = async () => {
             setLoading(true);
+            setError(null);
             try {
                 // Fetch Teachers
                 const { data: teacherData } = await supabase
@@ -86,6 +88,7 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
 
             } catch (e) {
                 console.error("Error fetching users", e);
+                setError("Failed to load contacts. Please try again.");
             } finally {
                 setLoading(false);
             }
@@ -102,6 +105,7 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
     }, [searchTerm, activeTab, teachers, classmates]);
 
     const handleSelectUser = async (user: UserListItem) => {
+        setError(null);
         try {
             // Check for existing direct chat
             // 1. Get my rooms
@@ -153,6 +157,7 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
 
             if (createError || !newRoom) {
                 console.error('Error creating room:', createError);
+                setError(`Failed to start chat: ${createError?.message || 'Unknown error'}`);
                 return;
             }
 
@@ -166,13 +171,15 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
 
             if (partError) {
                 console.error('Error adding participants:', partError);
+                setError(`Failed to add participants: ${partError.message}`);
                 return;
             }
 
             navigateTo('chat', user.name, { conversationId: newRoom.id });
 
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error starting chat:', e);
+            setError(e?.message || 'Failed to start chat. Please try again.');
         }
     };
 
@@ -192,6 +199,12 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
                     />
                 </div>
             </div>
+
+            {error && (
+                <div className="mx-4 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{error}</p>
+                </div>
+            )}
 
             <div className="px-4 bg-gray-100">
                 <div className="flex space-x-2 border-b border-gray-200">

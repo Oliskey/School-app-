@@ -213,45 +213,87 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, conversation, r
     };
 
     if (loading) {
-        return <div className="h-full flex items-center justify-center text-gray-500">Loading conversation...</div>;
+        return <div className="h-full flex items-center justify-center text-gray-500 bg-[#efeae2]">
+            <div className="flex flex-col items-center animate-pulse">
+                <div className="w-10 h-10 bg-gray-300 rounded-full mb-3"></div>
+                <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </div>
+        </div>;
     }
 
     if (!roomId) {
-        return <div className="h-full flex items-center justify-center text-gray-500">Select a conversation to start chatting</div>;
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-[#fdfdfd] border-l border-gray-100">
+                <div className="w-24 h-24 bg-orange-100/50 rounded-full flex items-center justify-center mb-6">
+                    <SendIcon className="w-10 h-10 text-orange-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Your Messages</h3>
+                <p className="text-gray-500 max-w-xs">Select a conversation from the list or start a new chat to begin messaging.</p>
+            </div>
+        );
     }
 
     return (
         <div className="flex flex-col h-full w-full relative bg-[#efeae2]">
+            {/* Header - Only show if we need context, but in split view the sidebar has context. 
+                 However, on mobile pushing to this view might need a header? 
+                 Actually StudentDashboard provides header. So we just need the content.
+                 BUT, for the Chat Area itself, seeing who we are talking to is nice.
+             */}
+            {/* We can do a mini-header inside the chat pane for the contact info */}
+            <div className="bg-white/90 backdrop-blur-sm p-3 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+                <div className="flex items-center space-x-3">
+                    {/* If we had room details passed, we could show avatar here. 
+                        We don't always have it in props, but we can try to find the 'other' participant from messages?
+                        Better: Pass roomDetails properly.
+                    */}
+                    {roomDetails?.displayAvatar && (
+                        <img src={roomDetails.displayAvatar} className="w-10 h-10 rounded-full object-cover border border-gray-100" alt="" />
+                    )}
+                    <div>
+                        <h3 className="font-bold text-gray-800 leading-tight">{roomDetails?.displayName || 'Chat'}</h3>
+                        {/* Optional status text */}
+                    </div>
+                </div>
+                <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                    <DotsVerticalIcon />
+                </button>
+            </div>
+
             {/* Messages Area */}
-            <div className="flex-grow p-4 space-y-2 overflow-y-auto custom-scrollbar">
+            <div className="flex-grow p-4 space-y-3 overflow-y-auto custom-scrollbar" style={{ backgroundImage: 'radial-gradient(#ddd 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
                 {messages.map((msg, index) => {
                     const isCurrentUser = msg.senderId === currentUserId;
-                    // Check if previous message was same sender to group visually
                     const isSequence = index > 0 && messages[index - 1].senderId === msg.senderId;
 
                     return (
-                        <div key={msg.id || index} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${isSequence ? 'mt-1' : 'mt-3'}`}>
+                        <div key={msg.id || index} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} ${isSequence ? 'mt-1' : 'mt-4'} group`}>
                             {!isCurrentUser && !isSequence && (
-                                <div className="w-8 h-8 mr-2 rounded-full bg-gray-300 overflow-hidden flex-shrink-0 self-end mb-1">
-                                    {msg.sender?.avatarUrl && <img src={msg.sender.avatarUrl} className="w-full h-full object-cover" />}
+                                <div className="w-8 h-8 mr-2 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 self-end mb-1 shadow-sm border border-white">
+                                    {msg.sender?.avatarUrl ? (
+                                        <img src={msg.sender.avatarUrl} className="w-full h-full object-cover" alt={msg.sender.name} />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">?</div>
+                                    )}
                                 </div>
                             )}
                             {!isCurrentUser && isSequence && <div className="w-8 mr-2 flex-shrink-0" />}
 
-                            <div className={`max-w-xs md:max-w-md lg:max-w-lg px-3 py-2 shadow-sm relative group ${isCurrentUser
-                                ? 'bg-[#d9fdd3] rounded-l-xl rounded-tr-xl rounded-br-xl'
-                                : 'bg-white rounded-r-xl rounded-tl-xl rounded-bl-xl'
+                            <div className={`max-w-[80%] md:max-w-[65%] px-4 py-2.5 shadow-sm relative text-sm ${isCurrentUser
+                                    ? 'bg-orange-500 text-white rounded-2xl rounded-tr-sm'
+                                    : 'bg-white text-gray-800 rounded-2xl rounded-tl-sm'
                                 }`}>
+
                                 {!isCurrentUser && !isSequence && msg.sender?.name && (
-                                    <p className="text-xs font-bold text-orange-600 mb-1">{msg.sender.name}</p>
+                                    <p className="text-[11px] font-bold text-orange-600 mb-1 opacity-90">{msg.sender.name}</p>
                                 )}
 
                                 {msg.type === 'text' && (
-                                    <p className="text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                                    <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
                                 )}
 
-                                <div className="flex justify-end items-center gap-1 mt-1">
-                                    <span className="text-[10px] text-gray-500 leading-none">
+                                <div className={`flex items-end gap-1 mt-1 ${isCurrentUser ? 'justify-end text-orange-100' : 'justify-end text-gray-400'}`}>
+                                    <span className="text-[10px] leading-none opacity-80">
                                         {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
                                     </span>
                                 </div>
@@ -262,10 +304,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, conversation, r
 
                 {typingUsers.size > 0 && (
                     <div className="flex items-center space-x-2 ml-12 mt-2">
-                        <div className="flex space-x-1 bg-white p-2 rounded-xl shadow-sm">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        <div className="flex space-x-1 bg-white px-3 py-2 rounded-2xl rounded-tl-none shadow-sm border border-gray-100">
+                            <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                         </div>
                     </div>
                 )}
@@ -274,27 +316,30 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, conversation, r
             </div>
 
             {/* Input Area */}
-            <div className="p-3 bg-[#F0F2F5] border-t border-gray-200">
-                <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
-                    <button type="button" className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-colors">
-                        {/* Placeholder for emojis */}
+            <div className="p-3 bg-white border-t border-gray-100">
+                <form onSubmit={handleSendMessage} className="flex items-end space-x-2 max-w-5xl mx-auto">
+                    <button type="button" className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                         <HappyIcon className="w-6 h-6" />
                     </button>
-                    <button type="button" className="p-2 text-gray-500 hover:bg-gray-200 rounded-full transition-colors">
-                        {/* Placeholder for attachments */}
+                    <button type="button" className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                         <PaperclipIcon className="w-5 h-5" />
                     </button>
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={onInputChange}
-                        placeholder="Type a message"
-                        className="flex-grow px-4 py-2 bg-white border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-green-400 focus:border-green-400 transition-all"
-                    />
+                    <div className="flex-grow bg-gray-100 rounded-2xl flex items-center px-4 py-2 focus-within:ring-2 focus-within:ring-orange-100 focus-within:bg-white transition-all border border-transparent focus-within:border-orange-200">
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={onInputChange}
+                            placeholder="Type a message..."
+                            className="flex-grow bg-transparent border-none focus:ring-0 text-gray-700 placeholder-gray-400 h-full py-1 text-sm sm:text-base outline-none"
+                        />
+                    </div>
                     <button
                         type="submit"
                         disabled={!inputText.trim()}
-                        className={`p-3 rounded-full text-white transition-all transform ${inputText.trim() ? 'bg-green-500 hover:scale-105 active:scale-95' : 'bg-gray-300'}`}
+                        className={`p-3 rounded-full shadow-md text-white transition-all transform ${inputText.trim()
+                                ? 'bg-orange-500 hover:bg-orange-600 hover:scale-105 active:scale-95 shadow-orange-200'
+                                : 'bg-gray-200 cursor-not-allowed'
+                            }`}
                         aria-label="Send message"
                     >
                         <SendIcon className="w-5 h-5" />

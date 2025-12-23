@@ -128,6 +128,120 @@ export async function fetchStudentsByClass(grade: number, section: string): Prom
     }
 }
 
+export async function fetchStudentSubjects(grade: number, section: string): Promise<string[]> {
+    try {
+        const { data, error } = await supabase
+            .from('classes')
+            .select('subject')
+            .eq('grade', grade)
+            .eq('section', section);
+
+        if (error) throw error;
+
+        // Return unique subjects
+        return Array.from(new Set((data || []).map((c: any) => c.subject)));
+    } catch (err) {
+        console.error('Error fetching student subjects:', err);
+        return [];
+    }
+}
+
+export async function createStudent(studentData: {
+    name: string;
+    email?: string;
+    grade: number;
+    section: string;
+    department?: string;
+    birthday?: string;
+    avatarUrl?: string;
+    userId?: number;
+}): Promise<Student | null> {
+    try {
+        const { data, error } = await supabase
+            .from('students')
+            .insert({
+                user_id: studentData.userId,
+                name: studentData.name,
+                email: studentData.email,
+                grade: studentData.grade,
+                section: studentData.section,
+                department: studentData.department,
+                birthday: studentData.birthday,
+                avatar_url: studentData.avatarUrl,
+                attendance_status: 'Absent',
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            name: data.name,
+            avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150',
+            grade: data.grade,
+            section: data.section,
+            department: data.department,
+            attendanceStatus: data.attendance_status || 'Absent',
+            birthday: data.birthday
+        };
+    } catch (err) {
+        console.error('Error creating student:', err);
+        return null;
+    }
+}
+
+export async function updateStudent(id: number, updates: Partial<{
+    name: string;
+    email: string;
+    grade: number;
+    section: string;
+    department: string;
+    birthday: string;
+    avatarUrl: string;
+    attendanceStatus: string;
+}>): Promise<boolean> {
+    try {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.grade !== undefined) dbUpdates.grade = updates.grade;
+        if (updates.section !== undefined) dbUpdates.section = updates.section;
+        if (updates.department !== undefined) dbUpdates.department = updates.department;
+        if (updates.birthday !== undefined) dbUpdates.birthday = updates.birthday;
+        if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+        if (updates.attendanceStatus !== undefined) dbUpdates.attendance_status = updates.attendanceStatus;
+
+        const { error } = await supabase
+            .from('students')
+            .update(dbUpdates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error updating student:', err);
+        return false;
+    }
+}
+
+export async function deleteStudent(id: number): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('students')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting student:', err);
+        return false;
+    }
+}
+
+
 // ============================================
 // TEACHERS
 // ============================================
@@ -190,6 +304,147 @@ export async function fetchTeacherById(id: number): Promise<Teacher | null> {
         return null;
     }
 }
+
+export async function createTeacher(teacherData: {
+    name: string;
+    email: string;
+    phone?: string;
+    subjects?: string[];
+    classes?: string[];
+    avatarUrl?: string;
+}): Promise<Teacher | null> {
+    try {
+        // Insert teacher first
+        const { data: teacher, error: teacherError } = await supabase
+            .from('teachers')
+            .insert({
+                name: teacherData.name,
+                email: teacherData.email,
+                phone: teacherData.phone,
+                avatar_url: teacherData.avatarUrl,
+                status: 'Active',
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (teacherError) throw teacherError;
+
+        // Insert subjects if provided
+        if (teacherData.subjects && teacherData.subjects.length > 0) {
+            const subjectInserts = teacherData.subjects.map(subject => ({
+                teacher_id: teacher.id,
+                subject
+            }));
+            await supabase.from('teacher_subjects').insert(subjectInserts);
+        }
+
+        // Insert classes if provided
+        if (teacherData.classes && teacherData.classes.length > 0) {
+            const classInserts = teacherData.classes.map(className => ({
+                teacher_id: teacher.id,
+                class_name: className
+            }));
+            await supabase.from('teacher_classes').insert(classInserts);
+        }
+
+        return {
+            id: teacher.id,
+            name: teacher.name,
+            avatarUrl: teacher.avatar_url || 'https://i.pravatar.cc/150?u=teacher',
+            email: teacher.email,
+            phone: teacher.phone || '',
+            status: teacher.status || 'Active',
+            subjects: teacherData.subjects || [],
+            classes: teacherData.classes || []
+        };
+    } catch (err) {
+        console.error('Error creating teacher:', err);
+        return null;
+    }
+}
+
+export async function updateTeacher(id: number, updates: Partial<{
+    name: string;
+    email: string;
+    phone: string;
+    avatarUrl: string;
+    status: string;
+    subjects: string[];
+    classes: string[];
+}>): Promise<boolean> {
+    try {
+        // Update teacher basic info
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+
+        if (Object.keys(dbUpdates).length > 0) {
+            const { error } = await supabase
+                .from('teachers')
+                .update(dbUpdates)
+                .eq('id', id);
+            if (error) throw error;
+        }
+
+        // Update subjects if provided
+        if (updates.subjects !== undefined) {
+            // Delete existing
+            await supabase.from('teacher_subjects').delete().eq('teacher_id', id);
+            // Insert new
+            if (updates.subjects.length > 0) {
+                const subjectInserts = updates.subjects.map(subject => ({
+                    teacher_id: id,
+                    subject
+                }));
+                await supabase.from('teacher_subjects').insert(subjectInserts);
+            }
+        }
+
+        // Update classes if provided
+        if (updates.classes !== undefined) {
+            // Delete existing
+            await supabase.from('teacher_classes').delete().eq('teacher_id', id);
+            // Insert new
+            if (updates.classes.length > 0) {
+                const classInserts = updates.classes.map(className => ({
+                    teacher_id: id,
+                    class_name: className
+                }));
+                await supabase.from('teacher_classes').insert(classInserts);
+            }
+        }
+
+        return true;
+    } catch (err) {
+        console.error('Error updating teacher:', err);
+        return false;
+    }
+}
+
+export async function deleteTeacher(id: number): Promise<boolean> {
+    try {
+        // Delete related records first (cascade should handle this, but being explicit)
+        await supabase.from('teacher_subjects').delete().eq('teacher_id', id);
+        await supabase.from('teacher_classes').delete().eq('teacher_id', id);
+
+        // Delete teacher
+        const { error } = await supabase
+            .from('teachers')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting teacher:', err);
+        return false;
+    }
+}
+
 
 // ============================================
 // PARENTS
@@ -350,6 +605,108 @@ export async function fetchParentsForStudent(studentId: number): Promise<Parent[
     }
 }
 
+export async function createParent(parentData: {
+    name: string;
+    email: string;
+    phone?: string;
+    childIds?: number[];
+    avatarUrl?: string;
+}): Promise<Parent | null> {
+    try {
+        const { data, error } = await supabase
+            .from('parents')
+            .insert({
+                name: parentData.name,
+                email: parentData.email,
+                phone: parentData.phone,
+                avatar_url: parentData.avatarUrl,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Link children if provided
+        if (parentData.childIds && parentData.childIds.length > 0) {
+            const linkInserts = parentData.childIds.map(studentId => ({
+                parent_id: data.id,
+                student_id: studentId
+            }));
+            await supabase.from('parent_children').insert(linkInserts);
+        }
+
+        return {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone || '',
+            avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150?u=parent',
+            childIds: parentData.childIds || []
+        };
+    } catch (err) {
+        console.error('Error creating parent:', err);
+        return null;
+    }
+}
+
+export async function updateParent(id: number, updates: Partial<{
+    name: string;
+    email: string;
+    phone: string;
+    avatarUrl: string;
+    childIds: number[];
+}>): Promise<boolean> {
+    try {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+
+        if (Object.keys(dbUpdates).length > 0) {
+            const { error } = await supabase
+                .from('parents')
+                .update(dbUpdates)
+                .eq('id', id);
+            if (error) throw error;
+        }
+
+        // Update child links if provided
+        if (updates.childIds !== undefined) {
+            await supabase.from('parent_children').delete().eq('parent_id', id);
+            if (updates.childIds.length > 0) {
+                const linkInserts = updates.childIds.map(studentId => ({
+                    parent_id: id,
+                    student_id: studentId
+                }));
+                await supabase.from('parent_children').insert(linkInserts);
+            }
+        }
+
+        return true;
+    } catch (err) {
+        console.error('Error updating parent:', err);
+        return false;
+    }
+}
+
+export async function deleteParent(id: number): Promise<boolean> {
+    try {
+        await supabase.from('parent_children').delete().eq('parent_id', id);
+        const { error } = await supabase
+            .from('parents')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting parent:', err);
+        return false;
+    }
+}
+
 // ============================================
 // NOTICES & ANNOUNCEMENTS
 // ============================================
@@ -375,6 +732,87 @@ export async function fetchNotices(): Promise<Notice[]> {
     } catch (err) {
         console.error('Error fetching notices:', err);
         return [];
+    }
+}
+
+export async function createNotice(noticeData: {
+    title: string;
+    content: string;
+    category: string;
+    isPinned?: boolean;
+    audience?: string[];
+}): Promise<Notice | null> {
+    try {
+        const { data, error } = await supabase
+            .from('notices')
+            .insert({
+                title: noticeData.title,
+                content: noticeData.content,
+                category: noticeData.category,
+                is_pinned: noticeData.isPinned || false,
+                audience: noticeData.audience || ['all'],
+                timestamp: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            title: data.title,
+            content: data.content,
+            timestamp: data.timestamp,
+            category: data.category,
+            isPinned: data.is_pinned || false,
+            audience: data.audience || ['all']
+        };
+    } catch (err) {
+        console.error('Error creating notice:', err);
+        return null;
+    }
+}
+
+export async function updateNotice(id: number, updates: Partial<{
+    title: string;
+    content: string;
+    category: string;
+    isPinned: boolean;
+    audience: string[];
+}>): Promise<boolean> {
+    try {
+        const dbUpdates: any = {};
+        if (updates.title !== undefined) dbUpdates.title = updates.title;
+        if (updates.content !== undefined) dbUpdates.content = updates.content;
+        if (updates.category !== undefined) dbUpdates.category = updates.category;
+        if (updates.isPinned !== undefined) dbUpdates.is_pinned = updates.isPinned;
+        if (updates.audience !== undefined) dbUpdates.audience = updates.audience;
+
+        const { error } = await supabase
+            .from('notices')
+            .update(dbUpdates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error updating notice:', err);
+        return false;
+    }
+}
+
+export async function deleteNotice(id: number): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('notices')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting notice:', err);
+        return false;
     }
 }
 
@@ -434,6 +872,88 @@ export async function fetchAssignments(): Promise<Assignment[]> {
     }
 }
 
+export async function createAssignment(assignmentData: {
+    title: string;
+    description: string;
+    className: string;
+    subject: string;
+    dueDate: string;
+}): Promise<Assignment | null> {
+    try {
+        const { data, error } = await supabase
+            .from('assignments')
+            .insert({
+                title: assignmentData.title,
+                description: assignmentData.description,
+                class_name: assignmentData.className,
+                subject: assignmentData.subject,
+                due_date: assignmentData.dueDate,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            className: data.class_name,
+            subject: data.subject,
+            dueDate: data.due_date,
+            totalStudents: data.total_students || 0,
+            submissionsCount: data.submissions_count || 0
+        };
+    } catch (err) {
+        console.error('Error creating assignment:', err);
+        return null;
+    }
+}
+
+export async function updateAssignment(id: number, updates: Partial<{
+    title: string;
+    description: string;
+    className: string;
+    subject: string;
+    dueDate: string;
+}>): Promise<boolean> {
+    try {
+        const dbUpdates: any = {};
+        if (updates.title !== undefined) dbUpdates.title = updates.title;
+        if (updates.description !== undefined) dbUpdates.description = updates.description;
+        if (updates.className !== undefined) dbUpdates.class_name = updates.className;
+        if (updates.subject !== undefined) dbUpdates.subject = updates.subject;
+        if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate;
+
+        const { error } = await supabase
+            .from('assignments')
+            .update(dbUpdates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error updating assignment:', err);
+        return false;
+    }
+}
+
+export async function deleteAssignment(id: number): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('assignments')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting assignment:', err);
+        return false;
+    }
+}
+
 // ============================================
 // EXAMS
 // ============================================
@@ -459,6 +979,136 @@ export async function fetchExams(): Promise<Exam[]> {
         }));
     } catch (err) {
         console.error('Error fetching exams:', err);
+        return [];
+    }
+}
+
+//============================================
+// FEE MANAGEMENT
+// ============================================
+
+export async function fetchStudentFees(studentId?: number): Promise<any[]> {
+    try {
+        let query = supabase.from('student_fees').select('*');
+
+        if (studentId) {
+            query = query.eq('student_id', studentId);
+        }
+
+        const { data, error } = await query.order('due_date', { ascending: true });
+
+        if (error) throw error;
+        return (data || []).map((f: any) => ({
+            id: f.id,
+            studentId: f.student_id,
+            totalFee: f.total_fee,
+            paidAmount: f.paid_amount,
+            status: f.status,
+            dueDate: f.due_date,
+            title: f.title,
+            term: f.term
+        }));
+    } catch (err) {
+        console.error('Error fetching student fees:', err);
+        return [];
+    }
+}
+
+export async function createFeeRecord(feeData: {
+    studentId: number;
+    amount: number;
+    title: string;
+    dueDate: string;
+    term?: string;
+    status?: string;
+}): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('student_fees')
+            .insert({
+                student_id: feeData.studentId,
+                total_fee: feeData.amount,
+                title: feeData.title,
+                due_date: feeData.dueDate,
+                term: feeData.term || 'Term 1',
+                status: feeData.status || 'Unpaid'
+            });
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error creating fee record:', err);
+        return false;
+    }
+}
+
+export async function updateFeeStatus(feeId: number, status: string, amountPaid?: number): Promise<boolean> {
+    try {
+        const updates: any = { status };
+        if (amountPaid !== undefined) {
+            updates.paid_amount = amountPaid;
+            updates.payment_date = new Date().toISOString();
+        }
+
+        const { error } = await supabase
+            .from('student_fees')
+            .update(updates)
+            .eq('id', feeId);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error updating fee status:', err);
+        return false;
+    }
+}
+
+// ============================================
+// ATTENDANCE OPERATIONS
+// ============================================
+
+export async function saveAttendanceRecords(records: Array<{
+    studentId: number;
+    date: string;
+    status: string;
+    className?: string;
+}>): Promise<boolean> {
+    try {
+        const inserts = records.map(r => ({
+            student_id: r.studentId,
+            date: r.date,
+            status: r.status,
+            class_name: r.className
+        }));
+
+        // Use upsert to update existing or insert new
+        const { error } = await supabase
+            .from('student_attendance')
+            .upsert(inserts, {
+                onConflict: 'student_id,date',
+                ignoreDuplicates: false
+            });
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error saving attendance records:', err);
+        return false;
+    }
+}
+
+export async function fetchAttendanceForClass(className: string, date: string): Promise<any[]> {
+    try {
+        const { data, error } = await supabase
+            .from('student_attendance')
+            .select('*')
+            .eq('class_name', className)
+            .eq('date', date);
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('Error fetching attendance:', err);
         return [];
     }
 }

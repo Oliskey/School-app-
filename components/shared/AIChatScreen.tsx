@@ -11,10 +11,10 @@ import LiveSession from './LiveSession';
 import MediaGenerator from './MediaGenerator';
 
 interface Message {
-  role: 'user' | 'model';
-  text: string;
-  imageUrl?: string;
-  audioData?: string; // Base64 encoded
+    role: 'user' | 'model';
+    text: string;
+    imageUrl?: string;
+    audioData?: string; // Base64 encoded
 }
 
 interface AIChatScreenProps {
@@ -24,14 +24,14 @@ interface AIChatScreenProps {
 
 // --- Helper Functions ---
 const fileToGenerativePart = async (file: File) => {
-  const base64EncodedDataPromise = new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-    reader.readAsDataURL(file);
-  });
-  return {
-    inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-  };
+    const base64EncodedDataPromise = new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+    });
+    return {
+        inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+    };
 };
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -46,7 +46,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) => {
     const theme = THEME_CONFIG[dashboardType];
     const [activeTab, setActiveTab] = useState<'chat' | 'live' | 'create'>('chat');
-    
+
     // Chat State
     const [messages, setMessages] = useState<Message[]>([
         { role: 'model', text: "Hello! I'm your enhanced AI assistant. Use the tabs below to switch between Chat, Live Voice, and Creative Studio." }
@@ -54,11 +54,11 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
-    
+
     // Chat Settings
     const [thinkingMode, setThinkingMode] = useState(false);
     const [useGrounding, setUseGrounding] = useState<'none' | 'search' | 'maps'>('none');
-    
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -69,14 +69,14 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const recorder = new MediaRecorder(stream);
             const chunks: Blob[] = [];
-            
+
             recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = async () => {
                 const audioBlob = new Blob(chunks, { type: 'audio/wav' });
                 const base64Audio = await blobToBase64(audioBlob);
                 handleTranscribe(base64Audio);
             };
-            
+
             mediaRecorderRef.current = recorder;
             recorder.start();
             setIsRecording(true);
@@ -96,7 +96,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash', // Efficient for transcription
+                model: 'gemini-2.0-flash', // Efficient for transcription
                 contents: {
                     parts: [
                         { inlineData: { mimeType: 'audio/wav', data: base64Audio } },
@@ -119,11 +119,11 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-preview-tts',
+                model: 'gemini-2.0-flash',
                 contents: { parts: [{ text }] },
                 config: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } }
             });
-            
+
             const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
             if (audioData) {
                 const audioBlob = await (await fetch(`data:audio/mp3;base64,${audioData}`)).blob();
@@ -139,10 +139,10 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
     // --- Main Chat Logic ---
     const handleSendMessage = async (text: string, attachment?: File) => {
         if (!text && !attachment) return;
-        
+
         setIsLoading(true);
         setInputText('');
-        
+
         let userMsg: Message = { role: 'user', text };
         if (attachment) {
             userMsg.imageUrl = URL.createObjectURL(attachment);
@@ -151,7 +151,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            let modelName = 'gemini-2.5-flash-lite'; // Default fast
+            let modelName = 'gemini-2.0-flash'; // Default fast
             let config: any = {};
             let parts: any[] = [];
 
@@ -159,19 +159,19 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
             if (attachment) {
                 const filePart = await fileToGenerativePart(attachment);
                 parts.push(filePart);
-                modelName = 'gemini-3-pro-preview'; // Switch for vision tasks
+                modelName = 'gemini-1.5-pro'; // Switch for vision tasks
             }
 
             if (thinkingMode) {
-                modelName = 'gemini-3-pro-preview';
+                modelName = 'gemini-1.5-pro';
                 config.thinkingConfig = { thinkingBudget: 32768 };
             }
 
             if (useGrounding === 'search') {
-                modelName = 'gemini-2.5-flash';
+                modelName = 'gemini-2.0-flash';
                 config.tools = [{ googleSearch: {} }];
             } else if (useGrounding === 'maps') {
-                modelName = 'gemini-2.5-flash';
+                modelName = 'gemini-2.0-flash';
                 config.tools = [{ googleMaps: {} }];
             }
 
@@ -214,7 +214,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
                 bgColor={theme.mainBg}
                 onBack={onBack}
             />
-            
+
             {/* Mode Tabs */}
             <div className="flex bg-white shadow-sm z-10">
                 {[
@@ -225,9 +225,8 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex-1 py-3 flex items-center justify-center space-x-2 border-b-4 transition-colors ${
-                            activeTab === tab.id ? `border-${theme.iconColor.split('-')[1]}-500 text-gray-800` : 'border-transparent text-gray-500 hover:bg-gray-50'
-                        }`}
+                        className={`flex-1 py-3 flex items-center justify-center space-x-2 border-b-4 transition-colors ${activeTab === tab.id ? `border-${theme.iconColor.split('-')[1]}-500 text-gray-800` : 'border-transparent text-gray-500 hover:bg-gray-50'
+                            }`}
                     >
                         <tab.icon className="w-5 h-5" />
                         <span className="font-medium text-sm hidden sm:inline">{tab.label}</span>
@@ -237,9 +236,9 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
 
             <div className="flex-grow overflow-hidden relative bg-gray-50">
                 {activeTab === 'live' && <LiveSession onClose={() => setActiveTab('chat')} />}
-                
+
                 {activeTab === 'create' && <MediaGenerator />}
-                
+
                 {activeTab === 'chat' && (
                     <div className="flex flex-col h-full">
                         {/* Chat Messages */}
@@ -283,15 +282,15 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
                             <div className="flex items-end space-x-2">
                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleSendMessage("", e.target.files[0])} />
                                 <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"><CameraIcon className="w-6 h-6" /></button>
-                                
+
                                 <div className="flex-grow bg-gray-100 rounded-2xl flex items-center px-3 py-2">
-                                    <textarea 
-                                        value={inputText} 
-                                        onChange={e => setInputText(e.target.value)} 
-                                        placeholder="Ask anything..." 
-                                        className="bg-transparent w-full outline-none resize-none text-sm max-h-24" 
+                                    <textarea
+                                        value={inputText}
+                                        onChange={e => setInputText(e.target.value)}
+                                        placeholder="Ask anything..."
+                                        className="bg-transparent w-full outline-none resize-none text-sm max-h-24"
                                         rows={1}
-                                        onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(inputText); }}}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(inputText); } }}
                                     />
                                 </div>
 

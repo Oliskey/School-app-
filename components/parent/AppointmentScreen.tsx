@@ -27,7 +27,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
                 .eq('status', 'Active');
 
             if (data) {
-                const mappedTeachers = data.map((t: any) => ({
+                const mapTeacher = (t: any) => ({
                     id: t.id,
                     name: t.name,
                     avatarUrl: t.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random`,
@@ -37,12 +37,83 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
                     bio: '',
                     email: t.email || '',
                     phone: t.phone || ''
-                } as Teacher));
+                } as Teacher);
+
+                const mappedTeachers = data.map(mapTeacher);
                 setTeachers(mappedTeachers);
             }
             setLoadingTeachers(false);
         };
+
         fetchTeachers();
+
+        // Real-time subscription
+        const subscription = supabase
+            .channel('public:teachers_appointment')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'teachers' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const newTeacher = payload.new as any;
+                    if (newTeacher.status === 'Active') {
+                        setTeachers(prev => {
+                            if (prev.find(t => t.id === newTeacher.id)) return prev;
+                            return [...prev, {
+                                id: newTeacher.id,
+                                name: newTeacher.name,
+                                avatarUrl: newTeacher.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(newTeacher.name)}&background=random`,
+                                subjects: [],
+                                classes: [],
+                                status: newTeacher.status,
+                                bio: '',
+                                email: newTeacher.email || '',
+                                phone: newTeacher.phone || ''
+                            } as Teacher];
+                        });
+                    }
+                } else if (payload.eventType === 'UPDATE') {
+                    const updatedTeacher = payload.new as any;
+                    setTeachers(prev => {
+                        // If status is not Active, remove it
+                        if (updatedTeacher.status !== 'Active') {
+                            return prev.filter(t => t.id !== updatedTeacher.id);
+                        }
+                        // If it IS Active, add or update it
+                        const existingIndex = prev.findIndex(t => t.id === updatedTeacher.id);
+                        if (existingIndex > -1) {
+                            const newPrev = [...prev];
+                            newPrev[existingIndex] = {
+                                ...newPrev[existingIndex],
+                                name: updatedTeacher.name,
+                                avatarUrl: updatedTeacher.avatar_url,
+                                status: updatedTeacher.status,
+                                email: updatedTeacher.email,
+                                phone: updatedTeacher.phone
+                            };
+                            return newPrev;
+                        } else {
+                            // Was not in list (maybe was inactive before), add it
+                            return [...prev, {
+                                id: updatedTeacher.id,
+                                name: updatedTeacher.name,
+                                avatarUrl: updatedTeacher.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(updatedTeacher.name)}&background=random`,
+                                subjects: [],
+                                classes: [],
+                                status: updatedTeacher.status,
+                                bio: '',
+                                email: updatedTeacher.email || '',
+                                phone: updatedTeacher.phone || ''
+                            } as Teacher];
+                        }
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    const deletedTeacher = payload.old as any;
+                    setTeachers(prev => prev.filter(t => t.id !== deletedTeacher.id));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(subscription);
+        };
     }, []);
 
     const activeTeachers = teachers;

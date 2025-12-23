@@ -17,14 +17,14 @@ const fileToText = (file: File): Promise<string> => {
 };
 
 const fileToGenerativePart = async (file: File) => {
-  const base64EncodedDataPromise = new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-    reader.readAsDataURL(file);
-  });
-  return {
-    inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-  };
+    const base64EncodedDataPromise = new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+    });
+    return {
+        inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+    };
 };
 
 type AdventureContent = { type: 'text', content: string } | { type: 'media', content: { inlineData: { data: string; mimeType: string; } } };
@@ -39,7 +39,13 @@ const AdventureQuestHost: React.FC<{ handleBack: () => void }> = ({ handleBack }
         setAppState('loading');
         setError(null);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+            if (!apiKey) {
+                setError("Configuration Error: API Key is missing. Please check your settings.");
+                setAppState('home');
+                return;
+            }
+            const ai = new GoogleGenAI({ apiKey });
 
             const sourceContentDescription = adventureContent.type === 'text'
                 ? 'the following text'
@@ -63,16 +69,16 @@ const AdventureQuestHost: React.FC<{ handleBack: () => void }> = ({ handleBack }
                     - "image_prompt": A creative, detailed, and safe-for-kids DALL-E style prompt to generate a vibrant, illustrative, and imaginative cartoon-style image related to the question. For example: "A friendly cartoon lion wearing a crown, explaining the food chain to a group of curious cartoon animals in a sunny savanna, digital art".
                     - "background_theme": A single keyword for the background style (e.g., 'jungle', 'space', 'ocean', 'castle', 'desert', 'lab').
             `;
-            
+
             let contents;
             if (adventureContent.type === 'text') {
-                 contents = `${systemPrompt}\n\nSource Content:\n---\n${adventureContent.content.substring(0, 30000)}\n---`;
+                contents = `${systemPrompt}\n\nSource Content:\n---\n${adventureContent.content.substring(0, 30000)}\n---`;
             } else { // media
                 contents = { parts: [{ text: systemPrompt }, adventureContent.content] };
             }
 
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.0-flash',
                 contents: contents,
                 config: {
                     responseMimeType: "application/json",

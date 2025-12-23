@@ -98,9 +98,22 @@ export const mockProgressReports: ProgressReport[] = [];
 export const mockEnrollmentData: { year: number, count: number }[] = [];
 export const mockAuditLogs: AuditLog[] = [];
 export const mockSavedTimetable = { current: null as any };
-export const mockBusRoster: BusRosterEntry[] = [];
-export const mockBusRoutes: BusRoute[] = [];
-export const mockDrivers: Driver[] = [];
+export const mockBusRoster: BusRosterEntry[] = [
+    { routeId: 'R1', driverId: 2, date: new Date().toISOString().split('T')[0] },
+    { routeId: 'R2', driverId: 1, date: new Date().toISOString().split('T')[0] }
+];
+export const mockBusRoutes: BusRoute[] = [
+    { id: 'R1', name: 'Route A - North Falls', description: 'Serves the northern residential districts and North Falls Estate.' },
+    { id: 'R2', name: 'Route B - Sunnyside', description: 'Covers Sunnyside Avenue, Green Park, and the central market area.' },
+    { id: 'R3', name: 'Route C - West End', description: 'Serves the West End layout including the new housing development.' },
+    { id: 'R4', name: 'Route D - Harbour View', description: 'Long distance route covering Harbour View and coastal road.' }
+];
+export const mockDrivers: Driver[] = [
+    { id: 1, name: 'Mr. John Smith', avatarUrl: 'https://i.pravatar.cc/150?u=john', phone: '+1234567890' },
+    { id: 2, name: 'Mrs. Sarah Connor', avatarUrl: 'https://i.pravatar.cc/150?u=sarah', phone: '+1234567891' },
+    { id: 3, name: 'Mr. Mike T', avatarUrl: 'https://i.pravatar.cc/150?u=mike', phone: '+1234567892' },
+    { id: 4, name: 'Ms. Davina K', avatarUrl: 'https://i.pravatar.cc/150?u=davina', phone: '+1234567893' }
+];
 export const mockPickupPoints: PickupPoint[] = [];
 export const mockHealthLogs: HealthLogEntry[] = [];
 export const mockExamsData: Exam[] = [];
@@ -127,7 +140,16 @@ export const mockPermissionSlip: PermissionSlip = {
 export const mockStoreProducts: StoreProduct[] = [];
 export const mockStoreOrders: StoreOrder[] = [];
 export const mockForumTopics: ForumTopic[] = [];
-export const mockAppointmentSlots: AppointmentSlot[] = [];
+export const mockAppointmentSlots: AppointmentSlot[] = [
+    { time: '09:00 AM', isBooked: false },
+    { time: '10:00 AM', isBooked: false },
+    { time: '11:00 AM', isBooked: true }, // One booked for demo
+    { time: '12:00 PM', isBooked: false },
+    { time: '01:00 PM', isBooked: false },
+    { time: '02:00 PM', isBooked: false },
+    { time: '03:00 PM', isBooked: false },
+    { time: '04:00 PM', isBooked: false }
+];
 export const mockAppointments: Appointment[] = [];
 export const mockQuizzes: Quiz[] = [];
 export const mockPdResources: PDResource[] = [];

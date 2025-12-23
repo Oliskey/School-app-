@@ -6,6 +6,7 @@ import { DashboardType, Student, StudentAssignment } from '../../types';
 import { THEME_CONFIG, ClockIcon, ClipboardListIcon, BellIcon, ChartBarIcon, ChevronRightIcon, SUBJECT_COLORS, BookOpenIcon, MegaphoneIcon, AttendanceSummaryIcon, CalendarIcon, ElearningIcon, StudyBuddyIcon, SparklesIcon, ReceiptIcon, AwardIcon, HelpIcon, GameControllerIcon } from '../../constants';
 import Header from '../ui/Header';
 import { StudentBottomNav } from '../ui/DashboardBottomNav';
+import { StudentSideNav } from '../ui/DashboardSideNav';
 import { mockStudents, mockTimetableData, mockAssignments, mockSubmissions, mockNotices, mockNotifications } from '../../data';
 import ErrorBoundary from '../ui/ErrorBoundary';
 import { useProfile } from '../../context/ProfileContext';
@@ -233,6 +234,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [student, setStudent] = useState<any>(null); // Use explicit type if available
     const [isLoading, setIsLoading] = useState(true);
+    const [isCreatingProfile, setIsCreatingProfile] = useState(false);
     const forceUpdate = () => setVersion(v => v + 1);
     const notificationCount = mockNotifications.filter(n => !n.isRead && n.audience.includes('student')).length;
 
@@ -250,16 +252,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                     setStudent(data);
                 } else {
                     console.warn("Student not found for email:", profile.email);
-                    // Fallback to demo student if local email doesn't match DB (e.g. 'student@school.com')
-                    if (profile.email === 'student@school.com') {
-                        // Assuming ID 4 matches the mock student used elsewhere or a real ID in DB for demo
+                    // Fallback to demo student for testing purposes
+                    // Match any demo email pattern (@school.com domain for quick login)
+                    if (profile.email?.endsWith('@school.com') || profile.email?.includes('student') || profile.email?.includes('demo')) {
+                        console.log('Using demo student fallback for:', profile.email);
                         setStudent({
-                            id: 4,
-                            name: 'Sade Olubayo',
+                            id: 1, // Use first student from sample data (John Doe)
+                            name: 'John Doe',
                             grade: 10,
                             section: 'A',
-                            avatarUrl: 'https://i.pravatar.cc/150?u=student4',
-                            email: 'student@school.com',
+                            avatarUrl: 'https://i.pravatar.cc/150?img=1',
+                            email: profile.email,
                             department: 'Science'
                         });
                     }
@@ -361,6 +364,40 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         forceUpdate,
     };
 
+    const handleCreateProfile = async () => {
+        if (!profile.id || !profile.email) return;
+
+        try {
+            setIsCreatingProfile(true);
+            const { createStudent } = await import('../../lib/database');
+
+            // Create default profile for the student
+            // We assume Grade 10A Science as default for new signups to unblock them
+            // In a real app, this would be a form
+            const newStudent = await createStudent({
+                userId: profile.id,
+                name: profile.name || 'New Student',
+                email: profile.email,
+                grade: 10,
+                section: 'A',
+                department: 'Science'
+            });
+
+            if (newStudent) {
+                setStudent(newStudent);
+                // Refresh page to ensure everything loads correctly
+                window.location.reload();
+            } else {
+                alert('Failed to create profile. Please check your connection.');
+            }
+        } catch (error) {
+            console.error('Error creating profile:', error);
+            alert('An error occurred while creating your profile.');
+        } finally {
+            setIsCreatingProfile(false);
+        }
+    };
+
     if (isLoading) {
         return <DashboardSuspenseFallback />;
     }
@@ -377,12 +414,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                         We couldn't find a student record linked to <strong>{profile.email}</strong>.
                         Please contact the school administrator to set up your student profile.
                     </p>
-                    <button
-                        onClick={onLogout}
-                        className="w-full py-3 px-4 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors shadow-sm"
-                    >
-                        Back to Login
-                    </button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <button
+                            onClick={handleCreateProfile}
+                            disabled={isCreatingProfile}
+                            className="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isCreatingProfile ? 'Creating Profile...' : 'Create Student Profile'}
+                        </button>
+                        <button
+                            onClick={onLogout}
+                            className="w-full py-3 px-4 bg-white text-gray-700 border border-gray-200 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                            Back to Login
+                        </button>
+                    </div>
                     <div className="mt-4 pt-4 border-t border-gray-100">
                         <p className="text-xs text-gray-400">User ID: {profile.id || 'N/A'}</p>
                     </div>
@@ -392,36 +438,46 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
     }
 
     return (
-        <div className="flex flex-col h-full bg-gray-100 relative">
-            <Header
-                title={currentNavigation.title}
-                avatarUrl={profile.avatarUrl}
-                bgColor={THEME_CONFIG[DashboardType.Student].mainBg}
-                onLogout={onLogout}
-                onBack={viewStack.length > 1 ? handleBack : undefined}
-                onNotificationClick={handleNotificationClick}
-                notificationCount={notificationCount}
-                onSearchClick={() => setIsSearchOpen(true)}
-            />
-            <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
-                <div className="pt-16 h-full">
-                    <ErrorBoundary>
-                        <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
-                            {ComponentToRender ? (
-                                <ComponentToRender
-                                    {...currentNavigation.props}
-                                    studentId={student.id}
-                                    student={student}
-                                    {...commonProps}
-                                />
-                            ) : (
-                                <div className="p-6">View not found: {currentNavigation.view}</div>
-                            )}
-                        </div>
-                    </ErrorBoundary>
+        <div className="flex h-full bg-gray-100 relative overflow-hidden">
+            {/* Sidebar for desktop */}
+            <StudentSideNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
+            {/* Main Content Area */}
+            <div className="flex flex-col flex-1 h-full relative overflow-hidden">
+                <Header
+                    title={currentNavigation.title}
+                    avatarUrl={profile.avatarUrl}
+                    bgColor={THEME_CONFIG[DashboardType.Student].mainBg}
+                    onLogout={onLogout}
+                    onBack={viewStack.length > 1 ? handleBack : undefined}
+                    onNotificationClick={handleNotificationClick}
+                    notificationCount={notificationCount}
+                    onSearchClick={() => setIsSearchOpen(true)}
+                />
+                <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
+                    <div className="pt-16 h-full">
+                        <ErrorBoundary>
+                            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+                                {ComponentToRender ? (
+                                    <ComponentToRender
+                                        {...currentNavigation.props}
+                                        studentId={student.id}
+                                        student={student}
+                                        {...commonProps}
+                                    />
+                                ) : (
+                                    <div className="p-6">View not found: {currentNavigation.view}</div>
+                                )}
+                            </div>
+                        </ErrorBoundary>
+                    </div>
+                </div>
+                {/* Bottom Nav for mobile */}
+                <div className="lg:hidden">
+                    <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
                 </div>
             </div>
-            <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
             <Suspense fallback={<DashboardSuspenseFallback />}>
                 {isSearchOpen && (
                     <GlobalSearchScreen

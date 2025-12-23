@@ -84,6 +84,11 @@ const ManagePoliciesScreen: React.FC = () => {
         p.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const ensureProtocol = (url: string) => {
+        if (!url) return '';
+        return url.startsWith('http') ? url : `https://${url}`;
+    };
+
     return (
         <div className="flex flex-col h-full bg-gray-50 p-6 space-y-6 overflow-y-auto">
 
@@ -116,7 +121,7 @@ const ManagePoliciesScreen: React.FC = () => {
                                     placeholder="e.g. Uniform Policy"
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                                     value={newPolicy.title}
-                                    onChange={e => setNewPolicy({ ...newPolicy, title: e.target.value })}
+                                    onChange={e => setNewItem({ ...newPolicy, title: e.target.value })}
                                     required
                                 />
                             </div>
@@ -127,7 +132,7 @@ const ManagePoliciesScreen: React.FC = () => {
                                     placeholder="Link to PDF/Doc..."
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                                     value={newPolicy.url}
-                                    onChange={e => setNewPolicy({ ...newPolicy, url: e.target.value })}
+                                    onChange={e => setNewItem({ ...newPolicy, url: e.target.value })}
                                 />
                             </div>
                             <div>
@@ -136,7 +141,7 @@ const ManagePoliciesScreen: React.FC = () => {
                                     placeholder="Brief summary..."
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all h-28 resize-none"
                                     value={newPolicy.description}
-                                    onChange={e => setNewPolicy({ ...newPolicy, description: e.target.value })}
+                                    onChange={e => setNewItem({ ...newPolicy, description: e.target.value })}
                                 />
                             </div>
                             <button
@@ -188,7 +193,7 @@ const ManagePoliciesScreen: React.FC = () => {
                                                 <h3 className="font-bold text-gray-800 text-lg group-hover:text-indigo-700 transition-colors">{policy.title}</h3>
                                                 <p className="text-gray-600 mt-1 text-sm leading-relaxed">{policy.description}</p>
                                                 {policy.url && (
-                                                    <a href={policy.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-semibold text-indigo-600 mt-2 hover:underline bg-indigo-50 px-2 py-1 rounded">
+                                                    <a href={ensureProtocol(policy.url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-semibold text-indigo-600 mt-2 hover:underline bg-indigo-50 px-2 py-1 rounded">
                                                         <LinkIcon className="w-3 h-3 mr-1" />
                                                         View Document
                                                     </a>

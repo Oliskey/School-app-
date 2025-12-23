@@ -74,6 +74,19 @@ const ParentListScreen: React.FC<ParentListScreenProps> = ({ navigateTo }) => {
     };
 
     fetchParents();
+
+    // Realtime Subscription
+    const subscription = supabase
+      .channel('public:parents')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parents' }, (payload) => {
+        console.log('Parent change received:', payload);
+        fetchParents();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const filteredParents = useMemo(() =>

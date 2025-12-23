@@ -35,7 +35,7 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
                     const behavior = s.behaviorNotes?.map(n => `${n.type}: ${n.title}`).join(', ') || 'No notes';
                     return `- ${s.name}: Grades=[${latestGrades}], Behavior=[${behavior}]`;
                 }).join('\n');
-                
+
                 const prompt = `
                     Analyze the following student data for a class and provide a concise summary for the teacher.
                     
@@ -46,7 +46,7 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
                 `;
 
                 const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
+                    model: 'gemini-2.0-flash',
                     contents: prompt,
                     config: {
                         responseMimeType: "application/json",
@@ -58,9 +58,9 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
                                     type: Type.ARRAY,
                                     items: {
                                         type: Type.OBJECT,
-                                        properties: { 
-                                            name: { type: Type.STRING }, 
-                                            reason: { type: Type.STRING, description: "A short, specific reason why this student is a top performer." } 
+                                        properties: {
+                                            name: { type: Type.STRING },
+                                            reason: { type: Type.STRING, description: "A short, specific reason why this student is a top performer." }
                                         },
                                         required: ["name", "reason"]
                                     },
@@ -70,9 +70,9 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
                                     type: Type.ARRAY,
                                     items: {
                                         type: Type.OBJECT,
-                                        properties: { 
-                                            name: { type: Type.STRING }, 
-                                            reason: { type: Type.STRING, description: "A short, specific reason why this student might need support." } 
+                                        properties: {
+                                            name: { type: Type.STRING },
+                                            reason: { type: Type.STRING, description: "A short, specific reason why this student might need support." }
                                         },
                                         required: ["name", "reason"]
                                     },
@@ -101,15 +101,15 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
     if (isLoading) {
         return (
             <div className="p-6 flex flex-col items-center justify-center h-full text-center bg-gray-100">
-                <AIIcon className="w-12 h-12 text-purple-400 animate-pulse mb-4"/>
+                <AIIcon className="w-12 h-12 text-purple-400 animate-pulse mb-4" />
                 <h2 className="text-xl font-bold text-gray-700">Analyzing Class Performance...</h2>
                 <p className="text-gray-500 mt-2">The AI is crunching the numbers to provide you with actionable insights.</p>
             </div>
         );
     }
-    
+
     if (error) {
-         return (
+        return (
             <div className="p-6 text-center bg-gray-100 h-full">
                 <h2 className="text-xl font-bold text-red-600">Error</h2>
                 <p className="text-gray-600 mt-2">{error}</p>
@@ -127,43 +127,43 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
                             <h4 className="font-bold text-lg text-gray-800">Overall Summary</h4>
                         </div>
                         <div className="prose prose-sm max-w-none text-gray-700">
-                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.overallSummary}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.overallSummary}</ReactMarkdown>
                         </div>
                     </div>
-                    
+
                     <div className="bg-white rounded-xl shadow-sm p-4">
                         <div className="flex items-center space-x-3 mb-3">
-                           <CheckCircleIcon className="h-6 w-6 text-green-500" />
-                           <h4 className="font-bold text-lg text-gray-800">Top Performers</h4>
+                            <CheckCircleIcon className="h-6 w-6 text-green-500" />
+                            <h4 className="font-bold text-lg text-gray-800">Top Performers</h4>
                         </div>
                         <ul className="space-y-3">
-                           {summary.topPerformers.map((student, idx) => (
-                               <li key={idx} className="flex items-start space-x-3">
-                                   <img src={students.find(s => s.name === student.name)?.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover"/>
-                                   <div>
-                                       <p className="font-semibold text-gray-800">{student.name}</p>
-                                       <p className="text-sm text-gray-600">{student.reason}</p>
-                                   </div>
-                               </li>
-                           ))}
+                            {summary.topPerformers.map((student, idx) => (
+                                <li key={idx} className="flex items-start space-x-3">
+                                    <img src={students.find(s => s.name === student.name)?.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
+                                    <div>
+                                        <p className="font-semibold text-gray-800">{student.name}</p>
+                                        <p className="text-sm text-gray-600">{student.reason}</p>
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     </div>
-                    
+
                     <div className="bg-white rounded-xl shadow-sm p-4">
                         <div className="flex items-center space-x-3 mb-3">
                             <TrendingUpIcon className="h-6 w-6 text-amber-500" />
                             <h4 className="font-bold text-lg text-gray-800">Students Needing Support</h4>
                         </div>
-                         <ul className="space-y-3">
-                           {summary.studentsNeedingSupport.map((student, idx) => (
-                               <li key={idx} className="flex items-start space-x-3">
-                                   <img src={students.find(s => s.name === student.name)?.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover"/>
-                                   <div>
-                                       <p className="font-semibold text-gray-800">{student.name}</p>
-                                       <p className="text-sm text-gray-600">{student.reason}</p>
-                                   </div>
-                               </li>
-                           ))}
+                        <ul className="space-y-3">
+                            {summary.studentsNeedingSupport.map((student, idx) => (
+                                <li key={idx} className="flex items-start space-x-3">
+                                    <img src={students.find(s => s.name === student.name)?.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover" />
+                                    <div>
+                                        <p className="font-semibold text-gray-800">{student.name}</p>
+                                        <p className="text-sm text-gray-600">{student.reason}</p>
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     </div>
                 </div>

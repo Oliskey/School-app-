@@ -1,0 +1,138 @@
+-- Sample Data for School Management System
+-- Run this in your Supabase SQL Editor to populate the database with test data
+
+-- ============================================
+-- 1. STUDENTS
+-- ============================================
+INSERT INTO students (name, email, grade, section, department, birthday, avatar_url, attendance_status) VALUES
+-- Demo student for quick login
+('Demo Student', 'student@school.com', 10, 'A', 'Science', '2010-01-15', 'https://i.pravatar.cc/150?img=1', 'Present'),
+-- Regular students
+('John Doe', 'john.doe@student.school.com', 10, 'A', 'Science', '2010-05-15', 'https://i.pravatar.cc/150?img=1', 'Present'),
+('Jane Smith', 'jane.smith@student.school.com', 10, 'A', 'Science', '2010-07-22', 'https://i.pravatar.cc/150?img=2', 'Present'),
+('Michael Johnson', 'michael.j@student.school.com', 10, 'B', 'Arts', '2010-03-10', 'https://i.pravatar.cc/150?img=3', 'Present'),
+('Emily Brown', 'emily.b@student.school.com', 11, 'A', 'Science', '2009-09-18', 'https://i.pravatar.cc/150?img=4', 'Present'),
+('David Wilson', 'david.w@student.school.com', 11, 'B', 'Commercial', '2009-11-25', 'https://i.pravatar.cc/150?img=5', 'Absent'),
+('Sarah Davis', 'sarah.d@student.school.com', 9, 'A', 'Science', '2011-02-14', 'https://i.pravatar.cc/150?img=6', 'Present'),
+('James Taylor', 'james.t@student.school.com', 9, 'B', 'Arts', '2011-06-30', 'https://i.pravatar.cc/150?img=7', 'Present'),
+('Lisa Anderson', 'lisa.a@student.school.com', 12, 'A', 'Science', '2008-12-05', 'https://i.pravatar.cc/150?img=8', 'Present');
+
+-- ============================================
+-- 2. TEACHERS
+-- ============================================
+INSERT INTO teachers (name, email, phone, avatar_url, status) VALUES
+('Dr. Robert Smith', 'robert.smith@school.com', '+234-801-234-5678', 'https://i.pravatar.cc/150?img=11', 'Active'),
+('Mrs. Jennifer Lee', 'jennifer.lee@school.com', '+234-802-345-6789', 'https://i.pravatar.cc/150?img=12', 'Active'),
+('Mr. Thomas Brown', 'thomas.brown@school.com', '+234-803-456-7890', 'https://i.pravatar.cc/150?img=13', 'Active'),
+('Ms. Patricia Garcia', 'patricia.garcia@school.com', '+234-804-567-8901', 'https://i.pravatar.cc/150?img=14', 'Active'),
+('Dr. Christopher Martinez', 'chris.martinez@school.com', '+234-805-678-9012', 'https://i.pravatar.cc/150?img=15', 'Active');
+
+-- ============================================
+-- 3. PARENTS
+-- ============================================
+INSERT INTO parents (name, email, phone, avatar_url) VALUES
+('Mr. William Doe', 'william.doe@parent.com', '+234-806-111-2222', 'https://i.pravatar.cc/150?img=21'),
+('Mrs. Mary Smith', 'mary.smith@parent.com', '+234-807-222-3333', 'https://i.pravatar.cc/150?img=22'),
+('Mr. Richard Johnson', 'richard.johnson@parent.com', '+234-808-333-4444', 'https://i.pravatar.cc/150?img=23');
+
+-- Link parents to children (assuming student IDs 1-8 were auto-generated)
+INSERT INTO parent_children (parent_id, student_id) VALUES
+(1, 1), -- William Doe -> John Doe
+(2, 2), -- Mary Smith -> Jane Smith
+(3, 3); -- Richard Johnson -> Michael Johnson
+
+-- ============================================
+-- 4. CLASSES
+-- ============================================
+INSERT INTO classes (id, grade, section, subject, department, student_count) VALUES
+('10A', 10, 'A', 'Mathematics', 'Science', 25),
+('10B', 10, 'B', 'English Literature', 'Arts', 22),
+('11A', 11, 'A', 'Physics', 'Science', 20),
+('11B', 11, 'B', 'Economics', 'Commercial', 18),
+('9A', 9, 'A', 'Chemistry', 'Science', 28),
+('12A', 12, 'A', 'Biology', 'Science', 15);
+
+-- ============================================
+-- 5. TEACHER SUBJECTS & CLASSES
+-- ============================================
+INSERT INTO teacher_subjects (teacher_id, subject) VALUES
+(1, 'Mathematics'),
+(1, 'Physics'),
+(2, 'English Literature'),
+(3, 'Chemistry'),
+(4, 'Economics'),
+(5, 'Biology');
+
+INSERT INTO teacher_classes (teacher_id, class_name) VALUES
+(1, '10A'),
+(1, '11A'),
+(2, '10B'),
+(3, '9A'),
+(4, '11B'),
+(5, '12A');
+
+-- ============================================
+-- 6. NOTICES
+-- ============================================
+INSERT INTO notices (title, content, timestamp, category, is_pinned, audience) VALUES
+('Welcome to New Term', 'We are excited to welcome all students back for the new academic term. Classes begin on Monday.', NOW(), 'General', true, ARRAY['all']),
+('Mid-Term Examination Schedule', 'Mid-term exams will commence on March 15th. Please check your timetable for specific dates.', NOW() - INTERVAL '2 days', 'Test Reminder', true, ARRAY['students', 'parents']),
+('Sports Day Announcement', 'Annual Sports Day will be held on April 10th. All students are expected to participate.', NOW() - INTERVAL '5 days', 'Event', false, ARRAY['all']),
+('Parent-Teacher Meeting', 'Parent-Teacher meetings are scheduled for next Friday. Please confirm your attendance.', NOW() - INTERVAL '1 day', 'Event', false, ARRAY['parents']);
+
+-- ============================================
+-- 7. ASSIGNMENTS
+-- ============================================
+INSERT INTO assignments (title, description, class_name, subject, due_date, total_students, submissions_count) VALUES
+('Mathematics Homework Chapter 5', 'Complete all exercises from Chapter 5: Quadratic Equations', '10A', 'Mathematics', CURRENT_DATE + INTERVAL '7 days', 25, 10),
+('English Essay: Shakespeare', 'Write a 500-word essay on Macbeth themes', '10B', 'English Literature', CURRENT_DATE + INTERVAL '5 days', 22, 5),
+('Chemistry Lab Report', 'Submit lab report on acids and bases experiment', '9A', 'Chemistry', CURRENT_DATE + INTERVAL '3 days', 28, 15),
+('Physics Problem Set', 'Solve problems 1-20 from the mechanics chapter', '11A', 'Physics', CURRENT_DATE + INTERVAL '10 days', 20, 0);
+
+-- ============================================
+-- 8. STUDENT FEES
+-- ============================================
+INSERT INTO student_fees (student_id, amount, amount_paid, status, due_date, term, payment_date) VALUES
+(1, 150000, 150000, 'Paid', CURRENT_DATE - INTERVAL '30 days', 'Term 1 2024', CURRENT_DATE - INTERVAL '35 days'),
+(2, 150000, 75000, 'Unpaid', CURRENT_DATE + INTERVAL '10 days', 'Term 1 2024', NULL),
+(3, 150000, 0, 'Overdue', CURRENT_DATE - INTERVAL '5 days', 'Term 1 2024', NULL),
+(4, 180000, 180000, 'Paid', CURRENT_DATE - INTERVAL '20 days', 'Term 1 2024', CURRENT_DATE - INTERVAL '25 days'),
+(5, 180000, 90000, 'Unpaid', CURRENT_DATE + INTERVAL '15 days', 'Term 1 2024', NULL),
+(6, 120000, 120000, 'Paid', CURRENT_DATE - INTERVAL '40 days', 'Term 1 2024', CURRENT_DATE - INTERVAL '42 days'),
+(7, 120000, 60000, 'Unpaid', CURRENT_DATE + INTERVAL '5 days', 'Term 1 2024', NULL),
+(8, 200000, 0, 'Overdue', CURRENT_DATE - INTERVAL '10 days', 'Term 1 2024', NULL);
+
+-- ============================================
+-- 9. TIMETABLE
+-- ============================================
+INSERT INTO timetable (class_name, day, time, subject, teacher) VALUES
+-- Monday Schedule
+('10A', 'Monday', '08:00-09:00', 'Mathematics', 'Dr. Robert Smith'),
+('10A', 'Monday', '09:00-10:00', 'English', 'Mrs. Jennifer Lee'),
+('10A', 'Monday', '10:30-11:30', 'Chemistry', 'Mr. Thomas Brown'),
+-- Tuesday Schedule
+('10A', 'Tuesday', '08:00-09:00', 'Physics', 'Dr. Robert Smith'),
+('10A', 'Tuesday', '09:00-10:00', 'Biology', 'Dr. Christopher Martinez');
+
+-- ============================================
+-- 10. ATTENDANCE (Sample)
+-- ============================================
+INSERT INTO student_attendance (student_id, date, status, class_name) VALUES
+(1, CURRENT_DATE, 'Present', '10A'),
+(2, CURRENT_DATE, 'Present', '10A'),
+(3, CURRENT_DATE, 'Absent', '10B'),
+(4, CURRENT_DATE, 'Present', '11A'),
+(5, CURRENT_DATE, 'Absent', '11B'),
+(6, CURRENT_DATE, 'Present', '9A'),
+(7, CURRENT_DATE, 'Present', '9B'),
+(8, CURRENT_DATE, 'Present', '12A');
+
+-- ============================================
+-- SUCCESS MESSAGE
+-- ============================================
+SELECT 'Sample data inserted successfully!' as status,
+       (SELECT COUNT(*) FROM students) as total_students,
+       (SELECT COUNT(*) FROM teachers) as total_teachers,
+       (SELECT COUNT(*) FROM parents) as total_parents,
+       (SELECT COUNT(*) FROM notices) as total_notices,
+       (SELECT COUNT(*) FROM assignments) as total_assignments;

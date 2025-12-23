@@ -4,6 +4,7 @@ import { DashboardType } from '../../types';
 import { THEME_CONFIG } from '../../constants';
 import Header from '../ui/Header';
 import { TeacherBottomNav } from '../ui/DashboardBottomNav';
+import { TeacherSideNav } from '../ui/DashboardSideNav';
 import { mockNotifications } from '../../data';
 import { useProfile } from '../../context/ProfileContext';
 
@@ -65,10 +66,10 @@ import MessagingLayout from '../shared/MessagingLayout';
 
 
 const DashboardSuspenseFallback = () => (
-    <div className="flex justify-center items-center h-full p-8 pt-20">
-      <div className="w-10 h-10 border-4 border-t-4 border-gray-200 border-t-purple-600 rounded-full animate-spin"></div>
-    </div>
-  );
+  <div className="flex justify-center items-center h-full p-8 pt-20">
+    <div className="w-10 h-10 border-4 border-t-4 border-gray-200 border-t-purple-600 rounded-full animate-spin"></div>
+  </div>
+);
 
 interface ViewStackItem {
   view: string;
@@ -77,8 +78,8 @@ interface ViewStackItem {
 }
 
 interface TeacherDashboardProps {
-    onLogout: () => void;
-    setIsHomePage: (isHome: boolean) => void;
+  onLogout: () => void;
+  setIsHomePage: (isHome: boolean) => void;
 }
 
 const LOGGED_IN_TEACHER_ID = 2;
@@ -107,29 +108,29 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
       setViewStack(stack => stack.slice(0, -1));
     }
   };
-  
+
   const handleBottomNavClick = (screen: string) => {
     setActiveBottomNav(screen);
     let props = {};
-    switch(screen) {
-        case 'home':
-            setViewStack([{ view: 'overview', title: 'Teacher Dashboard', props }]);
-            break;
-        case 'reports':
-             setViewStack([{ view: 'reports', title: 'Student Reports', props }]);
-            break;
-        case 'forum':
-            setViewStack([{ view: 'collaborationForum', title: 'Collaboration Forum', props: {} }]);
-            break;
-        case 'messages':
-            setViewStack([{ view: 'messages', title: 'Messages', props: {} }]);
-            break;
-        case 'settings':
-            setViewStack([{ view: 'settings', props, title: 'Settings' }]);
-            break;
-        default:
-            setViewStack([{ view: 'overview', title: 'Teacher Dashboard', props }]);
-     }
+    switch (screen) {
+      case 'home':
+        setViewStack([{ view: 'overview', title: 'Teacher Dashboard', props }]);
+        break;
+      case 'reports':
+        setViewStack([{ view: 'reports', title: 'Student Reports', props }]);
+        break;
+      case 'forum':
+        setViewStack([{ view: 'collaborationForum', title: 'Collaboration Forum', props: {} }]);
+        break;
+      case 'messages':
+        setViewStack([{ view: 'messages', title: 'Messages', props: {} }]);
+        break;
+      case 'settings':
+        setViewStack([{ view: 'settings', props, title: 'Settings' }]);
+        break;
+      default:
+        setViewStack([{ view: 'overview', title: 'Teacher Dashboard', props }]);
+    }
   };
 
   const handleNotificationClick = () => {
@@ -191,45 +192,57 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
 
   const currentNavigation = viewStack[viewStack.length - 1];
   const ComponentToRender = viewComponents[currentNavigation.view as keyof typeof viewComponents];
-  
+
   const commonProps = {
     navigateTo,
     handleBack,
     onLogout,
     forceUpdate,
+    profile,
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-100 relative">
-       <Header
-        title={currentNavigation.title}
-        avatarUrl={profile.avatarUrl}
-        bgColor={THEME_CONFIG[DashboardType.Teacher].mainBg}
-        onLogout={onLogout}
-        onBack={viewStack.length > 1 ? handleBack : undefined}
-        onNotificationClick={handleNotificationClick}
-        notificationCount={notificationCount}
-        onSearchClick={() => setIsSearchOpen(true)}
-      />
-      <div className="flex-grow overflow-y-auto" style={{marginTop: '-5rem'}}>
-        <main className="min-h-full pt-20">
-            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
-            {ComponentToRender ? (
+    <div className="flex h-full bg-gray-100 relative overflow-hidden">
+      {/* Sidebar for desktop */}
+      <TeacherSideNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 h-full relative overflow-hidden">
+        <Header
+          title={currentNavigation.title}
+          avatarUrl={profile.avatarUrl}
+          bgColor={THEME_CONFIG[DashboardType.Teacher].mainBg}
+          onLogout={onLogout}
+          onBack={viewStack.length > 1 ? handleBack : undefined}
+          onNotificationClick={handleNotificationClick}
+          notificationCount={notificationCount}
+          onSearchClick={() => setIsSearchOpen(true)}
+        />
+        <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
+          <main className="h-full pt-16">
+            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+              {ComponentToRender ? (
                 <ComponentToRender {...currentNavigation.props} {...commonProps} />
-            ) : (
+              ) : (
                 <div className="p-6">View not found: {currentNavigation.view}</div>
-            )}
+              )}
             </div>
-        </main>
+          </main>
+        </div>
+
+        {/* Bottom Nav for mobile */}
+        <div className="lg:hidden">
+          <TeacherBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+        </div>
       </div>
-      <TeacherBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+
       <Suspense fallback={<DashboardSuspenseFallback />}>
         {isSearchOpen && (
-            <GlobalSearchScreen 
-                dashboardType={DashboardType.Teacher}
-                navigateTo={navigateTo}
-                onClose={() => setIsSearchOpen(false)}
-            />
+          <GlobalSearchScreen
+            dashboardType={DashboardType.Teacher}
+            navigateTo={navigateTo}
+            onClose={() => setIsSearchOpen(false)}
+          />
         )}
       </Suspense>
     </div>

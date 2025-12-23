@@ -36,13 +36,13 @@ const MediaGenerator: React.FC = () => {
             if (mode === 'image') {
                 // Generate Image
                 const response = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: 'gemini-2.0-flash',
                     contents: { parts: [{ text: prompt }] },
                     config: {
                         imageConfig: { aspectRatio: aspectRatio, imageSize: '2K' }
                     }
                 });
-                
+
                 const imgPart = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
                 if (imgPart?.inlineData) {
                     setResultUrl(`data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`);
@@ -59,13 +59,13 @@ const MediaGenerator: React.FC = () => {
                         aspectRatio: aspectRatio as '16:9' | '9:16'
                     }
                 });
-                
+
                 // Polling
                 while (!operation.done) {
                     await new Promise(r => setTimeout(r, 5000));
                     operation = await ai.operations.getVideosOperation({ operation });
                 }
-                
+
                 const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
                 if (uri) setResultUrl(`${uri}&key=${process.env.API_KEY}`);
 
@@ -73,7 +73,7 @@ const MediaGenerator: React.FC = () => {
                 // Edit Image (Nano Banana)
                 const base64Data = uploadImage.split(',')[1];
                 const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash-image',
+                    model: 'gemini-2.0-flash',
                     contents: {
                         parts: [
                             { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
@@ -88,8 +88,8 @@ const MediaGenerator: React.FC = () => {
 
             } else if (mode === 'animate' && uploadImage) {
                 // Animate Image (Veo)
-                 const base64Data = uploadImage.split(',')[1];
-                 let operation = await ai.models.generateVideos({
+                const base64Data = uploadImage.split(',')[1];
+                let operation = await ai.models.generateVideos({
                     model: 'veo-3.1-fast-generate-preview',
                     prompt: prompt || "Animate this image cinematically",
                     image: {
@@ -131,9 +131,8 @@ const MediaGenerator: React.FC = () => {
                     <button
                         key={m.id}
                         onClick={() => { setMode(m.id as any); setResultUrl(null); }}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-                            mode === m.id ? 'bg-purple-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${mode === m.id ? 'bg-purple-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'
+                            }`}
                     >
                         <m.icon className="w-4 h-4" />
                         <span>{m.label}</span>
@@ -179,7 +178,7 @@ const MediaGenerator: React.FC = () => {
                             {uploadImage ? (
                                 <div className="relative inline-block">
                                     <img src={uploadImage} className="h-20 rounded-md border" alt="Upload" />
-                                    <button onClick={(e) => {e.stopPropagation(); setUploadImage(null);}} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><XCircleIcon className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setUploadImage(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><XCircleIcon className="w-4 h-4" /></button>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center text-gray-500">
@@ -195,8 +194,8 @@ const MediaGenerator: React.FC = () => {
                             <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Aspect Ratio</label>
                             <div className="flex flex-wrap gap-2">
                                 {(mode === 'video' ? videoRatios : aspectRatios).map(r => (
-                                    <button 
-                                        key={r} 
+                                    <button
+                                        key={r}
                                         onClick={() => setAspectRatio(r)}
                                         className={`px-3 py-1 text-xs rounded-md border ${aspectRatio === r ? 'bg-purple-50 border-purple-500 text-purple-700' : 'border-gray-200 text-gray-600'}`}
                                     >
@@ -208,13 +207,13 @@ const MediaGenerator: React.FC = () => {
                     )}
 
                     <div className="relative">
-                        <textarea 
-                            value={prompt} 
+                        <textarea
+                            value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder={mode === 'edit' ? "Describe changes (e.g., 'add a hat')" : "Describe what you want to create..."}
                             className="w-full p-3 pr-12 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none min-h-[80px]"
                         />
-                        <button 
+                        <button
                             onClick={handleGenerate}
                             disabled={isLoading || (!prompt && mode !== 'animate')}
                             className="absolute bottom-3 right-3 p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"

@@ -302,11 +302,13 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
             alert("Please provide a subject, class name, and at least one topic in a term's scheme of work.");
             return;
         }
-        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || "AIzaSyCbaGxsPmwNb8KuqFV2VTBhRZUVvO82FXI";
+        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            alert("Configuration Error: API Key is missing.");
+            alert("Configuration Error: VITE_GEMINI_API_KEY is not set in your .env file.");
             return;
         }
+
+        console.log("API Key loaded:", apiKey ? `${apiKey.substring(0, 8)}...` : "MISSING");
 
         setIsGenerating(true);
         try {
@@ -376,7 +378,7 @@ Return a single JSON object matching the required schema.`;
             // and parse with a resilient fallback so we surface errors instead of
             // silently failing.
             // Direct REST API Loop - Robust Fallback Strategy
-            const modelsToUse = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro'];
+            const modelsToUse = ['gemini-1.5-flash', 'gemini-1.5-pro'];
             let generatedText = null;
             let finalError = null;
 

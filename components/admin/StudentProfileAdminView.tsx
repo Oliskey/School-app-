@@ -173,7 +173,7 @@ const StudentProfileAdminView: React.FC<StudentProfileAdminViewProps> = ({ stude
             const prompt = `Generate a concise, professional summary for a school administrator about the student ${student.name}. Highlight key academic strengths, areas needing attention, and any notable behavioral patterns. Keep it to 2-3 short paragraphs. Base this summary on the following data:\n- Academic Performance: ${academicSummary}\n- Behavioral Notes: ${behaviorSummary}`;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.0-flash',
                 contents: prompt
             });
 
