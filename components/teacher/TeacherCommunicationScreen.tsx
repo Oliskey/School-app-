@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AnnouncementCategory, Notice } from '../../types';
-import { mockClasses, mockNotices } from '../../data';
+// import { mockClasses, mockNotices } from '../../data'; // REMOVED
 import { CameraIcon, StopIcon, XCircleIcon, VideoIcon } from '../../constants';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -10,12 +12,15 @@ const formatTime = (seconds: number) => {
 };
 
 const TeacherCommunicationScreen: React.FC = () => {
+    const { user } = useAuth();
+    const [classes, setClasses] = useState<any[]>([]);
     const [mode, setMode] = useState<'text' | 'video'>('text');
     const [selectedClasses, setSelectedClasses] = useState<Set<string>>(new Set());
     const [selectedCategory, setSelectedCategory] = useState<AnnouncementCategory>('General');
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
-    
+    const [teacherName, setTeacherName] = useState('');
+
     // Video state
     const [isRecording, setIsRecording] = useState(false);
     const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
@@ -24,7 +29,30 @@ const TeacherCommunicationScreen: React.FC = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const recordingIntervalRef = useRef<number | null>(null);
-    
+
+    // Fetch Classes and Teacher Name
+    useEffect(() => {
+        const fetchMeta = async () => {
+            if (!user) return;
+            // Get Teacher
+            const { data: teacher } = await supabase.from('teachers').select('id, name').eq('user_id', user.id).single();
+            if (teacher) {
+                setTeacherName(teacher.name);
+                // Get Classes
+                const { data: cls } = await supabase.from('teacher_classes').select('class_name').eq('teacher_id', teacher.id);
+                if (cls) {
+                    // Structure to match expected UI usage or just string list
+                    // The UI expected mockClasses object with grade/section. 
+                    // Let's adapt.
+                    // teacher_classes returns { class_name: "10A" } usually or similar.
+                    // Let's assume class_name is the full string needed.
+                    setClasses(cls.map((c, i) => ({ id: i, name: c.class_name })));
+                }
+            }
+        };
+        fetchMeta();
+    }, [user]);
+
     const handleClassToggle = (className: string) => {
         const newSelection = new Set(selectedClasses);
         if (newSelection.has(className)) {
@@ -34,8 +62,8 @@ const TeacherCommunicationScreen: React.FC = () => {
         }
         setSelectedClasses(newSelection);
     };
-    
-    const handleSend = (e: React.FormEvent) => {
+
+    const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedClasses.size === 0 || !title) {
             alert("Please select at least one class and provide a title.");
@@ -50,26 +78,37 @@ const TeacherCommunicationScreen: React.FC = () => {
             return;
         }
 
-        const newNotice: Omit<Notice, 'id'> = {
-            title,
-            content: message,
-            timestamp: new Date().toISOString(),
-            category: selectedCategory,
-            isPinned: false,
-            audience: ['parents', 'students'],
-            className: Array.from(selectedClasses).join(', '),
-            videoUrl: mode === 'video' ? videoBlobUrl! : undefined,
-        };
-        
-        mockNotices.unshift({ id: Date.now(), ...newNotice });
-        
-        alert(`Announcement sent to: ${Array.from(selectedClasses).join(', ')}`);
-        // Reset form
-        setSelectedClasses(new Set());
-        setTitle('');
-        setMessage('');
-        setVideoBlobUrl(null);
-        setMode('text');
+        try {
+            // Note: Video upload is not yet implemented in backend storage.
+            // We will only save the text notice for now.
+
+            const audienceArray = Array.from(selectedClasses);
+
+            const payload = {
+                title,
+                content: message || '(Video Announcement)',
+                category: selectedCategory,
+                is_pinned: false,
+                audience: audienceArray, // JSONB
+                created_by: teacherName,
+                timestamp: new Date().toISOString()
+            };
+
+            const { error } = await supabase.from('notices').insert([payload]);
+
+            if (error) throw error;
+
+            alert(`Announcement sent to: ${audienceArray.join(', ')}`);
+            // Reset form
+            setSelectedClasses(new Set());
+            setTitle('');
+            setMessage('');
+            setVideoBlobUrl(null);
+            setMode('text');
+        } catch (err: any) {
+            console.error("Error sending notice:", err);
+            alert("Failed to send notice: " + err.message);
+        }
     };
 
     const stopStream = () => {
@@ -78,18 +117,18 @@ const TeacherCommunicationScreen: React.FC = () => {
             streamRef.current = null;
         }
     };
-    
+
     useEffect(() => {
         // Cleanup stream on component unmount
         return () => stopStream();
     }, []);
-    
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             streamRef.current = stream;
             if (videoRef.current) videoRef.current.srcObject = stream;
-            
+
             const recorder = new MediaRecorder(stream);
             mediaRecorderRef.current = recorder;
             const chunks: Blob[] = [];
@@ -108,15 +147,15 @@ const TeacherCommunicationScreen: React.FC = () => {
             alert("Camera/microphone permission denied. Please enable it in your browser settings.");
         }
     };
-    
+
     const stopRecording = () => {
         if (mediaRecorderRef.current) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
-            if(recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
         }
     };
-    
+
     const handleDiscardVideo = () => {
         setVideoBlobUrl(null);
         setRecordingTime(0);
@@ -137,9 +176,9 @@ const TeacherCommunicationScreen: React.FC = () => {
             </div>
         </div>
     );
-    
+
     const VideoPreviewUI = () => (
-         <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
+        <div className="bg-white p-4 rounded-xl shadow-sm space-y-3">
             <video src={videoBlobUrl!} controls className="w-full aspect-video bg-black rounded-lg"></video>
             <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={handleDiscardVideo} className="w-full py-2 bg-gray-200 text-gray-800 font-bold rounded-lg">Discard</button>
@@ -157,8 +196,8 @@ const TeacherCommunicationScreen: React.FC = () => {
                             <div>
                                 <h3 className="text-lg font-bold text-gray-800 mb-2">1. Select Classes</h3>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {mockClasses.map(cls => {
-                                        const className = `Grade ${cls.grade}${cls.section}`;
+                                    {classes.map(cls => {
+                                        const className = cls.name;
                                         const isSelected = selectedClasses.has(className);
                                         return (
                                             <button type="button" key={cls.id} onClick={() => handleClassToggle(className)} className={`p-4 bg-white rounded-xl shadow-sm text-center border-2 ${isSelected ? 'border-purple-500' : 'border-transparent'}`} aria-pressed={isSelected}>
@@ -166,6 +205,7 @@ const TeacherCommunicationScreen: React.FC = () => {
                                             </button>
                                         );
                                     })}
+                                    {classes.length === 0 && <p className="text-sm text-gray-500 col-span-2">No classes found assigned to you.</p>}
                                 </div>
                             </div>
 

@@ -1,7 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserIcon, MailIcon, PhoneIcon, CameraIcon, BookOpenIcon } from '../../constants';
-import { supabase } from '../../lib/supabase';
+// Removed direct supabase import as we use context now
+// import { supabase } from '../../lib/supabase';
+
+import { useProfile } from '../../context/ProfileContext';
 
 interface EditTeacherProfileScreenProps {
     onProfileUpdate?: (data?: { name: string; avatarUrl: string }) => void;
@@ -9,46 +12,29 @@ interface EditTeacherProfileScreenProps {
     currentUser?: any;
 }
 
-const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onProfileUpdate, teacherId, currentUser }) => {
-    const [loading, setLoading] = useState(true);
+const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onProfileUpdate }) => {
+    // 1. Use centralized Profile Context
+    const { profile, updateProfile } = useProfile();
+    const [loading, setLoading] = useState(false); // Context is already loaded usually
     const [saving, setSaving] = useState(false);
 
-    // Form State
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
-    const [avatar, setAvatar] = useState('');
-    const [subject, setSubject] = useState('');
-    const [loadedTeacherId, setLoadedTeacherId] = useState<number | null>(null);
+    // Form State initialized from Context
+    const [name, setName] = useState(profile.name || '');
+    const [email, setEmail] = useState(profile.email || '');
+    const [phone, setPhone] = useState(profile.phone || '');
+    const [avatar, setAvatar] = useState(profile.avatarUrl || 'https://i.pravatar.cc/150?u=teacher');
 
-    // Fetch Profile Data
+    // 'Subject' is not in the base User profile, so we might keep it static or remove it.
+    // For now, we'll keep the UI but make it non-editable or just generic since it's not in Users table.
+    const [subject] = useState('General');
+
+    // Update local state when context profile changes (e.g. initial load)
     useEffect(() => {
-        const fetchProfile = async () => {
-            let query = supabase.from('teachers').select('*');
-
-            if (teacherId) {
-                query = query.eq('id', teacherId);
-            } else if (currentUser?.email) {
-                query = query.eq('email', currentUser.email);
-            } else {
-                // Fallback
-                query = query.eq('email', 'f.akintola@school.com');
-            }
-
-            const { data, error } = await query.single();
-
-            if (data) {
-                setLoadedTeacherId(data.id);
-                setName(data.name || '');
-                setEmail(data.email || '');
-                setPhone(data.phone || '');
-                setAvatar(data.avatar_url || 'https://i.pravatar.cc/150?u=teacher');
-                setSubject(data.subjects?.[0] || 'General');
-            }
-            setLoading(false);
-        };
-        fetchProfile();
-    }, []);
+        setName(profile.name || '');
+        setEmail(profile.email || '');
+        setPhone(profile.phone || '');
+        setAvatar(profile.avatarUrl || 'https://i.pravatar.cc/150?u=teacher');
+    }, [profile]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -96,20 +82,20 @@ const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onP
         setSaving(true);
 
         try {
-            const { error } = await supabase
-                .from('teachers')
-                .update({
-                    name: name,
-                    phone: phone,
-                    avatar_url: avatar // Updating avatar URL (base64 or link)
-                })
-                .eq('id', loadedTeacherId);
-
-            if (error) throw error;
+            // 2. Use updateProfile from Context
+            // This updates the central 'users' table and local state
+            await updateProfile({
+                name,
+                email,
+                avatarUrl: avatar,
+                // Phone is kept in local state/context but might not persist to DB 
+                // if 'users' table lacks the column (as per Admin structure).
+                phone
+            });
 
             alert('Profile updated successfully!');
+
             if (onProfileUpdate) {
-                // Pass optimistic data to instantly update dashboard UI
                 onProfileUpdate({ name, avatarUrl: avatar });
             }
         } catch (error: any) {
@@ -167,6 +153,7 @@ const EditTeacherProfileScreen: React.FC<EditTeacherProfileScreenProps> = ({ onP
                                 <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full pl-10 pr-3 py-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" />
                             </div>
                         </div>
+                        {/* Subject field kept for UI consistency but read-only as it's not in standard profile */}
                         <div>
                             <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
                             <div className="relative">

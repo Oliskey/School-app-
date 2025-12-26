@@ -200,8 +200,8 @@ const ReportCardPublishing: React.FC = () => {
                     key={tab}
                     onClick={() => setActiveTab(mappedTab)}
                     className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${isActive
-                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5'
-                        : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'
+                      ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5'
+                      : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'
                       }`}
                   >
                     <span>{tab}</span>
@@ -247,11 +247,17 @@ const ReportCardPublishing: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img
-                        src={student.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`}
-                        alt={student.name}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                      />
+                      {student.avatarUrl ? (
+                        <img
+                          src={student.avatarUrl}
+                          alt={student.name}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center border-2 border-white shadow-sm text-gray-500">
+                          <span className="font-bold text-lg">{student.name.charAt(0)}</span>
+                        </div>
+                      )}
                       <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${statusStyles[student.status].bg}`}>
                         {statusStyles[student.status].icon}
                       </div>

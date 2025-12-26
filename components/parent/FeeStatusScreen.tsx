@@ -3,8 +3,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { ReceiptIcon } from '../../constants';
-import { StudentFeeInfo } from '../../types';
-import { mockStudentFees } from '../../data';
 
 interface FeeStatusScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
@@ -69,7 +67,7 @@ const FeeStatusScreen: React.FC<FeeStatusScreenProps> = ({ parentId }) => {
                     return {
                         id: student.id,
                         name: student.name,
-                        avatarUrl: student.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`,
+                        avatarUrl: student.avatar_url,
                         totalFee: studentFee.total_fee,
                         paidAmount: studentFee.paid_amount,
                         status: studentFee.paid_amount >= studentFee.total_fee ? 'Paid' : 'Unpaid'
@@ -126,11 +124,17 @@ const FeeStatusScreen: React.FC<FeeStatusScreenProps> = ({ parentId }) => {
                             aria-label={`View fees for ${child.name}`}
                             aria-pressed={selectedChildId === child.id}
                         >
-                            <img
-                                src={child.avatarUrl}
-                                alt={child.name}
-                                className={`w-16 h-16 rounded-full object-cover border-4 transition-all duration-200 ${selectedChildId === child.id ? 'border-green-500 scale-110' : 'border-transparent group-hover:border-gray-300'}`}
-                            />
+                            {child.avatarUrl ? (
+                                <img
+                                    src={child.avatarUrl}
+                                    alt={child.name}
+                                    className={`w-16 h-16 rounded-full object-cover border-4 transition-all duration-200 ${selectedChildId === child.id ? 'border-green-500 scale-110' : 'border-transparent group-hover:border-gray-300'}`}
+                                />
+                            ) : (
+                                <div className={`w-16 h-16 rounded-full bg-green-100 flex items-center justify-center border-4 transition-all duration-200 ${selectedChildId === child.id ? 'border-green-500 scale-110' : 'border-transparent group-hover:border-gray-300'} text-green-700 font-bold text-xl`}>
+                                    {child.name.charAt(0)}
+                                </div>
+                            )}
                             <p className={`mt-1 text-sm font-semibold transition-colors ${selectedChildId === child.id ? 'text-green-600' : 'text-gray-600'}`}>{child.name.split(' ')[0]}</p>
                         </button>
                     ))}

@@ -55,14 +55,17 @@ const AdminStudentListForReport: React.FC<AdminStudentListForReportProps> = ({ c
             aria-label={`View report for ${student.name}`}
           >
             <div className="relative">
-              <img
-                src={student.avatarUrl}
-                alt={student.name}
-                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm group-hover:border-indigo-200 transition-colors"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`;
-                }}
-              />
+              {student.avatarUrl ? (
+                <img
+                  src={student.avatarUrl}
+                  alt={student.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm group-hover:border-indigo-200 transition-colors"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-white shadow-sm group-hover:border-indigo-200 transition-colors text-indigo-500">
+                  <UserIcon className="w-6 h-6" />
+                </div>
+              )}
               <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${student.attendanceStatus === 'Present' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
             </div>
 

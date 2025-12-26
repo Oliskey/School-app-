@@ -35,18 +35,7 @@ export function useParents(): UseParentsResult {
             if (fetchError) throw fetchError;
 
             // Transform Supabase data to match Parent type
-            const transformedParents: Parent[] = (data || []).map((p: any) => ({
-                id: p.id,
-                name: p.name,
-                email: p.email,
-                phone: p.phone,
-                address: p.address,
-                occupation: p.occupation,
-                childIds: p.child_ids || [],
-                avatarUrl: p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`,
-                relationship: p.relationship,
-                emergencyContact: p.emergency_contact,
-            }));
+            const transformedParents: Parent[] = (data || []).map(transformSupabaseParent);
 
             setParents(transformedParents);
             setError(null);
@@ -106,7 +95,7 @@ export function useParents(): UseParentsResult {
 
             if (insertError) throw insertError;
 
-            return data as any;
+            return transformSupabaseParent(data);
         } catch (err) {
             console.error('Error creating parent:', err);
             setError(err as Error);
@@ -121,27 +110,26 @@ export function useParents(): UseParentsResult {
         }
 
         try {
-            const updateData: any = {};
-            if (updates.name !== undefined) updateData.name = updates.name;
-            if (updates.email !== undefined) updateData.email = updates.email;
-            if (updates.phone !== undefined) updateData.phone = updates.phone;
-            if (updates.address !== undefined) updateData.address = updates.address;
-            if (updates.occupation !== undefined) updateData.occupation = updates.occupation;
-            if (updates.childIds !== undefined) updateData.child_ids = updates.childIds;
-            if (updates.avatarUrl !== undefined) updateData.avatar_url = updates.avatarUrl;
-            if (updates.relationship !== undefined) updateData.relationship = updates.relationship;
-            if (updates.emergencyContact !== undefined) updateData.emergency_contact = updates.emergencyContact;
-
             const { data, error: updateError } = await supabase
                 .from('parents')
-                .update(updateData)
+                .update({
+                    name: updates.name,
+                    email: updates.email,
+                    phone: updates.phone,
+                    address: updates.address,
+                    occupation: updates.occupation,
+                    child_ids: updates.childIds,
+                    avatar_url: updates.avatarUrl,
+                    relationship: updates.relationship,
+                    emergency_contact: updates.emergencyContact,
+                })
                 .eq('id', id)
                 .select()
                 .single();
 
             if (updateError) throw updateError;
 
-            return data as any;
+            return transformSupabaseParent(data);
         } catch (err) {
             console.error('Error updating parent:', err);
             setError(err as Error);
@@ -181,3 +169,16 @@ export function useParents(): UseParentsResult {
         deleteParent,
     };
 }
+
+const transformSupabaseParent = (p: any): Parent => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    phone: p.phone,
+    address: p.address,
+    occupation: p.occupation,
+    childIds: p.child_ids || [],
+    avatarUrl: p.avatar_url,
+    relationship: p.relationship,
+    emergencyContact: p.emergency_contact,
+});

@@ -5,9 +5,8 @@ import { DashboardType, Student, StudentAssignment } from '../../types';
 import { THEME_CONFIG, ClockIcon, ClipboardListIcon, BellIcon, ChartBarIcon, ChevronRightIcon, SUBJECT_COLORS, BookOpenIcon, MegaphoneIcon, AttendanceSummaryIcon, CalendarIcon, ElearningIcon, StudyBuddyIcon, SparklesIcon, ReceiptIcon, AwardIcon, HelpIcon, GameControllerIcon } from '../../constants';
 import Header from '../ui/Header';
 import { StudentBottomNav } from '../ui/DashboardBottomNav';
-import { mockNotifications } from '../../data'; // Keeping mockNotifications briefly if any other component depends on it, but we are replacing usage.
-// Actually, let's remove unused ones.
-import { } from '../../data';
+// import { mockNotifications } from '../../data'; // REMOVED
+import { } from '../../data'; // Ensure no mocks imported
 import ErrorBoundary from '../ui/ErrorBoundary';
 
 // Lazy load all view components
@@ -29,7 +28,7 @@ const StudentFinanceScreen = lazy(() => import('../student/StudentFinanceScreen'
 const AchievementsScreen = lazy(() => import('../student/AchievementsScreen'));
 const StudentMessagesScreen = lazy(() => import('../student/StudentMessagesScreen'));
 const StudentNewChatScreen = lazy(() => import('../student/NewMessageScreen'));
-const StudentProfileScreen = lazy(() => import('../student/StudentProfileScreen'));
+const EditProfileScreen = lazy(() => import('../shared/EditProfileScreen'));
 const VideoLessonScreen = lazy(() => import('../student/VideoLessonScreen'));
 const AssignmentSubmissionScreen = lazy(() => import('../student/AssignmentSubmissionScreen'));
 const AssignmentFeedbackScreen = lazy(() => import('../student/AssignmentFeedbackScreen'));
@@ -273,7 +272,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                     name: studentData.name,
                     grade: studentData.grade,
                     section: studentData.section,
-                    avatarUrl: studentData.avatar_url || 'https://i.pravatar.cc/150?img=12',
+                    avatarUrl: studentData.avatar_url,
                 } as any;
 
                 setStudent(mappedStudent);
@@ -356,7 +355,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                 setViewStack([{ view: 'messages', title: 'Messages' }]);
                 break;
             case 'profile':
-                setViewStack([{ view: 'profile', title: 'My Profile', props: { student: student } }]);
+                setViewStack([{ view: 'profile', title: 'My Profile', props: {} }]);
                 break;
             default:
                 setViewStack([{ view: 'overview', title: 'Student Dashboard' }]);
@@ -386,7 +385,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         achievements: AchievementsScreen,
         messages: StudentMessagesScreen,
         newChat: StudentNewChatScreen,
-        profile: StudentProfileScreen,
+        profile: (props: any) => <EditProfileScreen
+            onBack={handleBack}
+            user={{ id: student?.id, name: student?.name, avatarUrl: student?.avatarUrl, email: currentUser?.email }}
+            onProfileUpdate={(data) => {
+                setStudent(prev => prev ? ({ ...prev, name: data.name, avatarUrl: data.avatarUrl }) : null);
+            }}
+        />,
         videoLesson: VideoLessonScreen,
         assignmentSubmission: AssignmentSubmissionScreen,
         assignmentFeedback: AssignmentFeedbackScreen,

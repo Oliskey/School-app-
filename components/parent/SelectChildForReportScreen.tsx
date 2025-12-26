@@ -35,7 +35,7 @@ const SelectChildForReportScreen: React.FC<SelectChildForReportScreenProps> = ({
             const mappedStudents = students.map((s: any) => ({
               id: s.id,
               name: s.name,
-              avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
+              avatarUrl: s.avatar_url,
               grade: s.grade,
               section: s.section
             } as Student));
@@ -72,7 +72,13 @@ const SelectChildForReportScreen: React.FC<SelectChildForReportScreenProps> = ({
             className="w-full bg-white rounded-xl shadow-sm p-4 flex items-center justify-between text-left hover:bg-gray-50 hover:ring-2 hover:ring-green-200 transition-all"
           >
             <div className="flex items-center space-x-4">
-              <img src={child.avatarUrl} alt={child.name} className="w-14 h-14 rounded-full object-cover" />
+              {child.avatarUrl ? (
+                <img src={child.avatarUrl} alt={child.name} className="w-14 h-14 rounded-full object-cover" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xl">
+                  {child.name.charAt(0)}
+                </div>
+              )}
               <div>
                 <p className="font-bold text-gray-800">{child.name}</p>
                 <p className="text-sm text-gray-600">Grade {child.grade}{child.section}</p>

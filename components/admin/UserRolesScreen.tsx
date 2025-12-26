@@ -1,20 +1,71 @@
 
 import React, { useState } from 'react';
-import { 
-    ExamIcon, 
-    AttendanceIcon, 
-    ReportIcon, 
-    MegaphoneIcon, 
-    BookOpenIcon, 
-    ViewGridIcon, 
-    BusIcon, 
+import {
+    ExamIcon,
+    AttendanceIcon,
+    ReportIcon,
+    MegaphoneIcon,
+    BookOpenIcon,
+    ViewGridIcon,
+    BusIcon,
     ReceiptIcon,
     UsersIcon,
     AnalyticsIcon,
     AIIcon
 } from '../../constants';
-import { mockRolesAndPermissions } from '../../data';
+// import { mockRolesAndPermissions } from '../../data'; // Removed
 import { RoleName } from '../../types';
+
+// Default roles structure replacing mock data
+const DEFAULT_ROLES_PERMISSIONS = [
+    {
+        id: 'Admin' as RoleName,
+        name: 'Administrator',
+        description: 'Full access to all system features',
+        icon: UsersIcon,
+        permissions: [
+            { id: 'manage-users', label: 'Manage Users', enabled: true },
+            { id: 'manage-finances', label: 'Manage Finances', enabled: true },
+            { id: 'view-analytics', label: 'View Analytics', enabled: true },
+            { id: 'send-announcements', label: 'Send Announcements', enabled: true },
+        ]
+    },
+    {
+        id: 'Teacher' as RoleName,
+        name: 'Teacher',
+        description: 'Manage classes, students, and academic records',
+        icon: BookOpenIcon,
+        permissions: [
+            { id: 'mark-attendance', label: 'Mark Attendance', enabled: true },
+            { id: 'enter-results', label: 'Enter Results', enabled: true },
+            { id: 'manage-own-exams', label: 'Manage Exams', enabled: true },
+            { id: 'access-library', label: 'Access Library', enabled: true },
+        ]
+    },
+    {
+        id: 'Student' as RoleName,
+        name: 'Student',
+        description: 'View personal records and learning materials',
+        icon: ViewGridIcon,
+        permissions: [
+            { id: 'view-reports', label: 'View Report Cards', enabled: true },
+            { id: 'view-attendance', label: 'View Attendance', enabled: true },
+            { id: 'view-timetable', label: 'View Timetable', enabled: true },
+            { id: 'use-study-buddy', label: 'Use AI Study Buddy', enabled: true },
+        ]
+    },
+    {
+        id: 'Parent' as RoleName,
+        name: 'Parent',
+        description: 'Monitor child performance and payments',
+        icon: UsersIcon,
+        permissions: [
+            { id: 'view-reports', label: 'View Child Reports', enabled: true },
+            { id: 'view-fees', label: 'View & Pay Fees', enabled: true },
+            { id: 'track-bus', label: 'Track School Bus', enabled: true },
+        ]
+    }
+];
 
 const PermissionToggle = ({ enabled, onToggle, disabled = false }: { enabled: boolean, onToggle: () => void, disabled?: boolean }) => (
     <button
@@ -23,15 +74,13 @@ const PermissionToggle = ({ enabled, onToggle, disabled = false }: { enabled: bo
         aria-checked={enabled}
         onClick={onToggle}
         disabled={disabled}
-        className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 ${
-            enabled ? 'bg-sky-600' : 'bg-gray-300'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 ${enabled ? 'bg-sky-600' : 'bg-gray-300'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
         <span
             aria-hidden="true"
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                enabled ? 'translate-x-5' : 'translate-x-0'
-            }`}
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
         />
     </button>
 );
@@ -57,7 +106,7 @@ const permissionIcons: { [key: string]: React.ReactNode } = {
 const UserRolesScreen: React.FC = () => {
     const [permissionsState, setPermissionsState] = useState(() => {
         const initialState: { [key in RoleName]?: { [key: string]: boolean } } = {};
-        mockRolesAndPermissions.forEach(role => {
+        DEFAULT_ROLES_PERMISSIONS.forEach(role => {
             initialState[role.id] = {};
             role.permissions.forEach(perm => {
                 initialState[role.id]![perm.id] = perm.enabled;
@@ -80,7 +129,7 @@ const UserRolesScreen: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-gray-100">
             <main className="flex-grow p-4 space-y-4 overflow-y-auto pb-20">
-                {mockRolesAndPermissions.map(role => {
+                {DEFAULT_ROLES_PERMISSIONS.map(role => {
                     const IconComponent = role.icon;
                     return (
                         <div key={role.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">

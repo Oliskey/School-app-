@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GoogleGenAI, Chat } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CameraIcon } from '../../constants';
@@ -44,14 +44,14 @@ const StudyBuddy: React.FC = () => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ''; // Use Vite env var
+        const apiKey = import.meta.env.VITE_OPENAI_API_KEY || ''; // Use Vite env var
 
         if (!apiKey) {
-            setMessages(prev => [...prev, { role: 'model', text: "⚠️ API Key missing. Please set VITE_GEMINI_API_KEY in your .env file to use the AI Study Buddy." }]);
+            setMessages(prev => [...prev, { role: 'model', text: "⚠️ API Key missing. Please set VITE_OPENAI_API_KEY in your .env file to use the AI Study Buddy." }]);
             return;
         }
 
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = getAIClient(apiKey);
         chatRef.current = ai.chats.create({
             model: 'gemini-2.0-flash',
             config: {

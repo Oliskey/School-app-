@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LogoutIcon, ChevronLeftIcon, NotificationIcon, SearchIcon } from '../../constants';
+import { LogoutIcon, ChevronLeftIcon, NotificationIcon, SearchIcon, UserIcon } from '../../constants';
 
 interface HeaderProps {
   title: string;
@@ -39,7 +39,11 @@ const Header: React.FC<HeaderProps> = ({ title, avatarUrl, bgColor, onLogout, on
 
   const Avatar = () => (
     <div className="w-10 h-10 sm:w-12 sm:w-12 rounded-full bg-white/30 p-1 flex-shrink-0">
-      <img src={avatarUrl} alt="avatar" className="rounded-full w-full h-full object-cover" />
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="avatar" className="rounded-full w-full h-full object-cover" />
+      ) : (
+        <UserIcon className="w-full h-full p-1 text-gray-100" />
+      )}
     </div>
   );
 

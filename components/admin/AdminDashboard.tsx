@@ -1,7 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Header from '../ui/Header';
 import { AdminBottomNav } from '../ui/DashboardBottomNav';
-import { mockNotifications } from '../../data';
 import { DashboardType } from '../../types';
 import { supabase } from '../../lib/supabase';
 import ErrorBoundary from '../shared/ErrorBoundary';
@@ -19,6 +18,7 @@ const TeacherListScreen = lazy(() => import('./TeacherListScreen'));
 const TeacherPerformanceScreen = lazy(() => import('./TeacherPerformanceScreen'));
 const TimetableEditor = lazy(() => import('./TimetableEditor'));
 const TeacherAttendanceScreen = lazy(() => import('./TeacherAttendanceScreen'));
+const TeacherAttendanceApproval = lazy(() => import('./TeacherAttendanceApproval'));
 const FeeManagement = lazy(() => import('./FeeManagement'));
 const FeeDetailsScreen = lazy(() => import('./FeeDetailsScreen'));
 const ExamManagement = lazy(() => import('./ExamManagement'));
@@ -156,6 +156,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
         timetable: TimetableGeneratorScreen,
         timetableEditor: TimetableEditor,
         teacherAttendance: TeacherAttendanceScreen,
+        teacherAttendanceApproval: TeacherAttendanceApproval,
         feeManagement: FeeManagement,
         feeDetails: FeeDetailsScreen,
         examManagement: ExamManagement,
@@ -216,7 +217,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
         userAccounts: UserAccountsScreen,
     };
 
-    const notificationCount = mockNotifications.filter(n => !n.isRead && n.audience.includes('admin')).length;
+    const [notificationCount, setNotificationCount] = useState(0);
+
+    useEffect(() => {
+        const fetchNotifsCount = async () => {
+            const { count } = await supabase
+                .from('notifications')
+                .select('id', { count: 'exact', head: true })
+                .eq('is_read', false)
+                .contains('audience', ['admin']);
+            setNotificationCount(count || 0);
+        };
+        fetchNotifsCount();
+    }, []);
 
     const navigateTo = (view: string, title: string, props: any = {}) => {
         console.log(`Navigating to: ${view}`);
@@ -293,7 +306,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
             )}
             <Header
                 title={currentNavigation.title}
-                avatarUrl="https://i.pravatar.cc/150?u=admin"
+                avatarUrl=""
                 bgColor="bg-indigo-800"
                 onLogout={onLogout}
                 onBack={viewStack.length > 1 ? handleBack : undefined}

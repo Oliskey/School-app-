@@ -71,9 +71,29 @@ export interface ReportCard {
 export interface Student {
   id: number;
   name: string;
+  email: string;
   avatarUrl: string;
   grade: number;
   section: string;
+  rollNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
+  phone?: string;
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  admissionDate?: string;
+  bloodGroup?: string;
+  status?: 'Active' | 'Inactive' | 'Suspended';
+  attendance?: number;
+  performance?: number;
+  subjects?: string[];
+  fees?: {
+    total: number;
+    paid: number;
+    pending: number;
+  };
   department?: Department;
   attendanceStatus: AttendanceStatus;
   academicPerformance?: AcademicRecord[];
@@ -85,6 +105,7 @@ export interface Student {
 export type StudentReportInfo = Student & { status: 'Draft' | 'Submitted' | 'Published'; };
 
 export interface StudentAttendance {
+  id: number;
   studentId: number;
   date: string; // YYYY-MM-DD
   status: 'Present' | 'Absent' | 'Late' | 'Leave';
@@ -99,6 +120,17 @@ export interface Teacher {
   email: string;
   phone: string;
   status: 'Active' | 'Inactive' | 'On Leave';
+  dateOfJoining?: string;
+  qualification?: string;
+  experience?: string;
+  address?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
+  salary?: number;
+  attendance?: number;
+  performance?: number;
 }
 
 export interface ClassInfo {
@@ -154,6 +186,7 @@ export interface DigitalResource {
   subject: string;
   description: string;
   thumbnailUrl: string;
+  url?: string;
 }
 
 export interface VideoLesson extends DigitalResource {
@@ -266,12 +299,9 @@ export interface CurriculumSubject {
   category: CurriculumSubjectCategory;
 }
 
-export interface StudentFeeInfo {
+export interface Fee {
   id: number;
-  name: string;
-  avatarUrl: string;
-  grade: number;
-  section: string;
+  studentId: number;
   totalFee: number;
   paidAmount: number;
   dueDate: string;
@@ -354,11 +384,13 @@ export type Conversation = ChatRoom; // Backward compatibility alias
 export type AnnouncementCategory = 'General' | 'Homework' | 'Test Reminder' | 'Event' | 'Urgent' | 'Holiday';
 
 export interface TimetableEntry {
+  id: number;
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
   startTime: string; // "09:00"
   endTime: string; // "10:00"
   subject: string;
   className: string; // e.g., "Grade 11C"
+  teacherId?: number;
 }
 
 export interface StudentPerformanceData {
@@ -456,6 +488,10 @@ export interface Parent {
   phone: string;
   avatarUrl: string;
   childIds?: number[];
+  address?: string;
+  occupation?: string;
+  relationship?: string;
+  emergencyContact?: string;
 }
 
 export type ComplaintStatus = 'Submitted' | 'In Progress' | 'Resolved' | 'Closed';
@@ -480,6 +516,7 @@ export type NotificationCategory = 'Fees' | 'Attendance' | 'Message' | 'Event' |
 
 export interface Notification {
   id: number;
+  userId?: number;
   category: NotificationCategory;
   title: string;
   summary: string;

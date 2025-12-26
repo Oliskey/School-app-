@@ -9,6 +9,7 @@ import {
   SparklesIcon,
   CalendarPlusIcon,
   VideoIcon,
+  CheckCircleIcon,
   SUBJECT_COLORS
 } from '../../constants';
 // import { ClassInfo, Teacher, Assignment } from '../../types'; // Not utilizing full types yet for raw DB data
@@ -155,6 +156,7 @@ const TeacherOverview: React.FC<TeacherOverviewProps> = ({ navigateTo, currentUs
   };
 
   const quickActions = [
+    { label: "My Attendance", icon: <CheckCircleIcon className="h-7 w-7" />, action: () => navigateTo('teacherSelfAttendance', 'My Attendance', {}) },
     { label: "Attendance", icon: <TeacherAttendanceIcon className="h-7 w-7" />, action: () => navigateTo('selectClassForAttendance', 'Select Class', {}) },
     { label: "Assignments", icon: <ClipboardListIcon className="h-7 w-7" />, action: () => navigateTo('assignmentsList', 'Manage Assignments', {}) },
     { label: "Resources", icon: <BookOpenIcon className="h-7 w-7" />, action: () => navigateTo('resources', 'Resource Hub', {}) },

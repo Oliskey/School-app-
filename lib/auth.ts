@@ -39,8 +39,9 @@ export const createUserAccount = async (
     const username = generateUsername(fullName, userType);
     const password = generatePassword(surname);
 
-    // Hash the password before saving to auth_accounts (for production security)
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // For MVP/Demo, we are storing plaintext to match the simple RPC login.
+    // In production, uncomment the next line and update the RPC to check hashes.
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // 1. Create Supabase Auth user (with auto-confirm for development)
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -67,10 +68,10 @@ export const createUserAccount = async (
       .insert([{
         username: username,
         email: email,
-        password: hashedPassword,
+        password: password, // Store plaintext for simple RPC login
         user_type: userType,
         user_id: userId,
-        is_verified: true,  // Auto-verify for development
+        is_verified: true,
         verification_sent_at: new Date().toISOString(),
         verification_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
       }]);
@@ -185,87 +186,35 @@ export const authenticateUser = async (
 ): Promise<{
   success: boolean;
   userType?: 'Student' | 'Teacher' | 'Parent' | 'Admin';
-  userId?: string;
+  userId?: string; // We return string for compatibility, though DB gives number
   email?: string;
   error?: string
 }> => {
   try {
-    // First, try to find the email from our auth_accounts table using username
-    const { data: authAccount, error: lookupError } = await supabase
-      .from('auth_accounts')
-      .select('email, user_type, is_verified, verification_sent_at, verification_expires_at')
-      .eq('username', username.toLowerCase())
-      .single();
-
-    if (lookupError) {
-      // PGRST116: The result contains 0 rows (User not found)
-      // We handle this gracefully as "Invalid credentials"
-      if (lookupError.code === 'PGRST116') {
-        // Only log this if it's NOT a standard failure (optional, can be removed to be silent)
-        // console.warn('Authentication attempt with non-existent username:', username);
-        return { success: false, error: 'Invalid credentials' };
-      }
-
-      console.error('Database lookup error:', lookupError);
-      return { success: false, error: 'Invalid credentials' };
-    }
-
-    if (!authAccount) {
-      return { success: false, error: 'Invalid credentials' };
-    }
-
-    // If our DB shows the account as not yet verified, attempt a fresh check
-    // with Supabase Auth after sign-in. However, to avoid letting unverified
-    // users proceed, we will require that email verification is completed.
-
-    // Attempt sign-in with Supabase Auth
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: authAccount.email,
-      password: password.toLowerCase(),
+    // Call the database function to verify credentials
+    // This bypasses Supabase Auth email verification requirement for a smoother UX
+    const { data, error } = await supabase.rpc('authenticate_user', {
+      username_input: username.toLowerCase(),
+      password_input: password
     });
 
     if (error) {
-      console.error('Authentication error:', error);
-      // If sign-in failed and the account is marked as unverified, inform the user
-      if (!authAccount.is_verified) {
-        return { success: false, error: 'Email not verified. Please confirm your email before logging in. The account may be deactivated if not verified within 7 days.' };
-      }
+      console.error('RPC Error:', error);
       return { success: false, error: 'Invalid credentials' };
     }
 
-    if (!data.user) {
-      return { success: false, error: 'Authentication failed' };
+    // RPC returns an array (set of rows). If empty, no match.
+    if (!data || data.length === 0) {
+      return { success: false, error: 'Invalid credentials' };
     }
 
-    // Fetch the latest auth user info to check email verification status
-    try {
-      const { data: userInfo } = await supabase.auth.getUser();
-      const user = (userInfo as any)?.user;
-      const emailConfirmed = user && (user.email_confirmed_at || user.confirmed_at || user.email_verified || user.identities);
-
-      if (!emailConfirmed && !authAccount.is_verified) {
-        // sign out the session we just created
-        try { await supabase.auth.signOut(); } catch (_) { }
-        return { success: false, error: 'Email not verified. Please confirm your email before logging in. The account may be deactivated if not verified within 7 days.' };
-      }
-
-      // If email is confirmed and our auth_accounts wasn't up to date, update it
-      if (emailConfirmed && !authAccount.is_verified) {
-        try {
-          await supabase.from('auth_accounts').update({ is_verified: true }).eq('username', username.toLowerCase());
-        } catch (updateErr) {
-          console.warn('Could not update auth_accounts verification status:', updateErr);
-        }
-      }
-    } catch (e) {
-      console.warn('Could not fetch user info after sign-in to validate email verification:', e);
-    }
+    const user = data[0];
 
     return {
       success: true,
-      userType: authAccount.user_type,
-      userId: data.user.id,
-      email: data.user.email,
+      userType: user.role as any,
+      userId: user.id.toString(), // Convert number to string for context compatibility
+      email: user.email,
     };
   } catch (err: any) {
     console.error('Error in authenticateUser:', err);

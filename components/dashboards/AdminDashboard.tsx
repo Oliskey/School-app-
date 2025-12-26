@@ -7,6 +7,7 @@ import { mockNotifications } from '../../data';
 import { DashboardType } from '../../types';
 import MessagingLayout from '../shared/MessagingLayout';
 import { useProfile } from '../../context/ProfileContext';
+import ErrorBoundary from '../ui/ErrorBoundary';
 
 // Lazy load only the Global Search Screen as it's an overlay
 const GlobalSearchScreen = lazy(() => import('../shared/GlobalSearchScreen'));
@@ -50,6 +51,7 @@ import BrandingSettingsScreen from '../admin/BrandingSettingsScreen';
 import PersonalSecuritySettingsScreen from '../admin/PersonalSecuritySettingsScreen';
 import TeacherDetailAdminView from '../admin/TeacherDetailAdminView';
 import TeacherAttendanceDetail from '../admin/TeacherAttendanceDetail';
+import TeacherAttendanceApproval from '../admin/TeacherAttendanceApproval';
 import AttendanceOverviewScreen from '../admin/AttendanceOverviewScreen';
 import ClassAttendanceDetailScreen from '../admin/ClassAttendanceDetailScreen';
 import AdminSelectTermForReport from '../admin/AdminSelectTermForReport';
@@ -110,17 +112,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
 
     const notificationCount = mockNotifications.filter(n => !n.isRead && n.audience.includes('admin')).length;
 
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const scrollPositions = React.useRef<Record<string, number>>({});
+
+    // Save scroll position before navigating
+    const saveScrollPosition = () => {
+        if (scrollContainerRef.current) {
+            const currentView = viewStack[viewStack.length - 1].view;
+            scrollPositions.current[currentView] = scrollContainerRef.current.scrollTop;
+        }
+    };
+
     const navigateTo = (view: string, title: string, props: any = {}) => {
+        saveScrollPosition();
         setViewStack(stack => [...stack, { view, props, title }]);
     };
 
     const handleBack = () => {
+        // No need to save scroll when going back, we want to return to the saved state of the previous page
+        // But if we want to save the state of the CURRENT page in case we go forward again (not supported here), we would.
+        // Actually, for "Back", we effectively Discard the current view's scroll state usually, or keep it if we had a "Forward" button.
+        // Since we pop, we don't need to save the current one being popped.
         if (viewStack.length > 1) {
             setViewStack(stack => stack.slice(0, -1));
         }
     };
 
     const handleBottomNavClick = (screen: string) => {
+        saveScrollPosition(); // Save current before switching context completely
         setActiveBottomNav(screen);
         // Reset stack based on bottom nav selection
         switch (screen) {
@@ -132,6 +151,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
                 break;
             case 'communication':
                 setViewStack([{ view: 'communicationHub', props: {}, title: 'Communication Hub' }]);
+                break;
+            case 'attendance':
+                setViewStack([{ view: 'teacherAttendance', props: {}, title: 'Teacher Attendance' }]);
                 break;
             case 'analytics':
                 setViewStack([{ view: 'analytics', props: {}, title: 'School Analytics' }]);
@@ -145,6 +167,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
     };
 
     const handleNotificationClick = () => {
+        saveScrollPosition();
         navigateTo('notifications', 'Notifications');
     };
 
@@ -188,6 +211,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
         personalSecuritySettings: PersonalSecuritySettingsScreen,
         teacherDetailAdminView: TeacherDetailAdminView,
         teacherAttendanceDetail: TeacherAttendanceDetail,
+        teacherAttendanceApproval: TeacherAttendanceApproval,
         attendanceOverview: AttendanceOverviewScreen,
         classAttendanceDetail: ClassAttendanceDetailScreen,
         adminSelectTermForReport: AdminSelectTermForReport,
@@ -216,6 +240,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
     const ComponentToRender = viewComponents[currentNavigation.view as keyof typeof viewComponents];
     const isMessagesView = currentNavigation.view === 'messages';
 
+    // Restore scroll position when view changes
+    React.useLayoutEffect(() => {
+        if (scrollContainerRef.current) {
+            const savedPosition = scrollPositions.current[currentNavigation.view];
+            if (savedPosition !== undefined) {
+                scrollContainerRef.current.scrollTop = savedPosition;
+            } else {
+                scrollContainerRef.current.scrollTop = 0;
+            }
+        }
+    }, [currentNavigation.view]);
+
     const commonProps = {
         navigateTo,
         onLogout,
@@ -242,10 +278,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
                 />
 
                 {/* Content Container */}
-                <div className={`flex-grow ${isMessagesView ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-                    <div key={`${viewStack.length}-${version}`} className={`animate-slide-in-up ${isMessagesView ? 'h-full' : ''}`}>
-                        {ComponentToRender ? <ComponentToRender {...currentNavigation.props} {...commonProps} /> : <div>View not found: {currentNavigation.view}</div>}
-                    </div>
+                <div
+                    ref={scrollContainerRef}
+                    className={`flex-grow ${isMessagesView ? 'overflow-hidden' : 'overflow-y-auto'}`}
+                >
+                    <ErrorBoundary>
+                        <div key={`${viewStack.length}-${version}`} className={`animate-slide-in-up ${isMessagesView ? 'h-full' : ''}`}>
+                            {ComponentToRender ? <ComponentToRender {...currentNavigation.props} {...commonProps} /> : <div>View not found: {currentNavigation.view}</div>}
+                        </div>
+                    </ErrorBoundary>
                 </div>
 
                 {/* Bottom Nav for mobile */}

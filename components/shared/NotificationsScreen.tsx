@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { mockNotifications } from '../../data';
-import { mockStudents, mockStudentFees } from '../../data';
+import { mockStudents, mockFees } from '../../data';
 import { NOTIFICATION_CATEGORY_CONFIG } from '../../constants';
 import { Notification } from '../../types';
 
@@ -29,39 +29,39 @@ const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ userType, nav
   const relevantNotifications = useMemo(() =>
     mockNotifications
       .filter(n => n.audience.includes('all') || n.audience.includes(userType))
-      .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [userType]
   );
 
   const handleNotificationClick = (notification: Notification) => {
     // Parent-specific navigation logic
     if (userType === 'parent') {
-        switch (notification.category) {
+      switch (notification.category) {
         case 'Fees':
-            const feeStudentInfo = mockStudentFees.find(f => f.id === notification.studentId);
-            if (feeStudentInfo) {
+          const feeStudentInfo = mockFees.find(f => f.id === notification.studentId);
+          if (feeStudentInfo) {
             navigateTo('feeStatus', 'Fee Status', { student: feeStudentInfo });
-            }
-            break;
+          }
+          break;
         case 'Attendance':
-            const student = mockStudents.find(s => s.id === notification.studentId);
-            if (student) {
+          const student = mockStudents.find(s => s.id === notification.studentId);
+          if (student) {
             navigateTo('childDetail', student.name, { student, initialTab: 'attendance' });
-            }
-            break;
+          }
+          break;
         case 'Event':
-            navigateTo('calendar', 'School Calendar', {});
-            break;
+          navigateTo('calendar', 'School Calendar', {});
+          break;
         case 'Message':
-            alert("Navigating to messages...");
-            break;
+          alert("Navigating to messages...");
+          break;
         default:
-            break;
-        }
+          break;
+      }
     }
     // Add logic for other user types if needed
   };
-  
+
   return (
     <div className="flex flex-col h-full bg-gray-100">
       <main className="flex-grow p-4 space-y-3 overflow-y-auto">
@@ -70,7 +70,7 @@ const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ userType, nav
             const config = NOTIFICATION_CATEGORY_CONFIG[notification.category];
             const Icon = config.icon;
             return (
-              <button 
+              <button
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
                 className="w-full text-left bg-white rounded-xl shadow-sm p-4 flex items-start space-x-4 relative transition-all hover:shadow-md hover:ring-2 hover:ring-gray-200"

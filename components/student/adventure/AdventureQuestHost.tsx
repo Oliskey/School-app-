@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME, SchemaType as Type } from '../../../lib/ai';
 import HomeScreen from './HomeScreen';
 import LoadingScreen from './LoadingScreen';
 import QuizScreen from './QuizScreen';
@@ -39,13 +39,13 @@ const AdventureQuestHost: React.FC<{ handleBack: () => void }> = ({ handleBack }
         setAppState('loading');
         setError(null);
         try {
-            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+            const apiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
             if (!apiKey) {
                 setError("Configuration Error: API Key is missing. Please check your settings.");
                 setAppState('home');
                 return;
             }
-            const ai = new GoogleGenAI({ apiKey });
+            const ai = getAIClient(apiKey);
 
             const sourceContentDescription = adventureContent.type === 'text'
                 ? 'the following text'

@@ -43,27 +43,7 @@ export function useTeachers(filters?: { status?: string; subject?: string }): Us
             if (fetchError) throw fetchError;
 
             // Transform Supabase data to match Teacher type
-            const transformedTeachers: Teacher[] = (data || []).map((t: any) => ({
-                id: t.id,
-                name: t.name,
-                email: t.email,
-                phone: t.phone,
-                subjects: t.subjects || [],
-                classes: t.classes || [],
-                dateOfJoining: t.date_of_joining,
-                qualification: t.qualification,
-                experience: t.experience,
-                address: t.address,
-                gender: t.gender,
-                dateOfBirth: t.date_of_birth,
-                bloodGroup: t.blood_group,
-                emergencyContact: t.emergency_contact,
-                salary: t.salary,
-                avatarUrl: t.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random`,
-                status: t.status || 'Active',
-                attendance: t.attendance || 98,
-                performance: t.performance || 90,
-            }));
+            const transformedTeachers: Teacher[] = (data || []).map(transformSupabaseTeacher);
 
             setTeachers(transformedTeachers);
             setError(null);
@@ -132,7 +112,7 @@ export function useTeachers(filters?: { status?: string; subject?: string }): Us
 
             if (insertError) throw insertError;
 
-            return data as any;
+            return transformSupabaseTeacher(data);
         } catch (err) {
             console.error('Error creating teacher:', err);
             setError(err as Error);
@@ -147,34 +127,33 @@ export function useTeachers(filters?: { status?: string; subject?: string }): Us
         }
 
         try {
-            const updateData: any = {};
-            if (updates.name !== undefined) updateData.name = updates.name;
-            if (updates.email !== undefined) updateData.email = updates.email;
-            if (updates.phone !== undefined) updateData.phone = updates.phone;
-            if (updates.subjects !== undefined) updateData.subjects = updates.subjects;
-            if (updates.classes !== undefined) updateData.classes = updates.classes;
-            if (updates.dateOfJoining !== undefined) updateData.date_of_joining = updates.dateOfJoining;
-            if (updates.qualification !== undefined) updateData.qualification = updates.qualification;
-            if (updates.experience !== undefined) updateData.experience = updates.experience;
-            if (updates.address !== undefined) updateData.address = updates.address;
-            if (updates.gender !== undefined) updateData.gender = updates.gender;
-            if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
-            if (updates.bloodGroup !== undefined) updateData.blood_group = updates.bloodGroup;
-            if (updates.emergencyContact !== undefined) updateData.emergency_contact = updates.emergencyContact;
-            if (updates.salary !== undefined) updateData.salary = updates.salary;
-            if (updates.avatarUrl !== undefined) updateData.avatar_url = updates.avatarUrl;
-            if (updates.status !== undefined) updateData.status = updates.status;
-
             const { data, error: updateError } = await supabase
                 .from('teachers')
-                .update(updateData)
+                .update({
+                    name: updates.name,
+                    email: updates.email,
+                    phone: updates.phone,
+                    subjects: updates.subjects,
+                    classes: updates.classes,
+                    date_of_joining: updates.dateOfJoining,
+                    qualification: updates.qualification,
+                    experience: updates.experience,
+                    address: updates.address,
+                    gender: updates.gender,
+                    date_of_birth: updates.dateOfBirth,
+                    blood_group: updates.bloodGroup,
+                    emergency_contact: updates.emergencyContact,
+                    salary: updates.salary,
+                    avatar_url: updates.avatarUrl,
+                    status: updates.status,
+                })
                 .eq('id', id)
                 .select()
                 .single();
 
             if (updateError) throw updateError;
 
-            return data as any;
+            return transformSupabaseTeacher(data);
         } catch (err) {
             console.error('Error updating teacher:', err);
             setError(err as Error);
@@ -214,3 +193,25 @@ export function useTeachers(filters?: { status?: string; subject?: string }): Us
         deleteTeacher,
     };
 }
+
+const transformSupabaseTeacher = (t: any): Teacher => ({
+    id: t.id,
+    name: t.name,
+    email: t.email,
+    phone: t.phone,
+    subjects: t.subjects || [],
+    classes: t.classes || [],
+    dateOfJoining: t.date_of_joining,
+    qualification: t.qualification,
+    experience: t.experience,
+    address: t.address,
+    gender: t.gender,
+    dateOfBirth: t.date_of_birth,
+    bloodGroup: t.blood_group,
+    emergencyContact: t.emergency_contact,
+    salary: t.salary,
+    avatarUrl: t.avatar_url,
+    status: t.status || 'Active',
+    attendance: t.attendance || 98,
+    performance: t.performance || 90,
+});

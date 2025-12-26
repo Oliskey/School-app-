@@ -30,8 +30,7 @@ import {
     ElearningIcon,
     SchoolLogoIcon,
 } from '../../constants';
-// import { mockSavedTimetable } from '../../data'; // Mock removed
-import { mockStudents, mockTeachers, mockParents, mockBusRoster } from '../../data';
+// Mock data removed
 import { AuditLog } from '../../types';
 import DonutChart from '../ui/DonutChart';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -319,27 +318,27 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
     }, []);
 
     const fetchBusRosterLocal = () => {
-        // Sync with LocalStorage (managed by Admin Page), fallback to Mock
+        // Sync with LocalStorage (managed by Admin Page)
         const saved = localStorage.getItem('schoolApp_busRoster');
-        let currentRoster = mockBusRoster;
+        let currentRoster = [];
         if (saved) {
             try { currentRoster = JSON.parse(saved); } catch (e) { console.error(e); }
         }
 
         const today = new Date().toISOString().split('T')[0];
         const assigned = currentRoster.filter((r: any) => r.date === today && r.driverId).length;
-        // Total routes is static 4 from mock for now, or fetch from data.ts
+        // Total routes - can fetch from DB later, for now assuming 4 or 0
         setBusRosterAssigned(assigned);
-        setBusRosterTotal(4); // Hardcoded 4 routes as per data.ts
+        setBusRosterTotal(4); // Default to 4 routes
     };
 
     const fetchCounts = async () => {
         setIsLoadingCounts(true);
 
         if (!isSupabaseConfigured) {
-            setTotalStudents(mockStudents.length);
-            setTotalStaff(mockTeachers.length);
-            setTotalParents(mockParents.length);
+            setTotalStudents(0);
+            setTotalStaff(0);
+            setTotalParents(0);
             setIsLoadingCounts(false);
             return;
         }
@@ -522,13 +521,14 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
                     <div>
                         <h2 className="text-xl font-bold text-gray-700 mb-3 px-1">Quick Actions</h2>
                         {/* Mobile/Tablet view */}
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 lg:hidden">
+                        <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-3">
                             <QuickActionCard label="Add User" icon={<PlusIcon />} onClick={() => navigateTo('selectUserTypeToAdd', 'Add New User', {})} color="bg-sky-500" />
                             <QuickActionCard label="Publish Reports" icon={<ReportIcon />} onClick={() => navigateTo('reportCardPublishing', 'Publish Reports', {})} color="bg-purple-500" />
                             <QuickActionCard label="Timetable" icon={<ClipboardListIcon />} onClick={() => navigateTo('timetable', 'AI Timetable')} color="bg-indigo-500" />
                             <QuickActionCard label="Announce" icon={<MegaphoneIcon />} onClick={() => navigateTo('communicationHub', 'Communication Hub')} color="bg-teal-500" />
                             <QuickActionCard label="Bus Roster" icon={<BusVehicleIcon />} onClick={() => navigateTo('busDutyRoster', 'Bus Duty Roster')} color="bg-orange-500" />
                             <QuickActionCard label="Health Log" icon={<HeartIcon />} onClick={() => navigateTo('healthLog', 'Health Log')} color="bg-red-500" />
+                            <QuickActionCard label="Attendance" icon={<ClockIcon />} onClick={() => navigateTo('teacherAttendance', 'Teacher Attendance')} color="bg-amber-500" />
                             <QuickActionCard label="User Accounts" icon={<UsersIcon />} onClick={() => navigateTo('userAccounts', 'User Accounts')} color="bg-indigo-600" />
                         </div>
 
@@ -573,12 +573,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
                                     onClick={() => navigateTo('manageSchoolInfo', 'School Information')}
                                     color="bg-pink-600"
                                 />
-                                <QuickActionCard
-                                    label="User Accounts"
-                                    icon={<UsersIcon />}
-                                    onClick={() => navigateTo('userAccounts', 'User Accounts')}
-                                    color="bg-indigo-600"
-                                />
+
                             </div>
                         </div>
 

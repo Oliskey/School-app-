@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { XCircleIcon, SparklesIcon, BriefcaseIcon, CheckCircleIcon, PlusIcon, EditIcon, CalendarIcon, SaveIcon, CloudUploadIcon, RefreshIcon, ChevronLeftIcon } from '../../constants';
 import { SUBJECT_COLORS } from '../../constants';
-import { mockSavedTimetable } from '../../data';
 import { TimetableEntry } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { notifyClass } from '../../lib/database';
@@ -357,10 +356,8 @@ const TimetableEditor: React.FC<TimetableEditorProps> = ({ timetableData, naviga
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            if (mockSavedTimetable.current) {
-                mockSavedTimetable.current.timetable = timetable;
-                mockSavedTimetable.current.teacherAssignments = teacherAssignments;
-            }
+            // Removed mock update
+
             await saveTimetableToDatabase('Draft');
             setToastMessage('Changes saved to Draft');
         } catch (error) {
@@ -374,11 +371,7 @@ const TimetableEditor: React.FC<TimetableEditorProps> = ({ timetableData, naviga
     const handlePublish = async () => {
         setIsSaving(true);
         try {
-            if (mockSavedTimetable.current) {
-                mockSavedTimetable.current.timetable = timetable;
-                mockSavedTimetable.current.teacherAssignments = teacherAssignments;
-                mockSavedTimetable.current.status = 'Published';
-            }
+            // Removed mock update
             await saveTimetableToDatabase('Published');
 
             // Send Notification to Students
@@ -470,7 +463,7 @@ const TimetableEditor: React.FC<TimetableEditorProps> = ({ timetableData, naviga
 
     const handleRegenerate = () => {
         if (window.confirm("Start over? Unsaved changes will be lost.")) {
-            mockSavedTimetable.current = null;
+            // mockSavedTimetable.current = null;
             handleBack();
         }
     };

@@ -3,9 +3,8 @@ import React, { useState } from 'react';
 import { Teacher } from '../../types';
 import { MailIcon, PhoneIcon, ChartBarIcon, CalendarIcon, EditIcon, gradeColors, SUBJECT_COLORS, TrashIcon } from '../../constants';
 import DonutChart from '../ui/DonutChart';
-import { mockClasses, mockTeachers } from '../../data';
-import ConfirmationModal from '../ui/ConfirmationModal';
 import { supabase } from '../../lib/supabase';
+import ConfirmationModal from '../ui/ConfirmationModal';
 
 interface TeacherDetailAdminViewProps {
     teacher: Teacher;
@@ -36,7 +35,7 @@ const TeacherDetailAdminView: React.FC<TeacherDetailAdminViewProps> = ({ teacher
     const displayClasses = teacher.classes.map(className => {
         // Try to parse grade/section from string "10A" or "Grade 10A"
         const normalized = className.replace(/Grade\s*/i, '').trim();
-        const match = mockClasses.find(c => (c.grade + c.section) === normalized);
+        const match = null; // Removed mockClasses lookup
 
         if (match) return match;
 
@@ -78,11 +77,7 @@ const TeacherDetailAdminView: React.FC<TeacherDetailAdminViewProps> = ({ teacher
 
             if (deleteAuthError) console.warn('Warning: Could not delete auth account:', deleteAuthError);
 
-            // Also update mock data for consistency
-            const index = mockTeachers.findIndex(t => t.id === teacher.id);
-            if (index > -1) {
-                mockTeachers.splice(index, 1);
-            }
+
 
             alert(`${teacher.name} has been successfully deleted from the database.`);
             forceUpdate();
@@ -118,9 +113,7 @@ const TeacherDetailAdminView: React.FC<TeacherDetailAdminViewProps> = ({ teacher
                                             if (error) throw error;
 
                                             setTeacher({ ...teacher, status: newStatus });
-                                            // Update mock data for immediate consistency
-                                            const index = mockTeachers.findIndex(t => t.id === teacher.id);
-                                            if (index > -1) mockTeachers[index].status = newStatus;
+
 
                                             forceUpdate();
                                         } catch (err: any) {

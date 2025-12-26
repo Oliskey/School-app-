@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Student } from '../../types';
@@ -29,7 +29,7 @@ const AIPerformanceSummaryScreen: React.FC<AIPerformanceSummaryScreenProps> = ({
             }
             setIsLoading(true);
             try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
                 const studentDataForPrompt = students.map(s => {
                     const latestGrades = s.academicPerformance?.slice(-3).map(p => `${p.subject}: ${p.score}%`).join(', ') || 'N/A';
                     const behavior = s.behaviorNotes?.map(n => `${n.type}: ${n.title}`).join(', ') || 'No notes';

@@ -7,6 +7,7 @@ import { TeacherBottomNav } from '../ui/DashboardBottomNav';
 import { TeacherSideNav } from '../ui/DashboardSideNav';
 import { mockNotifications } from '../../data';
 import { useProfile } from '../../context/ProfileContext';
+import ErrorBoundary from '../ui/ErrorBoundary';
 
 // Lazy load only the Global Search Screen as it's an overlay
 const GlobalSearchScreen = lazy(() => import('../shared/GlobalSearchScreen'));
@@ -46,6 +47,7 @@ import TeacherReportCardPreviewScreen from '../teacher/TeacherReportCardPreviewS
 import NotificationsScreen from '../shared/NotificationsScreen';
 import TeacherSelectClassForAttendance from '../teacher/TeacherUnifiedAttendanceScreen';
 import TeacherMarkAttendanceScreen from '../teacher/TeacherAttendanceScreen';
+import TeacherSelfAttendance from '../teacher/TeacherSelfAttendance';
 import LessonPlannerScreen from '../teacher/LessonPlannerScreen';
 import LessonPlanDetailScreen from '../teacher/LessonPlanDetailScreen';
 import DetailedLessonNoteScreen from '../teacher/DetailedLessonNoteScreen';
@@ -144,6 +146,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     examManagement: TeacherExamManagement,
     selectClassForAttendance: TeacherSelectClassForAttendance,
     markAttendance: TeacherMarkAttendanceScreen,
+    teacherSelfAttendance: TeacherSelfAttendance,
     library: LibraryScreen,
     gallery: PhotoGalleryScreen,
     calendar: CalendarScreen,
@@ -220,13 +223,15 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
         />
         <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
           <main className="h-full pt-16">
-            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
-              {ComponentToRender ? (
-                <ComponentToRender {...currentNavigation.props} {...commonProps} />
-              ) : (
-                <div className="p-6">View not found: {currentNavigation.view}</div>
-              )}
-            </div>
+            <ErrorBoundary>
+              <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+                {ComponentToRender ? (
+                  <ComponentToRender {...currentNavigation.props} {...commonProps} />
+                ) : (
+                  <div className="p-6">View not found: {currentNavigation.view}</div>
+                )}
+              </div>
+            </ErrorBoundary>
           </main>
         </div>
 

@@ -1,46 +1,33 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+// import { supabase } from '../../lib/supabase'; // Removed
 import { UserIcon, MailIcon, PhoneIcon, CameraIcon } from '../../constants';
 import { useProfile } from '../../context/ProfileContext';
 
 interface EditParentProfileScreenProps {
     parentId?: number | null;
-    onProfileUpdate?: () => void;
+    onProfileUpdate?: (data?: { name: string; avatarUrl: string }) => void;
 }
 
-const EditParentProfileScreen: React.FC<EditParentProfileScreenProps> = ({ parentId, onProfileUpdate }) => {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
-    const [avatar, setAvatar] = useState('https://i.pravatar.cc/150?u=parent');
-    const [loading, setLoading] = useState(true);
+const EditParentProfileScreen: React.FC<EditParentProfileScreenProps> = ({ onProfileUpdate }) => {
+    // 1. Use centralized Profile Context
+    const { profile, updateProfile } = useProfile();
+
+    // Form State from Context
+    const [name, setName] = useState(profile.name || '');
+    const [email, setEmail] = useState(profile.email || '');
+    const [phone, setPhone] = useState(profile.phone || '');
+    const [avatar, setAvatar] = useState(profile.avatarUrl || 'https://i.pravatar.cc/150?u=parent');
+
     const [saving, setSaving] = useState(false);
 
+    // Sync with context if it loads late or changes
     useEffect(() => {
-        if (!parentId) {
-            setLoading(false);
-            return;
-        }
-
-        const fetchProfile = async () => {
-            const { data, error } = await supabase
-                .from('parents')
-                .select('*')
-                .eq('id', parentId)
-                .single();
-
-            if (data) {
-                setName(data.name || '');
-                setEmail(data.email || '');
-                setPhone(data.phone || '');
-                setAvatar(data.avatar_url || 'https://i.pravatar.cc/150?u=parent');
-            }
-            setLoading(false);
-        };
-
-        fetchProfile();
-    }, [parentId]);
+        setName(profile.name || '');
+        setEmail(profile.email || '');
+        setPhone(profile.phone || '');
+        if (profile.avatarUrl) setAvatar(profile.avatarUrl);
+    }, [profile]);
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -53,29 +40,12 @@ const EditParentProfileScreen: React.FC<EditParentProfileScreenProps> = ({ paren
         }
     };
 
-    const { updateProfile } = useProfile();
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
 
         try {
-            const updates = {
-                name,
-                email,
-                phone,
-                avatar_url: avatar
-            };
-
-            // 1. Update Parent Table
-            const { error } = await supabase
-                .from('parents')
-                .update(updates)
-                .eq('id', parentId);
-
-            if (error) throw error;
-
-            // 2. Update Context (and potentially Users table via context if configured)
+            // 2. Update via Context (Users Table)
             await updateProfile({
                 name,
                 email,
@@ -84,7 +54,7 @@ const EditParentProfileScreen: React.FC<EditParentProfileScreenProps> = ({ paren
             });
 
             alert('Profile saved successfully!');
-            if (onProfileUpdate) onProfileUpdate();
+            if (onProfileUpdate) onProfileUpdate({ name, avatarUrl: avatar });
 
         } catch (error: any) {
             console.error('Error updating profile:', error);
@@ -93,8 +63,6 @@ const EditParentProfileScreen: React.FC<EditParentProfileScreenProps> = ({ paren
             setSaving(false);
         }
     };
-
-    if (loading) return <div className="p-8 text-center">Loading profile...</div>;
 
     return (
         <div className="flex flex-col h-full bg-gray-50">

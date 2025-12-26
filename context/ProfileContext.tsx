@@ -61,8 +61,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         }
 
-        // Fallback: load from localStorage if DB not available
-        const savedProfile = localStorage.getItem('userProfile');
+        // Fallback: load from sessionStorage if DB not available
+        const savedProfile = sessionStorage.getItem('userProfile');
         if (savedProfile) {
           try {
             setProfileState(JSON.parse(savedProfile));
@@ -72,7 +72,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       } catch (err) {
         console.warn('Error initializing profile from Supabase:', err);
-        // Use default or localStorage
+        // Use default or sessionStorage
       } finally {
         setIsLoading(false);
       }
@@ -83,8 +83,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setProfile = useCallback((newProfile: UserProfile) => {
     setProfileState(newProfile);
-    // Also cache in localStorage
-    localStorage.setItem('userProfile', JSON.stringify(newProfile));
+    // Also cache in sessionStorage
+    sessionStorage.setItem('userProfile', JSON.stringify(newProfile));
   }, []);
 
   const loadProfileFromDatabase = useCallback(async (userId?: number | string, email?: string) => {
@@ -121,7 +121,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
           role: profile.role,
         };
         setProfileState(dbProfile);
-        localStorage.setItem('userProfile', JSON.stringify(dbProfile));
+        sessionStorage.setItem('userProfile', JSON.stringify(dbProfile));
         return dbProfile;
       } else {
         console.warn('Could not load profile from database:', error);
@@ -182,7 +182,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // Update local state and cache after successful save
       setProfileState(updated);
-      localStorage.setItem('userProfile', JSON.stringify(updated));
+      sessionStorage.setItem('userProfile', JSON.stringify(updated));
     } catch (err) {
       console.error('Error updating profile:', err);
       throw err;
@@ -212,7 +212,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
             role: profile.role,
           };
           setProfileState(refreshed);
-          localStorage.setItem('userProfile', JSON.stringify(refreshed));
+          sessionStorage.setItem('userProfile', JSON.stringify(refreshed));
           return;
         }
       } else if (profile.email) {
@@ -232,7 +232,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
             role: profile.role,
           };
           setProfileState(refreshed);
-          localStorage.setItem('userProfile', JSON.stringify(refreshed));
+          sessionStorage.setItem('userProfile', JSON.stringify(refreshed));
           return;
         }
       }

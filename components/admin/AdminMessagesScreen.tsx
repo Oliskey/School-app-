@@ -163,7 +163,13 @@ const AdminMessagesScreen: React.FC<AdminMessagesScreenProps> = ({ onSelectChat,
                                             }`}
                                     >
                                         <div className="relative flex-shrink-0">
-                                            <img src={room.displayAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(room.displayName)}&background=random`} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            {room.displayAvatar ? (
+                                                <img src={room.displayAvatar} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 border border-gray-100 shadow-sm">
+                                                    <span className="font-bold">{room.displayName.charAt(0)}</span>
+                                                </div>
+                                            )}
                                             {room.is_group && (
                                                 <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
                                                     <div className="bg-indigo-100 rounded-full p-1">

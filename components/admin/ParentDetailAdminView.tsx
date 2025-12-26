@@ -2,7 +2,6 @@
 import React from 'react';
 import { Parent } from '../../types';
 import { MailIcon, PhoneIcon, EditIcon, TrashIcon, StudentsIcon } from '../../constants';
-import { mockStudents, mockParents } from '../../data';
 import { supabase } from '../../lib/supabase';
 
 interface ParentDetailAdminViewProps {
@@ -50,9 +49,8 @@ const ParentDetailAdminView: React.FC<ParentDetailAdminViewProps> = ({ parent, n
         fetchChildren();
     }, [parent.id]);
 
-    // Use the fetched children, fallback to mock only if needed (or remove mock logic completely if we want to be pure)
-    // For now, let's prefer the state if populated, otherwise mock logic (for backward compat if parent object has childIds property from mock)
-    const displayChildren = children.length > 0 ? children : mockStudents.filter(s => parent.childIds?.includes(s.id));
+    // Use the fetched children
+    const displayChildren = children;
 
     const handleDelete = async () => {
         if (window.confirm(`Are you sure you want to delete the account for ${parent.name}? This action cannot be undone.`)) {
@@ -83,11 +81,7 @@ const ParentDetailAdminView: React.FC<ParentDetailAdminViewProps> = ({ parent, n
 
                 if (deleteAuthError) console.warn('Warning: Could not delete auth account:', deleteAuthError);
 
-                // Also update mock data for consistency
-                const index = mockParents.findIndex(p => p.id === parent.id);
-                if (index > -1) {
-                    mockParents.splice(index, 1);
-                }
+
 
                 alert(`${parent.name} has been successfully deleted from the database.`);
                 forceUpdate();

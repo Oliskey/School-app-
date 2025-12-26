@@ -4,19 +4,18 @@ import { DashboardType } from './types';
 import Login from './components/auth/Login';
 import AIChatScreen from './components/shared/AIChatScreen';
 import { requestNotificationPermission, showNotification } from './components/shared/notifications';
-import { mockNotices, mockTeachers, mockStudents } from './data';
 import { ProfileProvider } from './context/ProfileContext';
-
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { realtimeService } from './services/RealtimeService';
 
 const AdminDashboard = lazy(() => import('./components/dashboards/AdminDashboard'));
 const TeacherDashboard = lazy(() => import('./components/dashboards/TeacherDashboard'));
 const ParentDashboard = lazy(() => import('./components/dashboards/ParentDashboard'));
 const StudentDashboard = lazy(() => import('./components/dashboards/StudentDashboard'));
 
-// A simple checkmark icon for the success animation, based on constants.tsx
+// A simple checkmark icon for the success animation
 const CheckCircleIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></svg>;
 
-// A component for the success screen shown after login
 const SuccessScreen: React.FC = () => (
   <div className="flex flex-col items-center justify-center h-full bg-green-500 animate-fade-in">
     <div className="w-24 h-24 bg-white/30 rounded-full flex items-center justify-center">
@@ -29,152 +28,89 @@ const SuccessScreen: React.FC = () => (
 const LoadingScreen: React.FC = () => (
   <div className="flex flex-col items-center justify-center h-full bg-gray-100">
     <div className="w-12 h-12 border-4 border-t-4 border-gray-200 border-t-sky-500 rounded-full animate-spin"></div>
-    <p className="mt-4 text-gray-600">Loading Dashboard...</p>
+    <p className="mt-4 text-gray-600">Loading...</p>
   </div>
 );
 
-
-const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeDashboard, setActiveDashboard] = useState<DashboardType>(DashboardType.Student);
+const AuthenticatedApp: React.FC = () => {
+  const { user, role, signOut, loading } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHomePage, setIsHomePage] = useState(true);
-  const [loginStatus, setLoginStatus] = useState<'idle' | 'success'>('idle');
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  // Show success screen briefly after login if needed, 
+  // but usually we just want to show the dashboard immediately 
+  // unless we're tracking a "just logged in" state.
+  // For simplicity, we'll skip the explicit success screen transition logic managed by App
+  // and let the user land directly on dashboard, or we could check a 'justLoggedIn' flag.
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Request permission once the user is authenticated.
+    if (user && role) {
       requestNotificationPermission();
 
-      // --- Notification Simulation ---
+      // Realtime Subscriptions
+      const userId = user.id; // Or a numeric ID if mapped
 
-      // 1. Simulate a new announcement after 10 seconds
-      const announcementTimeout = setTimeout(() => {
-        const newAnnouncement = mockNotices.find(n => n.category === 'Urgent');
-        if (newAnnouncement) {
-          showNotification(newAnnouncement.title, {
-            body: newAnnouncement.content,
-            icon: 'https://cdn-icons-png.flaticon.com/512/1007/1007996.png', // Megaphone icon
-            tag: `announcement-${newAnnouncement.id}`
-          });
-        }
-      }, 10000);
 
-      // 2. Simulate a new message after 15 seconds, tailored to the user role
-      const messageTimeout = setTimeout(() => {
-        let senderName: string | undefined;
-        let senderAvatar: string | undefined;
-        let messageBody = "Hello! Just checking in.";
+      const notifChannel = realtimeService.subscribeToNotifications(userId, (payload) => {
+        showNotification(payload.title || 'New Notification', {
+          body: payload.message || payload.content,
+          icon: 'https://cdn-icons-png.flaticon.com/512/1007/1007996.png'
+        });
+      });
 
-        // Safely access mock data or fallback
-        const adminSender = mockTeachers.length > 0 ? mockTeachers[0] : { name: 'Mr. Teacher', avatarUrl: '' };
-        const teacherSender = mockStudents.length > 2 ? mockStudents[2] : (mockStudents.length > 0 ? mockStudents[0] : { name: 'Student', avatarUrl: '' });
-        const parentSender = mockTeachers.length > 1 ? mockTeachers[1] : { name: 'Mrs. Teacher', avatarUrl: '' };
-        const studentSender = mockTeachers.length > 0 ? mockTeachers[0] : { name: 'Mr. Teacher', avatarUrl: '' };
-
-        switch (activeDashboard) {
-          case DashboardType.Admin:
-            senderName = adminSender.name;
-            senderAvatar = adminSender.avatarUrl;
-            messageBody = "The reports for Grade 10A are ready for review.";
-            break;
-          case DashboardType.Teacher:
-            senderName = teacherSender.name;
-            senderAvatar = teacherSender.avatarUrl;
-            messageBody = "Good afternoon, I have a question about the assignment.";
-            break;
-          case DashboardType.Parent:
-            senderName = parentSender.name;
-            senderAvatar = parentSender.avatarUrl;
-            messageBody = "Hello, just a reminder about the PTA meeting tomorrow.";
-            break;
-          case DashboardType.Student:
-            senderName = studentSender.name;
-            senderAvatar = studentSender.avatarUrl;
-            messageBody = "Great work on the last test! Keep it up.";
-            break;
-        }
-
-        if (senderName) {
-          showNotification(`New message from ${senderName}`, {
-            body: messageBody,
-            icon: senderAvatar,
-            tag: `message-${Date.now()}`
-          });
-        }
-      }, 15000);
-
-      // Cleanup timeouts on component unmount or when user logs out
       return () => {
-        clearTimeout(announcementTimeout);
-        clearTimeout(messageTimeout);
+        realtimeService.unsubscribeAll();
       };
     }
-  }, [isAuthenticated, activeDashboard]);
+  }, [user, role]);
 
+  if (loading) return <LoadingScreen />;
 
-  const handleLogin = (dashboard: DashboardType, user?: any) => {
-    setActiveDashboard(dashboard);
-    if (user) {
-      setCurrentUser(user);
-    }
-    setLoginStatus('success');
-    setTimeout(() => {
-      setIsAuthenticated(true);
-      setIsHomePage(true);
-      setLoginStatus('idle'); // Reset for next time, if user logs out and back in
-    }, 1800); // Duration matches animations
-  };
+  if (!user || !role) {
+    return <Login />;
+  }
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setIsChatOpen(false); // Reset chat state on logout
+  const handleLogout = async () => {
+    await signOut();
     setIsHomePage(true);
-    setLoginStatus('idle');
-    setCurrentUser(null);
+    setIsChatOpen(false);
   };
 
   const renderDashboard = () => {
-    switch (activeDashboard) {
-      case DashboardType.Admin:
-        return <AdminDashboard onLogout={handleLogout} setIsHomePage={setIsHomePage} />;
-      case DashboardType.Teacher:
-        return <TeacherDashboard onLogout={handleLogout} setIsHomePage={setIsHomePage} currentUser={currentUser} />;
-      case DashboardType.Parent:
-        return <ParentDashboard onLogout={handleLogout} setIsHomePage={setIsHomePage} currentUser={currentUser} />;
-      case DashboardType.Student:
-        return <StudentDashboard onLogout={handleLogout} setIsHomePage={setIsHomePage} currentUser={currentUser} />;
-      default:
-        return <StudentDashboard onLogout={handleLogout} setIsHomePage={setIsHomePage} currentUser={currentUser} />;
+    const props = { onLogout: handleLogout, setIsHomePage, currentUser: user };
+
+    switch (role) {
+      case DashboardType.Admin: return <AdminDashboard {...props} />;
+      case DashboardType.Teacher: return <TeacherDashboard {...props} />;
+      case DashboardType.Parent: return <ParentDashboard {...props} />;
+      case DashboardType.Student: return <StudentDashboard {...props} />;
+      default: return <StudentDashboard {...props} />;
     }
   };
 
-  const appContent = (
-    <>
-      {loginStatus === 'success' ? (
-        <SuccessScreen />
-      ) : !isAuthenticated ? (
-        <Login onLogin={handleLogin} />
-      ) : isChatOpen ? (
-        <AIChatScreen onBack={() => setIsChatOpen(false)} dashboardType={activeDashboard} />
-      ) : (
-        <Suspense fallback={<LoadingScreen />}>
-          {renderDashboard()}
-        </Suspense>
-      )}
-    </>
-  );
+  if (isChatOpen) {
+    return <AIChatScreen onBack={() => setIsChatOpen(false)} dashboardType={role} />;
+  }
 
   return (
-    <ProfileProvider>
-      <div className="font-sans w-screen h-screen bg-[#F0F2F5] flex flex-col items-center justify-center">
-        <div className="relative w-full h-full flex flex-col shadow-2xl">
-          {appContent}
+    <Suspense fallback={<LoadingScreen />}>
+      {renderDashboard()}
+    </Suspense>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <ProfileProvider>
+        <div className="font-sans w-screen h-screen bg-[#F0F2F5] flex flex-col items-center justify-center">
+          <div className="relative w-full h-full flex flex-col shadow-2xl">
+            <AuthenticatedApp />
+          </div>
         </div>
-      </div>
-    </ProfileProvider>
+      </ProfileProvider>
+    </AuthProvider>
   );
 };
 

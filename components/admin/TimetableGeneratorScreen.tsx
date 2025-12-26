@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import { AIIcon, SparklesIcon, TrashIcon, PlusIcon, XCircleIcon, ChevronRightIcon, CalendarIcon, UserGroupIcon, BookOpenIcon, ClockIcon, EditIcon } from '../../constants';
-import { mockSavedTimetable } from '../../data';
 import { supabase } from '../../lib/supabase';
 import { checkTimetableExists, fetchTimetableForClass, fetchTeachers } from '../../lib/database';
 
@@ -236,8 +235,8 @@ const TimetableGeneratorScreen: React.FC<TimetableGeneratorScreenProps> = ({ nav
                 teachers: dbTeachers.map(t => ({ name: t.name, subjects: t.subjects }))
             };
 
-            mockSavedTimetable.current = timetableData;
-            navigateTo('timetableEditor', 'Edit Timetable', { timetableData: mockSavedTimetable.current });
+            // mockSavedTimetable.current = timetableData; // Removed mock dependency
+            navigateTo('timetableEditor', 'Edit Timetable', { timetableData: timetableData });
 
         } catch (error) {
             console.error("Error loading existing timetable:", error);
@@ -251,7 +250,7 @@ const TimetableGeneratorScreen: React.FC<TimetableGeneratorScreenProps> = ({ nav
         setIsGenerating(true);
         // ... (existing generation logic) ...
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const prompt = `
                 You are an expert school administrator. Generate a balanced weekly timetable for:
                 - Class: ${className}
@@ -346,8 +345,8 @@ const TimetableGeneratorScreen: React.FC<TimetableGeneratorScreenProps> = ({ nav
                 teachers: teachers
             };
 
-            mockSavedTimetable.current = { ...timetableData, status: 'Draft' };
-            navigateTo('timetableEditor', 'Edit Timetable', { timetableData: mockSavedTimetable.current });
+            // mockSavedTimetable.current = { ...timetableData, status: 'Draft' };
+            navigateTo('timetableEditor', 'Edit Timetable', { timetableData: { ...timetableData, status: 'Draft' } });
 
         } catch (error) {
             console.error("Timetable generation error:", error);

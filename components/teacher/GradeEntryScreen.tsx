@@ -68,7 +68,7 @@ const GradeEntryScreen: React.FC<GradeEntryScreenProps> = ({ exam }) => {
 
                 const loadedStudents = studentsData.map((s: any) => ({
                     ...s,
-                    avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`
+                    avatarUrl: s.avatar_url
                 }));
                 setStudents(loadedStudents);
 
@@ -174,7 +174,13 @@ const GradeEntryScreen: React.FC<GradeEntryScreenProps> = ({ exam }) => {
                         {students.map(student => (
                             <li key={student.id} className="p-4 flex items-center justify-between bg-white hover:bg-gray-50">
                                 <div className="flex items-center space-x-4">
-                                    <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+                                    {student.avatarUrl ? (
+                                        <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                                            <span className="font-bold">{student.name.charAt(0)}</span>
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="font-bold text-gray-800">{student.name}</p>
                                         <p className="text-sm text-gray-500">Student ID: SCH-0{student.id}</p>

@@ -44,6 +44,7 @@ import TeacherReportCardPreviewScreen from '../teacher/TeacherReportCardPreviewS
 import NotificationsScreen from '../shared/NotificationsScreen';
 import TeacherSelectClassForAttendance from '../teacher/TeacherUnifiedAttendanceScreen';
 import TeacherMarkAttendanceScreen from '../teacher/TeacherAttendanceScreen';
+import TeacherSelfAttendance from '../teacher/TeacherSelfAttendance';
 import LessonPlannerScreen from '../teacher/LessonPlannerScreen';
 import LessonPlanDetailScreen from '../teacher/LessonPlanDetailScreen';
 import DetailedLessonNoteScreen from '../teacher/DetailedLessonNoteScreen';
@@ -95,7 +96,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
   // Profile State
   const [teacherProfile, setTeacherProfile] = useState({
     name: 'Teacher',
-    avatarUrl: 'https://i.pravatar.cc/150?u=teacher'
+    avatarUrl: ''
   });
 
   const fetchProfile = async (optimisticData?: { name: string; avatarUrl: string }) => {
@@ -125,7 +126,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
         setTeacherId(data.id);
         setTeacherProfile({
           name: data.name || 'Teacher',
-          avatarUrl: data.avatar_url || 'https://i.pravatar.cc/150?u=teacher'
+          avatarUrl: data.avatar_url
         });
       }
     } catch (err) {
@@ -192,6 +193,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     examManagement: TeacherExamManagement,
     selectClassForAttendance: TeacherSelectClassForAttendance,
     markAttendance: TeacherMarkAttendanceScreen,
+    teacherSelfAttendance: TeacherSelfAttendance,
     library: LibraryScreen,
     gallery: PhotoGalleryScreen,
     calendar: CalendarScreen,

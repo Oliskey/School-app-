@@ -13,9 +13,20 @@ interface StudentProfileScreenProps {
 
 // --- INLINE SETTINGS COMPONENTS ---
 
-const StudentEditProfile: React.FC<{ student: Student }> = ({ student }) => {
-    const [avatar, setAvatar] = useState(student.avatarUrl);
+// Import useProfile
+import { useProfile } from '../../context/ProfileContext';
+
+const StudentEditProfile: React.FC<{ student: Student }> = ({ student }) => { // student prop kept for compatibility but we use context
+    const { profile, updateProfile } = useProfile();
+    const [avatar, setAvatar] = useState(profile.avatarUrl || student.avatarUrl); // Use context as primary, prop as fallback
     const [saving, setSaving] = useState(false);
+
+    // Sync state with profile updates
+    useEffect(() => {
+        if (profile.avatarUrl) {
+            setAvatar(profile.avatarUrl);
+        }
+    }, [profile]);
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -28,20 +39,16 @@ const StudentEditProfile: React.FC<{ student: Student }> = ({ student }) => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            const updates = {
-                avatar_url: avatar
-            };
 
-            const { error } = await supabase
-                .from('students')
-                .update(updates)
-                .eq('id', student.id);
+            // Update via Context
+            await updateProfile({
+                avatarUrl: avatar
+            });
 
-            if (error) throw error;
             alert('Profile updated successfully!');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating profile:', error);
-            alert('Failed to update profile.');
+            alert(`Failed to update profile: ${error.message || 'Error'}`);
         } finally {
             setSaving(false);
         }
@@ -114,6 +121,7 @@ const SettingsPlaceholder: React.FC = () => (
 
 const StudentProfileScreen: React.FC<StudentProfileScreenProps> = ({ studentId, student, onLogout, navigateTo }) => {
     // const student = mockStudents... removed
+    const { profile } = useProfile(); // Hook already imported for sub-component, using it here too
     const [activeSetting, setActiveSetting] = useState<SettingView>(null);
     const [parents, setParents] = useState<Parent[]>([]);
 
@@ -157,7 +165,7 @@ const StudentProfileScreen: React.FC<StudentProfileScreenProps> = ({ studentId, 
             <div className={`w-full md:w-[400px] md:flex-shrink-0 bg-gray-50 flex flex-col ${activeSetting ? 'hidden md:flex' : 'flex'}`}>
                 <div className="flex-grow p-4 space-y-4 overflow-y-auto">
                     <div className="bg-white p-4 rounded-xl shadow-sm flex items-center space-x-4">
-                        <img src={student.avatarUrl} alt={student.name} className="w-20 h-20 rounded-full object-cover border-4 border-orange-100 flex-shrink-0 aspect-square" />
+                        <img src={profile.avatarUrl || student.avatarUrl} alt={profile.name || student.name} className="w-20 h-20 rounded-full object-cover border-4 border-orange-100 flex-shrink-0 aspect-square" />
                         <div>
                             <h3 className="text-xl font-bold text-gray-800">{student.name}</h3>
                             <p className="text-gray-500 font-medium">Grade {student.grade}{student.section}</p>

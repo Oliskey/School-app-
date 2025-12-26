@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { HealthLogEntry } from '../../types';
-import { mockHealthLogs as initialLogs, mockStudents } from '../../data';
+import React, { useState, useMemo, useEffect } from 'react';
+import { HealthLogEntry, Student } from '../../types';
 import { SearchIcon, PlusIcon, XCircleIcon, HeartIcon, ClockIcon, CalendarIcon, FilterIcon, RefreshIcon, CheckCircleIcon, ExclamationCircleIcon, TrendingUpIcon } from '../../constants';
-import { getFormattedClassName } from '../../constants';
+// import { getFormattedClassName } from '../../constants'; // unused or keep if needed
+import { supabase } from '../../lib/supabase';
 
 // --- TYPES & HELPERS ---
 const AILMENT_COLORS: { [key: string]: string } = {
@@ -28,7 +28,8 @@ const getAilmentColor = (reason: string) => {
 
 
 const HealthLogScreen: React.FC = () => {
-    const [logs, setLogs] = useState<HealthLogEntry[]>(initialLogs);
+    const [logs, setLogs] = useState<HealthLogEntry[]>([]);
+    const [students, setStudents] = useState<Student[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
     const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week'>('all');
@@ -40,6 +41,14 @@ const HealthLogScreen: React.FC = () => {
     const [medication, setMedication] = useState('');
     const [dosage, setDosage] = useState('');
     const [parentNotified, setParentNotified] = useState(false);
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            const { data } = await supabase.from('students').select('*');
+            if (data) setStudents(data);
+        };
+        fetchStudents();
+    }, []);
 
     const filteredLogs = useMemo(() => {
         let filtered = logs.filter(log => log.studentName.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -74,7 +83,7 @@ const HealthLogScreen: React.FC = () => {
             return;
         }
 
-        const student = mockStudents.find(s => s.id === selectedStudent);
+        const student = students.find(s => s.id === selectedStudent);
         if (!student) {
             alert("Selected student not found.");
             return;
@@ -160,8 +169,8 @@ const HealthLogScreen: React.FC = () => {
                                     key={filter}
                                     onClick={() => setTimeFilter(filter)}
                                     className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-all capitalize whitespace-nowrap ${timeFilter === filter
-                                            ? 'bg-white text-gray-800 shadow-sm ring-1 ring-black/5'
-                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                                        ? 'bg-white text-gray-800 shadow-sm ring-1 ring-black/5'
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
                                         }`}
                                 >
                                     {filter === 'all' ? 'All History' : filter}
@@ -288,7 +297,7 @@ const HealthLogScreen: React.FC = () => {
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all font-medium text-gray-800"
                                 >
                                     <option value="">-- Select Student --</option>
-                                    {mockStudents.map(s => <option key={s.id} value={s.id}>{s.name} (Grade {s.grade}{s.section})</option>)}
+                                    {students.map(s => <option key={s.id} value={s.id}>{s.name} (Grade {s.grade}{s.section})</option>)}
                                 </select>
                             </div>
 

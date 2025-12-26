@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CameraIcon, SendIcon, MicrophoneIcon, SparklesIcon, VideoIcon, PhotoIcon, BriefcaseIcon, MapIcon, SearchIcon, PlayIcon, StopIcon, AIIcon } from '../../constants';
@@ -94,7 +94,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
     const handleTranscribe = async (base64Audio: string) => {
         setIsLoading(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const response = await ai.models.generateContent({
                 model: 'gemini-2.0-flash', // Efficient for transcription
                 contents: {
@@ -117,7 +117,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
     // --- TTS Playback ---
     const playTTS = async (text: string) => {
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const response = await ai.models.generateContent({
                 model: 'gemini-2.0-flash',
                 contents: { parts: [{ text }] },
@@ -150,7 +150,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack, dashboardType }) =>
         setMessages(prev => [...prev, userMsg]);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             let modelName = 'gemini-2.0-flash'; // Default fast
             let config: any = {};
             let parts: any[] = [];

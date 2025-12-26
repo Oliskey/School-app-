@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Student } from '../../types';
@@ -25,7 +25,7 @@ const AIParentingTipsScreen: React.FC<AIParentingTipsScreenProps> = ({ student }
             setIsLoading(true);
             setError(null);
             try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
 
                 const academicSummary = student.academicPerformance
                     ?.slice(-4) // get latest 4 records

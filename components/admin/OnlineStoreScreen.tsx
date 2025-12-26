@@ -1,7 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { StoreProduct, StoreOrder } from '../../types';
-import { mockStoreProducts, mockStoreOrders } from '../../data';
+
 import { ShoppingCartIcon, ReceiptIcon } from '../../constants';
+
+// Placeholder data until backend is ready
+const MOCK_PRODUCTS: StoreProduct[] = [
+    { id: 1, name: 'School Uniform Set', price: 15000, category: 'Uniform', stock: 50, imageUrl: 'https://images.unsplash.com/photo-1599026315539-722146cb677e?w=500&auto=format&fit=crop&q=60' },
+    { id: 2, name: 'Mathematics Textbook', price: 4500, category: 'Book', stock: 120, imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500&auto=format&fit=crop&q=60' },
+    { id: 3, name: 'School Bag', price: 8000, category: 'Stationery', stock: 35, imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&auto=format&fit=crop&q=60' },
+];
+
+const MOCK_ORDERS: StoreOrder[] = [
+    { id: 'ORD-001', customerName: 'Parent of John Doe', totalAmount: 19500, status: 'Delivered', orderDate: '2023-10-15', items: [{ productName: 'School Uniform Set', quantity: 1 }, { productName: 'Mathematics Textbook', quantity: 1 }] },
+    { id: 'ORD-002', customerName: 'Parent of Jane Smith', totalAmount: 8000, status: 'Pending', orderDate: '2023-10-16', items: [{ productName: 'School Bag', quantity: 1 }] },
+];
 
 const formatter = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 });
 
@@ -62,14 +74,14 @@ const OnlineStoreScreen: React.FC = () => {
                         onClick={() => setActiveTab('products')}
                         className={`w-1/2 py-2 text-sm font-semibold rounded-md flex items-center justify-center space-x-2 transition-colors ${activeTab === 'products' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-600'}`}
                     >
-                        <ShoppingCartIcon className="h-5 w-5"/>
+                        <ShoppingCartIcon className="h-5 w-5" />
                         <span>Products</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('orders')}
                         className={`w-1/2 py-2 text-sm font-semibold rounded-md flex items-center justify-center space-x-2 transition-colors ${activeTab === 'orders' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-600'}`}
                     >
-                        <ReceiptIcon className="h-5 w-5"/>
+                        <ReceiptIcon className="h-5 w-5" />
                         <span>Orders</span>
                     </button>
                 </div>
@@ -78,12 +90,12 @@ const OnlineStoreScreen: React.FC = () => {
             <main className="flex-grow p-4 overflow-y-auto">
                 {activeTab === 'products' && (
                     <div className="grid grid-cols-2 gap-4">
-                        {mockStoreProducts.map(product => <ProductCard key={product.id} product={product} />)}
+                        {MOCK_PRODUCTS.map(product => <ProductCard key={product.id} product={product} />)}
                     </div>
                 )}
                 {activeTab === 'orders' && (
                     <div className="space-y-3">
-                        {mockStoreOrders.map(order => <OrderRow key={order.id} order={order} />)}
+                        {MOCK_ORDERS.map(order => <OrderRow key={order.id} order={order} />)}
                     </div>
                 )}
             </main>

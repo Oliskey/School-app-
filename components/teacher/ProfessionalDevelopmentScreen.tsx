@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PDResource } from '../../types';
@@ -45,7 +45,7 @@ const ProfessionalDevelopmentScreen: React.FC = () => {
         fetchResources();
     }, []);
 
-    const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY }), []);
+    const ai = useMemo(() => getAIClient(import.meta.env.VITE_OPENAI_API_KEY || ''), []);
 
     const handleGenerateSuggestions = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -2,11 +2,11 @@
 
 import React from 'react';
 // FIX: Corrected import for MessagesIcon and added HomeIcon and SettingsIcon.
-import { HomeIcon, BellIcon, UserIcon as ProfileIcon, DocumentTextIcon, PhoneIcon, PlayIcon, AnalyticsIcon, MegaphoneIcon, SettingsIcon, MessagesIcon, ElearningIcon, SparklesIcon, UserGroupIcon, GameControllerIcon, ChartBarIcon } from '../../constants';
+import { HomeIcon, BellIcon, UserIcon as ProfileIcon, DocumentTextIcon, PhoneIcon, PlayIcon, AnalyticsIcon, MegaphoneIcon, SettingsIcon, MessagesIcon, ElearningIcon, SparklesIcon, UserGroupIcon, GameControllerIcon, ChartBarIcon, ClockIcon } from '../../constants';
 
 const NavItem: React.FC<{ icon: React.ReactElement<{ className?: string }>, label: string, isActive: boolean, onClick: () => void, activeColor: string }> = ({ icon, label, isActive, onClick, activeColor }) => (
   <button onClick={onClick} className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-colors duration-200 ${isActive ? activeColor : 'text-gray-500'}`}>
-    {React.cloneElement(icon, { className: `h-6 w-6`})}
+    {React.cloneElement(icon, { className: `h-6 w-6` })}
     <span className="text-xs font-medium">{label}</span>
   </button>
 );
@@ -16,7 +16,8 @@ export const AdminBottomNav = ({ activeScreen, setActiveScreen }: { activeScreen
     { id: 'home', icon: <HomeIcon />, label: 'Home' },
     { id: 'messages', icon: <MessagesIcon />, label: 'Messages' },
     { id: 'communication', icon: <MegaphoneIcon />, label: 'Announce' },
-    { id: 'analytics', icon: <AnalyticsIcon className="h-6 w-6"/>, label: 'Analytics' },
+
+    { id: 'analytics', icon: <AnalyticsIcon className="h-6 w-6" />, label: 'Analytics' },
     { id: 'settings', icon: <SettingsIcon />, label: 'Settings' },
   ];
   return (
@@ -32,7 +33,7 @@ export const TeacherBottomNav = ({ activeScreen, setActiveScreen }: { activeScre
   const navItems = [
     { id: 'home', icon: <HomeIcon />, label: 'Home' },
     { id: 'reports', icon: <DocumentTextIcon />, label: 'Reports' },
-    { id: 'forum', icon: <UserGroupIcon />, label: 'Forum'},
+    { id: 'forum', icon: <UserGroupIcon />, label: 'Forum' },
     { id: 'messages', icon: <MessagesIcon />, label: 'Messages' },
     { id: 'settings', icon: <SettingsIcon />, label: 'Settings' },
   ];

@@ -102,7 +102,7 @@ const TeacherReportsScreen: React.FC<TeacherReportsScreenProps> = ({ navigateTo 
                     return {
                         ...s,
                         name: s.name,
-                        avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
+                        avatarUrl: s.avatar_url,
                         // Attach stats to student object for display (using partial type or extending type locally)
                         gradeAverage: avgScore,
                         attendancePercentage: attendancePct,
@@ -160,7 +160,13 @@ const TeacherReportsScreen: React.FC<TeacherReportsScreenProps> = ({ navigateTo 
                 {loading ? <div className="text-center py-4">Loading student data...</div> : (
                     students.length > 0 ? students.map((student: any) => (
                         <div key={student.id} className="bg-white rounded-xl shadow-sm p-3 flex items-center space-x-3">
-                            <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+                            {student.avatarUrl ? (
+                                <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-bold">
+                                    {student.name.charAt(0)}
+                                </div>
+                            )}
                             <div className="flex-grow">
                                 <p className="font-bold text-gray-800">{student.name}</p>
                                 <div className="flex items-center space-x-3 text-sm text-gray-500">

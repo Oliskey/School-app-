@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Submission, Assignment } from '../../types';
 import { SparklesIcon, AIIcon } from '../../constants';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME, SchemaType as Type } from '../../lib/ai';
 
 // A custom microphone icon
 const MicrophoneIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 2m0 3a3 3 0 0 1 3 -3h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3z" /><path d="M5 10a7 7 0 0 0 14 0" /><path d="M8 21l8 0" /><path d="M12 17l0 4" /></svg>;
@@ -67,7 +67,7 @@ const GradeSubmissionScreen: React.FC<GradeSubmissionScreenProps> = ({ submissio
     setIsGenerating(true);
     setAiSuggestions([]);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
       const prompt = `Generate 3 distinct, constructive feedback comments for a student's assignment.
       - Assignment Title: "${assignment.title}"
       - Subject: "${assignment.subject}"

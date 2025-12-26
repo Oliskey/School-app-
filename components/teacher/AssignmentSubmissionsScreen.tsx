@@ -12,7 +12,13 @@ interface AssignmentSubmissionsScreenProps {
 
 const SubmissionCard: React.FC<{ student: Student; submission: Submission; onGrade: (submission: Submission) => void }> = ({ student, submission, onGrade }) => (
     <div className="bg-white rounded-xl shadow-sm p-3 flex items-center space-x-3">
-        <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+        {student.avatarUrl ? (
+            <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+        ) : (
+            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-bold">
+                {student.name.charAt(0)}
+            </div>
+        )}
         <div className="flex-grow">
             <p className="font-bold text-gray-800">{student.name}</p>
             <div className="flex items-center text-sm text-gray-500 space-x-2">
@@ -40,7 +46,13 @@ const SubmissionCard: React.FC<{ student: Student; submission: Submission; onGra
 
 const NotSubmittedCard: React.FC<{ student: Student; onRemind: (student: Student) => void }> = ({ student, onRemind }) => (
     <div className="bg-white rounded-xl shadow-sm p-3 flex items-center space-x-3">
-        <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+        {student.avatarUrl ? (
+            <img src={student.avatarUrl} alt={student.name} className="w-12 h-12 rounded-full object-cover" />
+        ) : (
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold">
+                {student.name.charAt(0)}
+            </div>
+        )}
         <div className="flex-grow">
             <p className="font-bold text-gray-800">{student.name}</p>
             <p className="text-sm text-red-500 font-semibold">Not Submitted</p>
@@ -81,7 +93,7 @@ const AssignmentSubmissionsScreen: React.FC<AssignmentSubmissionsScreenProps> = 
                     if (studentsData) {
                         classStudents = studentsData.map((s: any) => ({
                             ...s,
-                            avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`
+                            avatarUrl: s.avatar_url
                         }));
                     }
                 }

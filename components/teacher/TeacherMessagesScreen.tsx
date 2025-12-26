@@ -78,7 +78,7 @@ const TeacherMessagesScreen: React.FC<TeacherMessagesScreenProps> = ({ navigateT
                     participant: {
                         id: c.participant_id,
                         name: participantName,
-                        avatarUrl: participantAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(participantName)}&background=random`,
+                        avatarUrl: participantAvatar,
                         role: c.participant_role as any
                     },
                     lastMessage: {
@@ -223,7 +223,13 @@ const TeacherMessagesScreen: React.FC<TeacherMessagesScreenProps> = ({ navigateT
                                         className={`w-full text-left px-4 py-3 flex items-center space-x-4 transition-all hover:bg-gray-50 active:bg-gray-100 ${isSelected ? 'bg-purple-50/60 border-l-4 border-purple-500' : 'border-l-4 border-transparent'}`}
                                     >
                                         <div className="relative flex-shrink-0">
-                                            <img src={room.displayAvatar} alt={room.displayName} className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            {room.displayAvatar ? (
+                                                <img src={room.displayAvatar} alt={room.displayName} className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center border border-gray-100 shadow-sm text-indigo-500 font-bold">
+                                                    {room.displayName.charAt(0)}
+                                                </div>
+                                            )}
                                             {room.is_group && (
                                                 <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
                                                     <div className="bg-indigo-100 rounded-full p-1">

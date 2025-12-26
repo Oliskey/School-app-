@@ -11,7 +11,8 @@ import {
     TrendingUpIcon,
     SettingsIcon,
     ChevronLeftIcon,
-    ExamIcon
+    ExamIcon,
+    UserIcon
 } from '../../constants';
 import { THEME_CONFIG } from '../../constants';
 import { DashboardType } from '../../types';
@@ -26,6 +27,7 @@ interface TeacherSettingsScreenProps {
     onLogout: () => void;
     navigateTo: (view: string, title: string, props?: any) => void;
     dashboardProfile?: { name: string; avatarUrl: string; };
+    profile?: { name: string; avatarUrl: string; };
     refreshDashboardProfile?: (data?: { name: string; avatarUrl: string }) => void;
     teacherId?: number | null;
     currentUser?: any;
@@ -44,12 +46,12 @@ const SettingsPlaceholder: React.FC = () => (
 );
 
 
-const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout, navigateTo, dashboardProfile, refreshDashboardProfile, teacherId, currentUser }) => {
+const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout, navigateTo, profile: propProfile, refreshDashboardProfile, teacherId, currentUser }) => {
     const theme = THEME_CONFIG[DashboardType.Teacher];
     const [activeSetting, setActiveSetting] = useState<SettingView>(null);
 
     // Use passed profile or fallback
-    const profile = dashboardProfile || { name: 'Teacher', avatarUrl: 'https://i.pravatar.cc/150?u=teacher' };
+    const profile = propProfile || { name: 'Teacher', avatarUrl: '' };
 
     const settingsItems = [
         { id: 'editTeacherProfile', icon: <EditIcon />, label: 'Edit Profile', color: 'bg-blue-100 text-blue-500' },
@@ -71,7 +73,7 @@ const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout,
     const renderActiveSetting = () => {
         switch (activeSetting) {
             case 'editTeacherProfile':
-                return <EditTeacherProfileScreen onProfileUpdate={refreshDashboardProfile} teacherId={teacherId} currentUser={currentUser} />;
+                return <EditTeacherProfileScreen onProfileUpdate={refreshDashboardProfile} teacherId={teacherId} currentUser={currentUser || profile} />;
             case 'cbtManagement':
                 return <CBTManagementScreen navigateTo={navigateTo} teacherId={teacherId} />;
             case 'professionalDevelopment':
@@ -95,7 +97,13 @@ const TeacherSettingsScreen: React.FC<TeacherSettingsScreenProps> = ({ onLogout,
       `}>
                 <div className="flex-grow p-4 space-y-4 overflow-y-auto">
                     <div className="flex flex-col items-center p-6 space-y-2 bg-white rounded-xl shadow-sm">
-                        <img src={profile.avatarUrl} alt={profile.name} className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md flex-shrink-0 aspect-square" />
+                        {profile.avatarUrl ? (
+                            <img src={profile.avatarUrl} alt={profile.name} className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md flex-shrink-0 aspect-square" />
+                        ) : (
+                            <div className="w-24 h-24 rounded-full border-4 border-white shadow-md flex-shrink-0 bg-gray-200 flex items-center justify-center text-gray-400">
+                                <UserIcon className="w-12 h-12" />
+                            </div>
+                        )}
                         <h3 className="text-2xl font-bold text-gray-800">{profile.name}</h3>
                         <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-3 py-1 rounded-full">Subject Teacher</span>
                     </div>

@@ -30,7 +30,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
                 const mapTeacher = (t: any) => ({
                     id: t.id,
                     name: t.name,
-                    avatarUrl: t.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=random`,
+                    avatarUrl: t.avatar_url,
                     subjects: [], // Fetch or mock subjects if needed
                     classes: [],
                     status: t.status,
@@ -59,7 +59,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
                             return [...prev, {
                                 id: newTeacher.id,
                                 name: newTeacher.name,
-                                avatarUrl: newTeacher.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(newTeacher.name)}&background=random`,
+                                avatarUrl: newTeacher.avatar_url,
                                 subjects: [],
                                 classes: [],
                                 status: newTeacher.status,
@@ -94,7 +94,7 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
                             return [...prev, {
                                 id: updatedTeacher.id,
                                 name: updatedTeacher.name,
-                                avatarUrl: updatedTeacher.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(updatedTeacher.name)}&background=random`,
+                                avatarUrl: updatedTeacher.avatar_url,
                                 subjects: [],
                                 classes: [],
                                 status: updatedTeacher.status,
@@ -181,11 +181,17 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
 
                     <div className="bg-gray-50 rounded-2xl p-4 mb-6 text-left border border-gray-100">
                         <div className="flex items-center mb-3 pb-3 border-b border-gray-200">
-                            <img
-                                src={selectedTeacher?.avatarUrl}
-                                alt={selectedTeacher?.name}
-                                className="w-10 h-10 rounded-full object-cover mr-3 border border-white shadow-sm"
-                            />
+                            {selectedTeacher?.avatarUrl ? (
+                                <img
+                                    src={selectedTeacher?.avatarUrl}
+                                    alt={selectedTeacher?.name}
+                                    className="w-10 h-10 rounded-full object-cover mr-3 border border-white shadow-sm"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3 border border-white shadow-sm text-green-700 font-bold">
+                                    {selectedTeacher?.name?.charAt(0)}
+                                </div>
+                            )}
                             <div>
                                 <p className="text-xs text-gray-500 uppercase font-semibold">Teacher</p>
                                 <p className="font-bold text-gray-800">{selectedTeacher?.name}</p>
@@ -238,11 +244,17 @@ const AppointmentScreen: React.FC<AppointmentScreenProps> = ({ parentId, navigat
                                         }`}
                                 >
                                     <div className="relative inline-block mb-3">
-                                        <img
-                                            src={teacher.avatarUrl}
-                                            alt={teacher.name}
-                                            className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm"
-                                        />
+                                        {teacher.avatarUrl ? (
+                                            <img
+                                                src={teacher.avatarUrl}
+                                                alt={teacher.name}
+                                                className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm"
+                                            />
+                                        ) : (
+                                            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center border-2 border-white shadow-sm text-green-600 font-bold text-xl">
+                                                {teacher.name.charAt(0)}
+                                            </div>
+                                        )}
                                         {selectedTeacher?.id === teacher.id && (
                                             <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1 border-2 border-white">
                                                 <CheckCircleIcon className="w-3 h-3 text-white" />

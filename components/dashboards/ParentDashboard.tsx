@@ -31,7 +31,7 @@ import { ParentBottomNav } from '../ui/DashboardBottomNav';
 import { ParentSideNav } from '../ui/DashboardSideNav';
 import { useProfile } from '../../context/ProfileContext';
 import {
-    mockStudentFees,
+    mockFees,
     mockStudents,
     mockAssignments,
     mockSubmissions,
@@ -45,6 +45,7 @@ import { fetchParentByEmail, fetchChildrenForParent, fetchParentByUserId } from 
 
 import DonutChart from '../ui/DonutChart';
 import GlobalSearchScreen from '../shared/GlobalSearchScreen';
+import ErrorBoundary from '../ui/ErrorBoundary';
 
 
 // Import all view components
@@ -431,7 +432,7 @@ const Dashboard = ({ navigateTo, children, parentId }: { navigateTo: (view: stri
         .map(student => {
             // In a real app, we would fetch these specifically for the student. 
             // For now, we try to find a match in mocks or return default/empty.
-            const feeInfo = mockStudentFees.find(f => f.id === student.id) || {
+            const feeInfo = mockFees.find(f => f.id === student.id) || {
                 id: student.id, name: student.name, avatarUrl: student.avatarUrl, grade: student.grade, section: student.section,
                 totalFee: 100000, paidAmount: 0, dueDate: '2024-12-31', status: 'Unpaid'
             } as any;
@@ -542,7 +543,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                     console.warn("Parent profile not found for user:", profile.email);
                     // Fallback to demo for development
                     if (profile.email === 'parent@school.com') {
-                        setParent({ id: 1002, name: 'Mrs. Bello', email: 'parent@school.com', avatarUrl: 'https://i.pravatar.cc/150?u=parent' });
+                        setParent({ id: 1002, name: 'Mrs. Bello', email: 'parent@school.com', avatarUrl: null });
                         const mockKids = mockStudents.filter(s => [3, 4].includes(s.id));
                         setChildren(mockKids);
                     }
@@ -611,7 +612,10 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         reportCard: ReportCardScreen,
         timetable: TimetableScreen,
         more: (props: any) => <ParentProfileScreen {...props} parentId={parent?.id} />,
-        editParentProfile: (props: any) => <EditParentProfileScreen {...props} parentId={parent?.id} onProfileUpdate={forceUpdate} />,
+        editParentProfile: (props: any) => <EditParentProfileScreen {...props} parentId={parent?.id} onProfileUpdate={(data) => {
+            if (data) setParent((prev: any) => ({ ...prev, ...data }));
+            forceUpdate();
+        }} />,
         feedback: FeedbackScreen,
         notificationSettings: ParentNotificationSettingsScreen,
         securitySettings: ParentSecurityScreen,
@@ -661,13 +665,15 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 />
                 <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
                     <div className="h-full pt-16">
-                        <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
-                            {ComponentToRender ? (
-                                <ComponentToRender {...currentNavigation.props} {...commonProps} />
-                            ) : (
-                                <div className="p-6">View not found: {currentNavigation.view}</div>
-                            )}
-                        </div>
+                        <ErrorBoundary>
+                            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+                                {ComponentToRender ? (
+                                    <ComponentToRender {...currentNavigation.props} {...commonProps} />
+                                ) : (
+                                    <div className="p-6">View not found: {currentNavigation.view}</div>
+                                )}
+                            </div>
+                        </ErrorBoundary>
                     </div>
                 </div>
                 {/* Bottom Nav for mobile */}

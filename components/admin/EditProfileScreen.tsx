@@ -19,12 +19,40 @@ const EditProfileScreen: React.FC = () => {
         setAvatar(profile.avatarUrl);
     }, [profile]);
 
-    const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
-            const file = event.target.files[0];
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatar(reader.result as string);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 500;
+                    const MAX_HEIGHT = 500;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    setAvatar(dataUrl);
+                };
+                img.src = event.target?.result as string;
             };
             reader.readAsDataURL(file);
         }
@@ -42,8 +70,9 @@ const EditProfileScreen: React.FC = () => {
             });
             setSaveMessage('Profile saved successfully!');
             setTimeout(() => setSaveMessage(''), 3000);
-        } catch (err) {
-            setSaveMessage('Failed to save profile. Please try again.');
+        } catch (err: any) {
+            console.error('Save error:', err);
+            setSaveMessage(`Failed to save profile: ${err.message || 'Please try again.'}`);
         }
     };
 
@@ -61,7 +90,7 @@ const EditProfileScreen: React.FC = () => {
                             </label>
                         </div>
                     </div>
-                    
+
                     {/* Form Fields */}
                     <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
                         <div>
@@ -82,7 +111,7 @@ const EditProfileScreen: React.FC = () => {
                                 <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-10 pr-3 py-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" />
                             </div>
                         </div>
-                         <div>
+                        <div>
                             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                             <div className="relative">
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
@@ -97,20 +126,18 @@ const EditProfileScreen: React.FC = () => {
                 {/* Action Button */}
                 <div className="p-4 mt-auto bg-gray-50 border-t border-gray-200">
                     {saveMessage && (
-                        <div className={`mb-3 p-3 rounded-lg text-center text-sm font-medium ${
-                            saveMessage.includes('successfully')
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                        }`}>
+                        <div className={`mb-3 p-3 rounded-lg text-center text-sm font-medium ${saveMessage.includes('successfully')
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}>
                             {saveMessage}
                         </div>
                     )}
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm font-medium text-white ${
-                            isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-sky-500 hover:bg-sky-600'
-                        } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500`}
+                        className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm font-medium text-white ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-sky-500 hover:bg-sky-600'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500`}
                     >
                         {isLoading ? 'Saving...' : 'Save'}
                     </button>

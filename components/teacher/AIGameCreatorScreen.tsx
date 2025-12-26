@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME, SchemaType as Type } from '../../lib/ai';
 import { AIGame, AIGameQuestion, GameLevel } from '../../types';
 import { mockCustomAIGames } from '../../data';
 import { AIIcon, SparklesIcon, TrashIcon, PlusIcon, XCircleIcon, CheckCircleIcon, EditIcon, PlayIcon, PublishIcon } from '../../constants';
@@ -40,11 +40,11 @@ const AIGameCreatorScreen: React.FC<AIGameCreatorScreenProps> = ({ navigateTo, h
         }
         setIsGenerating(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const prompt = `You are an expert educational game designer. Create a multiple-choice quiz game based on these criteria:\n- Subject: ${subject}\n- Topic: ${topic}\n- Class Level: ${level}\nGenerate a JSON object for a quiz with 10 questions.`;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-1.5-flash',
+                model: AI_MODEL_NAME,
                 contents: prompt,
                 config: {
                     responseMimeType: "application/json",

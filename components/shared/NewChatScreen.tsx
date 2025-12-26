@@ -45,7 +45,7 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentUserId, onBack, on
                 const mappedUsers: ChatUser[] = (data || []).map((u: any) => ({
                     id: u.id,
                     name: u.name,
-                    avatarUrl: u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`,
+                    avatarUrl: u.avatar_url,
                     role: u.role
                 }));
 
@@ -228,11 +228,17 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentUserId, onBack, on
                             className="w-full flex items-center px-4 py-3 hover:bg-gray-50 transition-colors"
                         >
                             <div className="relative">
-                                <img
-                                    src={currentUser.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=random`}
-                                    alt="Me"
-                                    className="w-12 h-12 rounded-full object-cover"
-                                />
+                                {currentUser.avatarUrl ? (
+                                    <img
+                                        src={currentUser.avatarUrl}
+                                        alt="Me"
+                                        className="w-12 h-12 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                        <UserIcon className="h-6 w-6" />
+                                    </div>
+                                )}
                                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                             </div>
                             <div className="ml-3 text-left">
@@ -256,11 +262,17 @@ const NewChatScreen: React.FC<NewChatScreenProps> = ({ currentUserId, onBack, on
                             onClick={() => startChat(user.id)}
                             className="w-full flex items-center px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
                         >
-                            <img
-                                src={user.avatarUrl}
-                                alt={user.name}
-                                className="w-12 h-12 rounded-full object-cover bg-gray-200"
-                            />
+                            {user.avatarUrl ? (
+                                <img
+                                    src={user.avatarUrl}
+                                    alt={user.name}
+                                    className="w-12 h-12 rounded-full object-cover bg-gray-200"
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                    <UserIcon className="h-6 w-6" />
+                                </div>
+                            )}
                             <div className="ml-3 text-left">
                                 <p className="font-bold text-gray-800">{user.name}</p>
                                 <p className="text-sm text-gray-500 capitalize">{user.role}</p>

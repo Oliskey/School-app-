@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import { SparklesIcon, VideoIcon, CameraIcon, PhotoIcon, XCircleIcon, DownloadIcon } from '../../constants';
 
 const MediaGenerator: React.FC = () => {
@@ -31,7 +31,7 @@ const MediaGenerator: React.FC = () => {
         setResultUrl(null);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
 
             if (mode === 'image') {
                 // Generate Image
@@ -67,7 +67,7 @@ const MediaGenerator: React.FC = () => {
                 }
 
                 const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
-                if (uri) setResultUrl(`${uri}&key=${process.env.API_KEY}`);
+                if (uri) setResultUrl(`${uri}&key=${import.meta.env.VITE_OPENAI_API_KEY}`);
 
             } else if (mode === 'edit' && uploadImage) {
                 // Edit Image (Nano Banana)
@@ -107,7 +107,7 @@ const MediaGenerator: React.FC = () => {
                     operation = await ai.operations.getVideosOperation({ operation });
                 }
                 const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
-                if (uri) setResultUrl(`${uri}&key=${process.env.API_KEY}`);
+                if (uri) setResultUrl(`${uri}&key=${import.meta.env.VITE_OPENAI_API_KEY}`);
             }
 
         } catch (error) {

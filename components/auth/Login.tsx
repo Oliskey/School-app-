@@ -1,15 +1,19 @@
-
 import React, { useState, useEffect } from 'react';
 import { SchoolLogoIcon, UserIcon, LockIcon, EyeIcon, EyeOffIcon } from '../../constants';
 import { DashboardType } from '../../types';
 import { checkSupabaseConnection } from '../../lib/database';
 import { authenticateUser } from '../../lib/auth';
+import { useAuth } from '../../context/AuthContext';
+import { useProfile } from '../../context/ProfileContext';
+
 
 interface LoginProps {
-  onLogin: (dashboard: DashboardType, user?: any) => void;
+  onLogin?: (dashboard: DashboardType, user?: any) => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = () => {
+  const { signIn } = useAuth();
+  const { setProfile } = useProfile();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,24 +21,36 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [connectionError, setConnectionError] = useState<string>('');
+
   useEffect(() => {
-    checkSupabaseConnection().then(connected => {
-      setIsSupabaseConnected(connected);
-    });
+    const checkConnection = async () => {
+      try {
+        const { error } = await import('../../lib/supabase').then(m => m.supabase.from('students').select('id').limit(1));
+        if (error) {
+          console.error('Connection Check Error:', error);
+          setIsSupabaseConnected(false);
+          setConnectionError(`${error.code} - ${error.message}`);
+        } else {
+          setIsSupabaseConnected(true);
+          setConnectionError('');
+        }
+      } catch (err: any) {
+        console.error('Connection Check Exception:', err);
+        setIsSupabaseConnected(false);
+        setConnectionError(err.message || 'Unknown network error');
+      }
+    };
+    checkConnection();
   }, []);
 
   const getDashboardTypeFromUserType = (userType: string): DashboardType => {
     switch (userType) {
-      case 'Admin':
-        return DashboardType.Admin;
-      case 'Teacher':
-        return DashboardType.Teacher;
-      case 'Parent':
-        return DashboardType.Parent;
-      case 'Student':
-        return DashboardType.Student;
-      default:
-        return DashboardType.Student;
+      case 'Admin': return DashboardType.Admin;
+      case 'Teacher': return DashboardType.Teacher;
+      case 'Parent': return DashboardType.Parent;
+      case 'Student': return DashboardType.Student;
+      default: return DashboardType.Student;
     }
   };
 
@@ -45,20 +61,52 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       const user = username.trim().toLowerCase();
-      const pass = password.trim().toLowerCase();
+      const pass = password.trim();
 
-      // 1. Check Demo Credentials First (to avoid database errors for demo users)
-      if (user === 'admin' && pass === 'admin') {
-        onLogin(DashboardType.Admin, { userId: 'admin', email: 'admin@school.com', userType: 'Admin' });
+      // 1. Check Demo Credentials First (Bypass DB as requested)
+      if (user === 'admin' && pass === 'admin123') {
+        setProfile({
+          id: 'admin',
+          name: 'System Admin',
+          email: 'admin@school.com',
+          role: 'Admin',
+          // avatarUrl removed
+          phone: '123-456-7890'
+        });
+        await signIn(DashboardType.Admin, { userId: 'admin', email: 'admin@school.com', userType: 'Admin' });
         return;
-      } else if (user === 'teacher' && pass === 'teacher') {
-        onLogin(DashboardType.Teacher, { userId: 'teacher', email: 'teacher@school.com', userType: 'Teacher' });
+      } else if (user === 'teacher' && pass === 'teacher123') {
+        setProfile({
+          id: 'teacher',
+          name: 'John Teacher',
+          email: 'teacher@school.com',
+          role: 'Teacher',
+          // avatarUrl removed
+          phone: '123-456-7890'
+        });
+        await signIn(DashboardType.Teacher, { userId: 'teacher', email: 'teacher@school.com', userType: 'Teacher' });
         return;
-      } else if (user === 'parent' && pass === 'parent') {
-        onLogin(DashboardType.Parent, { userId: 'parent', email: 'parent@school.com', userType: 'Parent' });
+      } else if (user === 'parent' && pass === 'parent123') {
+        setProfile({
+          id: 'parent',
+          name: 'Jane Parent',
+          email: 'parent@school.com',
+          role: 'Parent',
+          // avatarUrl removed
+          phone: '123-456-7890'
+        });
+        await signIn(DashboardType.Parent, { userId: 'parent', email: 'parent@school.com', userType: 'Parent' });
         return;
-      } else if (user === 'student' && pass === 'student') {
-        onLogin(DashboardType.Student, { userId: 'student', email: 'student@school.com', userType: 'Student' });
+      } else if (user === 'student' && pass === 'student123') {
+        setProfile({
+          id: 'student',
+          name: 'Sam Student',
+          email: 'student@school.com',
+          role: 'Student',
+          // avatarUrl removed
+          phone: '123-456-7890'
+        });
+        await signIn(DashboardType.Student, { userId: 'student', email: 'student@school.com', userType: 'Student' });
         return;
       }
 
@@ -67,14 +115,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         const result = await authenticateUser(user, pass);
         if (result.success && result.userType) {
           const dashboardType = getDashboardTypeFromUserType(result.userType);
-          onLogin(dashboardType, { userId: result.userId, email: result.email, userType: result.userType });
+          await signIn(dashboardType, { userId: result.userId, email: result.email, userType: result.userType });
           return;
         }
+        // If we get here with failure
+        setError(result.error || 'Invalid credentials. Please try again.');
+      } else {
+        // Fallback if not connected but we want to avoid mock data
+        setError('Database not connected. Please check your connection.');
       }
 
-      // If we get here, neither worked
-      setError('Invalid credentials. Please try again.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login error:', err);
       setError('An error occurred during login. Please try again.');
     } finally {
@@ -84,7 +135,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleDemoLogin = (user: 'admin' | 'teacher' | 'parent' | 'student') => {
     setUsername(user);
-    setPassword(user);
+    setPassword(`${user}123`);
   };
 
   return (
@@ -199,21 +250,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
               Checking database...
             </div>
-          ) : isSupabaseConnected ? (
-            <div className="text-xs text-green-600 flex items-center justify-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Connected to Supabase
-            </div>
           ) : (
-            <div className="text-xs text-amber-600 flex items-center justify-center gap-1">
-              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-              Using mock data
+            <div className="mt-6 text-center">
+              <p className={`text-sm flex items-center justify-center gap-2 ${isSupabaseConnected ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className={`w-2 h-2 rounded-full ${isSupabaseConnected ? 'bg-green-500' : 'bg-amber-500'}`}></span>
+                {isSupabaseConnected ? 'Connected to Database' : 'Using mock data'}
+              </p>
+              {!isSupabaseConnected && (
+                <div className="mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-100 max-w-xs mx-auto text-left">
+                  <p className="font-bold">Connection Debug Info:</p>
+                  <p>URL: {import.meta.env.VITE_SUPABASE_URL ? 'Loaded ✅' : 'Missing ❌'}</p>
+                  <p>Error: {connectionError || 'Initializing...'}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
     </div>
   );
 };
-
 export default Login;

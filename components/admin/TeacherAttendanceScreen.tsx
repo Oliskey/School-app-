@@ -18,14 +18,14 @@ interface TeacherAttendanceScreenProps {
 const TeacherAttendanceScreen: React.FC<TeacherAttendanceScreenProps> = ({ navigateTo }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const theme = THEME_CONFIG[DashboardType.Admin];
-    const [teachers, setTeachers] = useState<TeacherWithAttendance[]>(() => 
+    const [teachers, setTeachers] = useState<TeacherWithAttendance[]>(() =>
         mockTeachers.map((teacher, index) => ({
             ...teacher,
             // Set some default varied statuses for demonstration
             attendanceStatus: index % 10 === 0 ? 'Absent' : (index % 15 === 0 ? 'Leave' : 'Present'),
         }))
     );
-    
+
     const handleStatusChange = useCallback((teacherId: number, status: AttendanceStatus) => {
         setTeachers(currentTeachers =>
             currentTeachers.map(teacher =>
@@ -76,6 +76,17 @@ const TeacherAttendanceScreen: React.FC<TeacherAttendanceScreenProps> = ({ navig
                     </div>
                 </div>
 
+
+                {/* Actions Bar */}
+                <div className="px-4 pb-2 bg-white flex justify-end">
+                    <button
+                        onClick={() => navigateTo('teacherAttendanceApproval', 'Attendance Approvals')}
+                        className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        <span>Review Approvals</span>
+                    </button>
+                </div>
+
                 {/* Search Bar */}
                 <div className="p-4 bg-gray-100 z-10 border-b border-t border-gray-200">
                     <div className="relative">
@@ -111,12 +122,11 @@ const TeacherAttendanceScreen: React.FC<TeacherAttendanceScreenProps> = ({ navig
                                     {(['Present', 'Absent', 'Leave'] as AttendanceStatus[]).map(status => (
                                         <button
                                             key={status}
-                                            onClick={(e) => { e.stopPropagation(); handleStatusChange(teacher.id, status)}}
-                                            className={`w-10 h-8 rounded-lg text-xs font-bold transition-transform transform hover:scale-110 ${
-                                                teacher.attendanceStatus === status 
-                                                ? statusStyles[status].button
-                                                : 'bg-gray-200 text-gray-600'
-                                            }`}
+                                            onClick={(e) => { e.stopPropagation(); handleStatusChange(teacher.id, status) }}
+                                            className={`w-10 h-8 rounded-lg text-xs font-bold transition-transform transform hover:scale-110 ${teacher.attendanceStatus === status
+                                                    ? statusStyles[status].button
+                                                    : 'bg-gray-200 text-gray-600'
+                                                }`}
                                             aria-label={`Mark ${teacher.name} as ${status}`}
                                         >
                                             {status.charAt(0)}

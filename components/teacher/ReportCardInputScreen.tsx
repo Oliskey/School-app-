@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import { Student, Teacher, Rating, ReportCard, ReportCardAcademicRecord } from '../../types';
 import { SchoolLogoIcon, PlusIcon, AIIcon, LockIcon } from '../../constants';
 import { mockTeachers, mockStudents } from '../../data';
@@ -189,7 +189,7 @@ const ReportCardInputScreen: React.FC<ReportCardInputScreenProps> = ({ student, 
 
         setGeneratingRemarkIndex(index);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const prompt = `Generate a short, constructive remark for a student's report card.
             Subject: ${record.subject}
             Continuous Assessment (CA) Score (out of 40): ${record.ca}

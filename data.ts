@@ -2,7 +2,7 @@
 import {
     Student,
     Teacher,
-    StudentFeeInfo,
+    Fee,
     Assignment,
     Submission,
     Notice,
@@ -49,7 +49,8 @@ import {
     Parent,
     RoleName,
     Complaint,
-    AppointmentSlot
+    AppointmentSlot,
+    ChatMessage
 } from './types';
 import {
     ExamIcon,
@@ -80,44 +81,33 @@ export const getSubjectsForStudent = (student: Student): string[] => {
     return getSubjectsForGrade(student.grade, student.department);
 };
 
-export const mockClasses: ClassInfo[] = [];
-export const mockStudents: Student[] = [];
-export const mockTeachers: Teacher[] = [];
-export const mockParents: Parent[] = [];
-export const mockNotices: Notice[] = [];
-export const mockNotifications: Notification[] = [];
-export const mockStudentFees: StudentFeeInfo[] = [];
-export const mockAssignments: Assignment[] = [];
-export const mockSubmissions: Submission[] = [];
-export const mockStudentAttendance: StudentAttendance[] = [];
-export const mockTimetableData: TimetableEntry[] = [];
+export const mockClasses: ClassInfo[] = []; // Migrated to Supabase
+export const mockStudents: Student[] = []; // Migrated to Supabase
+export const mockTeachers: Teacher[] = []; // Migrated to Supabase
+export const mockParents: Parent[] = []; // Migrated to Supabase
+export const mockNotices: Notice[] = []; // Migrated to Supabase
+export const mockNotifications: Notification[] = []; // Migrated to Supabase
+export const mockFees: Fee[] = []; // Migrated to Supabase
+export const mockAssignments: Assignment[] = []; // Migrated to Supabase
+export const mockSubmissions: Submission[] = []; // Migrated to Supabase
+export const mockStudentAttendance: StudentAttendance[] = []; // Migrated to Supabase
+export const mockTimetableData: TimetableEntry[] = []; // Migrated to Supabase
 export const mockProgressReports: ProgressReport[] = [];
 export const mockEnrollmentData: { year: number, count: number }[] = [];
 export const mockAuditLogs: AuditLog[] = [];
 export const mockSavedTimetable = { current: null as any };
-export const mockBusRoster: BusRosterEntry[] = [
-    { routeId: 'R1', driverId: 2, date: new Date().toISOString().split('T')[0] },
-    { routeId: 'R2', driverId: 1, date: new Date().toISOString().split('T')[0] }
-];
-export const mockBusRoutes: BusRoute[] = [
-    { id: 'R1', name: 'Route A - North Falls', description: 'Serves the northern residential districts and North Falls Estate.' },
-    { id: 'R2', name: 'Route B - Sunnyside', description: 'Covers Sunnyside Avenue, Green Park, and the central market area.' },
-    { id: 'R3', name: 'Route C - West End', description: 'Serves the West End layout including the new housing development.' },
-    { id: 'R4', name: 'Route D - Harbour View', description: 'Long distance route covering Harbour View and coastal road.' }
-];
-export const mockDrivers: Driver[] = [
-    { id: 1, name: 'Mr. John Smith', avatarUrl: 'https://i.pravatar.cc/150?u=john', phone: '+1234567890' },
-    { id: 2, name: 'Mrs. Sarah Connor', avatarUrl: 'https://i.pravatar.cc/150?u=sarah', phone: '+1234567891' },
-    { id: 3, name: 'Mr. Mike T', avatarUrl: 'https://i.pravatar.cc/150?u=mike', phone: '+1234567892' },
-    { id: 4, name: 'Ms. Davina K', avatarUrl: 'https://i.pravatar.cc/150?u=davina', phone: '+1234567893' }
-];
+export const mockBusRoster: BusRosterEntry[] = []; // Pending migration if used
+export const mockBusRoutes: BusRoute[] = []; // Pending migration if used
+export const mockDrivers: Driver[] = []; // Pending migration if used
 export const mockPickupPoints: PickupPoint[] = [];
 export const mockHealthLogs: HealthLogEntry[] = [];
-export const mockExamsData: Exam[] = [];
+export const mockExamsData: Exam[] = []; // Migrated to Supabase
 export const mockCalendarEvents: any[] = [];
-export const mockDigitalResources: DigitalResource[] = [];
+export const mockDigitalResources: DigitalResource[] = []; // Migrated to Supabase
 export const mockPhotos: Photo[] = [];
-export const mockConversations: Conversation[] = [];
+export const mockMessages: ChatMessage[] = []; // Migrated to Supabase
+export const mockConversations: Conversation[] = []; // Migrated to Supabase
+
 export const mockAdminConversations: Conversation[] = [];
 export const mockSubjectAverages: SubjectAverage[] = [];
 export const mockTopStudents: StudentPerformanceData[] = [];
@@ -137,16 +127,7 @@ export const mockPermissionSlip: PermissionSlip = {
 export const mockStoreProducts: StoreProduct[] = [];
 export const mockStoreOrders: StoreOrder[] = [];
 export const mockForumTopics: ForumTopic[] = [];
-export const mockAppointmentSlots: AppointmentSlot[] = [
-    { time: '09:00 AM', isBooked: false },
-    { time: '10:00 AM', isBooked: false },
-    { time: '11:00 AM', isBooked: true }, // One booked for demo
-    { time: '12:00 PM', isBooked: false },
-    { time: '01:00 PM', isBooked: false },
-    { time: '02:00 PM', isBooked: false },
-    { time: '03:00 PM', isBooked: false },
-    { time: '04:00 PM', isBooked: false }
-];
+export const mockAppointmentSlots: AppointmentSlot[] = []; // Migrated/Pending
 export const mockAppointments: Appointment[] = [];
 export const mockQuizzes: Quiz[] = [];
 export const mockPdResources: PDResource[] = [];

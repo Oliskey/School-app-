@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { mockStudentFees, mockFeeBreakdown, mockPaymentHistory } from '../../data';
+import { mockFees, mockFeeBreakdown, mockPaymentHistory } from '../../data';
 import { ReceiptIcon } from '../../constants';
 
 // For demo, assume logged-in student is ID 4
@@ -9,12 +9,12 @@ const studentId = 4;
 const formatter = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 });
 
 const StudentFinanceScreen: React.FC = () => {
-    const studentFeeInfo = mockStudentFees.find(f => f.id === studentId);
+    const studentFeeInfo = mockFees.find(f => f.id === studentId);
 
     if (!studentFeeInfo) {
         return <div className="p-4">Fee information not available.</div>;
     }
-    
+
     const balance = studentFeeInfo.totalFee - studentFeeInfo.paidAmount;
 
     return (
@@ -26,7 +26,7 @@ const StudentFinanceScreen: React.FC = () => {
                     <p className="text-4xl font-bold mt-1">{formatter.format(balance)}</p>
                     <p className="text-xs opacity-80 mt-2">Due Date: {new Date(studentFeeInfo.dueDate).toLocaleDateString('en-GB')}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Fee Breakdown */}
                     <div className="bg-white p-4 rounded-xl shadow-sm">
@@ -44,7 +44,7 @@ const StudentFinanceScreen: React.FC = () => {
                             </li>
                         </ul>
                     </div>
-                    
+
                     {/* Payment History */}
                     <div className="bg-white p-4 rounded-xl shadow-sm">
                         <h3 className="font-bold text-gray-800 mb-3">Payment History</h3>
@@ -53,7 +53,7 @@ const StudentFinanceScreen: React.FC = () => {
                                 {mockPaymentHistory.map(p => (
                                     <li key={p.id} className="flex items-center">
                                         <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mr-3">
-                                            <ReceiptIcon className="w-5 h-5 text-green-600"/>
+                                            <ReceiptIcon className="w-5 h-5 text-green-600" />
                                         </div>
                                         <div className="flex-grow">
                                             <p className="font-semibold text-gray-700">{p.method}</p>

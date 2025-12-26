@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { Student } from '../../types';
 import { DocumentTextIcon, BookOpenIcon, ClipboardListIcon, CheckCircleIcon, SUBJECT_COLORS, EditIcon, getFormattedClassName, CakeIcon, TrashIcon, SparklesIcon, AIIcon } from '../../constants';
 import DonutChart from '../ui/DonutChart';
-import { mockStudents } from '../../data';
-import { GoogleGenAI } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import ConfirmationModal from '../ui/ConfirmationModal';
 import { supabase } from '../../lib/supabase';
@@ -147,11 +146,7 @@ const StudentProfileAdminView: React.FC<StudentProfileAdminViewProps> = ({ stude
                 }
             }
 
-            // Also update mock data for consistency
-            const index = mockStudents.findIndex(s => s.id === student.id);
-            if (index > -1) {
-                mockStudents.splice(index, 1);
-            }
+
 
             alert(`${student.name} has been successfully deleted from the database.`);
             forceUpdate();
@@ -166,7 +161,7 @@ const StudentProfileAdminView: React.FC<StudentProfileAdminViewProps> = ({ stude
         setIsGeneratingSummary(true);
         setSummary(''); // Clear previous summary
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const academicSummary = student.academicPerformance?.map(p => `${p.subject}: ${p.score}%`).join(', ') || 'N/A';
             const behaviorSummary = student.behaviorNotes?.map(n => `${n.type} - ${n.title}: ${n.note}`).join('; ') || 'No notes';
 
@@ -266,13 +261,13 @@ const StudentProfileAdminView: React.FC<StudentProfileAdminViewProps> = ({ stude
                                 <div className="flex items-center justify-between px-2">
                                     <div className="relative">
                                         <DonutChart
-                                            percentage={Object.values(attendanceData).reduce((a, b) => a + b, 0) > 0 ? Math.round(((attendanceData.present + attendanceData.late) / Object.values(attendanceData).reduce((a, b) => a + b, 0)) * 100) : 0}
+                                            percentage={(Object.values(attendanceData) as number[]).reduce((a, b) => a + b, 0) > 0 ? Math.round(((attendanceData.present + attendanceData.late) / (Object.values(attendanceData) as number[]).reduce((a, b) => a + b, 0)) * 100) : 0}
                                             color="#16a34a"
                                             size={100}
                                             strokeWidth={10}
                                         />
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-2xl font-bold text-gray-800">{Object.values(attendanceData).reduce((a, b) => a + b, 0) > 0 ? Math.round(((attendanceData.present + attendanceData.late) / Object.values(attendanceData).reduce((a, b) => a + b, 0)) * 100) : 0}%</span>
+                                            <span className="text-2xl font-bold text-gray-800">{(Object.values(attendanceData) as number[]).reduce((a, b) => a + b, 0) > 0 ? Math.round(((attendanceData.present + attendanceData.late) / (Object.values(attendanceData) as number[]).reduce((a, b) => a + b, 0)) * 100) : 0}%</span>
                                             <span className="text-xs text-gray-500">Present</span>
                                         </div>
                                     </div>

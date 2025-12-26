@@ -83,7 +83,7 @@ const TeacherMarkAttendanceScreen: React.FC<TeacherMarkAttendanceScreenProps> = 
                         name: s.name,
                         grade: s.grade,
                         section: s.section,
-                        avatarUrl: s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
+                        avatarUrl: s.avatar_url,
                         attendanceStatus: (record?.status || 'Present') as AttendanceStatus, // Default to Present for easier workflow
                     } as unknown as Student;
                 });
@@ -222,7 +222,13 @@ const TeacherMarkAttendanceScreen: React.FC<TeacherMarkAttendanceScreenProps> = 
                         {students.map(student => (
                             <li key={student.id} className="p-4 flex items-center justify-between bg-white hover:bg-gray-50">
                                 <div className="flex items-center space-x-4">
-                                    <img src={student.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover bg-gray-200" />
+                                    {student.avatarUrl ? (
+                                        <img src={student.avatarUrl} alt={student.name} className="w-10 h-10 rounded-full object-cover bg-gray-200" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold">
+                                            {student.name.charAt(0)}
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="font-bold text-gray-800">{student.name}</p>
                                         <p className="text-xs text-gray-500">Status: {student.attendanceStatus}</p>

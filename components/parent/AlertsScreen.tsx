@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { mockNotifications } from '../../data';
-import { mockStudents, mockStudentFees } from '../../data';
+import { mockStudents, mockFees } from '../../data';
 import { NOTIFICATION_CATEGORY_CONFIG } from '../../constants';
 import { Notification } from '../../types';
 
@@ -29,7 +29,7 @@ const AlertsScreen: React.FC<AlertsScreenProps> = ({ navigateTo }) => {
   const handleNotificationClick = (notification: Notification) => {
     switch (notification.category) {
       case 'Fees':
-        const feeStudentInfo = mockStudentFees.find(f => f.id === notification.studentId);
+        const feeStudentInfo = mockFees.find(f => f.id === notification.studentId);
         if (feeStudentInfo) {
           navigateTo('feeStatus', 'Fee Status', { student: feeStudentInfo });
         }
@@ -51,8 +51,8 @@ const AlertsScreen: React.FC<AlertsScreenProps> = ({ navigateTo }) => {
         break;
     }
   };
-  
-  const sortedNotifications = [...mockNotifications].filter(n => n.audience.includes('parent')).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const sortedNotifications = [...mockNotifications].filter(n => n.audience.includes('parent')).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
     <div className="flex flex-col h-full bg-gray-100">
@@ -62,7 +62,7 @@ const AlertsScreen: React.FC<AlertsScreenProps> = ({ navigateTo }) => {
             const config = NOTIFICATION_CATEGORY_CONFIG[notification.category];
             const Icon = config.icon;
             return (
-              <button 
+              <button
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
                 className="w-full text-left bg-white rounded-xl shadow-sm p-4 flex items-start space-x-4 relative transition-all hover:shadow-md hover:ring-2 hover:ring-green-200"

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { UsersIcon, ParentNavIcon, TeacherNavIcon, StudentNavIcon, AIIcon } from '../../constants';
-import { GoogleGenAI, Type } from "@google/genai";
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 
 type Audience = 'all' | 'parents' | 'teachers' | 'students';
 
@@ -43,7 +43,7 @@ const CommunicationHub: React.FC = () => {
         }
         setIsGenerating(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
             const audienceText = selectedAudience === 'all' ? 'everyone (students, parents, and teachers)' : `the ${selectedAudience}`;
             const response = await ai.models.generateContent({
                 model: 'gemini-2.0-flash',

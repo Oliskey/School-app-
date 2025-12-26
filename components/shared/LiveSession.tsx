@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { getAIClient, AI_MODEL_NAME } from '../../lib/ai';
 import { MicrophoneIcon, StopIcon, VideoIcon } from '../../constants';
 
 interface LiveSessionProps {
@@ -52,7 +52,7 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
         const startSession = async () => {
             setStatus('connecting');
             try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const ai = getAIClient(import.meta.env.VITE_OPENAI_API_KEY || '');
 
                 // Setup Audio Context
                 audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });

@@ -23,24 +23,17 @@ import {
     CalendarIcon,
     CalendarPlusIcon,
     SparklesIcon,
+} from 'lucide-react';
+import {
     getFormattedClassName
 } from '../../constants';
 import Header from '../ui/Header';
 import { ParentBottomNav } from '../ui/DashboardBottomNav';
-import {
-    mockStudentFees,
-    mockStudents,
-    mockAssignments,
-    mockSubmissions,
-    mockNotices,
-    mockStudentAttendance,
-    mockTimetableData,
-    mockNotifications,
-    mockProgressReports,
-} from '../../data';
 import DonutChart from '../ui/DonutChart';
 import GlobalSearchScreen from '../shared/GlobalSearchScreen';
 
+import { supabase } from '../../lib/supabase';
+import { getHomeworkStatus } from '../../utils/homeworkUtils';
 
 // Import all view components
 import ExamSchedule from '../shared/ExamSchedule';
@@ -134,60 +127,68 @@ const ChildStatCard: React.FC<{ data: any, navigateTo: (view: string, title: str
 };
 
 
-const getHomeworkStatus = (assignment: StudentAssignment) => {
-    const dueDate = new Date(assignment.dueDate);
-    const now = new Date();
-
-    if (assignment.submission) {
-        if (assignment.submission.status === 'Graded') {
-            return { text: `Graded: ${assignment.submission.grade}/100`, icon: <CheckCircleIcon />, color: 'text-green-600', bg: 'bg-green-50', isComplete: true };
-        }
-        return { text: 'Submitted', icon: <CheckCircleIcon />, color: 'text-sky-600', bg: 'bg-sky-50', isComplete: true };
-    }
-
-    if (dueDate < now) {
-        return { text: 'Overdue', icon: <ExclamationCircleIcon />, color: 'text-red-600', bg: 'bg-red-50', isComplete: false };
-    }
-    return { text: 'Pending', icon: <ClockIcon />, color: 'text-amber-600', bg: 'bg-amber-50', isComplete: false };
-};
-
 const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (view: string, title: string, props?: any) => void }) => {
-    const theme = THEME_CONFIG[DashboardType.Parent];
+    const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+    const [progressReport, setProgressReport] = useState<ProgressReport | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Memoized data processing
-    const { latestTerm, latestGrades, averageScore, studentHomework, progressReport } = useMemo(() => {
-        const publishedReport = student.reportCards?.find(rc => rc.status === 'Published');
+    useEffect(() => {
+        const fetchAcademics = async () => {
+            try {
+                // Fetch Assignments
+                const { data: assignmentsData } = await supabase
+                    .from('assignments')
+                    .select('*')
+                    .eq('class_name', `${student.grade}${student.section}`) // Approximate matching
+                    .gt('due_date', new Date().toISOString())
+                    .order('due_date', { ascending: true });
 
-        let term = 'N/A';
-        let grades: { subject: string; score: number; teacherRemark?: string; }[] = [];
-        let avg = 0;
+                const { data: submissionsData } = await supabase
+                    .from('assignment_submissions')
+                    .select('*')
+                    .eq('student_id', student.id);
 
-        if (publishedReport) {
-            term = `${publishedReport.term} (${publishedReport.session})`;
-            grades = publishedReport.academicRecords.map(r => ({ subject: r.subject, score: r.total, teacherRemark: r.remark }));
-            avg = grades.length > 0 ? Math.round(grades.reduce((acc, curr) => acc + curr.score, 0) / grades.length) : 0;
-        } else {
-            // Fallback to academicPerformance if no published report card
-            const term2Grades = student.academicPerformance?.filter(p => p.term === 'Term 2');
-            if (term2Grades && term2Grades.length > 0) {
-                term = 'Term 2';
-                grades = term2Grades;
-                avg = Math.round(grades.reduce((acc, curr) => acc + curr.score, 0) / grades.length);
+                if (assignmentsData) {
+                    const merged: StudentAssignment[] = assignmentsData.map((a: any) => ({
+                        id: a.id,
+                        title: a.title,
+                        description: a.description,
+                        className: a.class_name,
+                        subject: a.subject,
+                        dueDate: a.due_date,
+                        totalStudents: 0, // Not needed for parent view usually
+                        submissionsCount: 0,
+                        submission: submissionsData?.find((s: any) => s.assignment_id === a.id) ? {
+                            id: submissionsData.find((s: any) => s.assignment_id === a.id).id,
+                            assignmentId: a.id,
+                            student: { id: student.id, name: student.name, avatarUrl: student.avatarUrl },
+                            submittedAt: submissionsData.find((s: any) => s.assignment_id === a.id).submitted_at,
+                            isLate: false, // Calc if needed
+                            status: submissionsData.find((s: any) => s.assignment_id === a.id).grade ? 'Graded' : 'Ungraded',
+                            grade: submissionsData.find((s: any) => s.assignment_id === a.id).grade
+                        } : undefined
+                    }));
+                    setAssignments(merged);
+                }
+
+                // Fetch AI Progress Report (Mock table or generating on fly? Using mock structure for now but implied DB)
+                // For now, let's assume we might store this in a 'progress_reports' table or similar.
+                // Since schema might not have it, we'll leave it null or try to fetch if table exists.
+                // Skipping distinct table fetch for now to keep it simple, or use empty.
+
+            } catch (err) {
+                console.error("Error fetching academics:", err);
+            } finally {
+                setLoading(false);
             }
-        }
+        };
+        fetchAcademics();
+    }, [student]);
 
-        const homework = mockAssignments
-            .map(a => ({
-                ...a,
-                submission: mockSubmissions.find(s => s.assignmentId === a.id && s.student.id === student.id)
-            }))
-            .filter(a => new Date(a.dueDate) > new Date())
-            .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-
-        // Use mockProgressReports explicitly typed
-        const progress = mockProgressReports.find((p: ProgressReport) => p.studentId === student.id);
-
-        return { latestTerm: term, latestGrades: grades, averageScore: avg, studentHomework: homework, progressReport: progress };
+    // Calculate Average from Academic Performance (already on student object)
+    const averageScore = useMemo(() => {
+        if (!student.academicPerformance?.length) return 0;
+        return Math.round(student.academicPerformance.reduce((acc, curr) => acc + curr.score, 0) / student.academicPerformance.length);
     }, [student]);
 
     return (
@@ -213,7 +214,7 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                     <div className="flex justify-between items-center">
                         <div>
                             <h4 className="font-bold text-gray-800">Term Performance</h4>
-                            <p className="text-sm text-gray-700">{latestTerm}</p>
+                            <p className="text-sm text-gray-700">Current Term</p>
                         </div>
                         {averageScore > 0 && (
                             <div className="text-right">
@@ -222,23 +223,23 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                             </div>
                         )}
                     </div>
-                    {latestGrades.length > 0 && (
+                    {student.academicPerformance && student.academicPerformance.length > 0 ? (
                         <div className="mt-3 space-y-2">
-                            {latestGrades.map((grade, i) => (
+                            {student.academicPerformance.map((grade, i) => (
                                 <div key={i} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                                     <span className="font-semibold text-sm text-gray-700">{grade.subject}</span>
                                     <span className="font-bold text-sm text-gray-800">{grade.score}%</span>
                                 </div>
                             ))}
                         </div>
-                    )}
+                    ) : <p className="text-sm text-gray-500 mt-2">No grades recorded yet.</p>}
                 </div>
 
                 {/* Homework */}
                 <div className="bg-white p-4 rounded-xl shadow-sm">
                     <h4 className="font-bold text-gray-800 mb-3">Upcoming Homework</h4>
                     <div className="space-y-3">
-                        {studentHomework.length > 0 ? studentHomework.map(hw => {
+                        {assignments.length > 0 ? assignments.map(hw => {
                             const status = getHomeworkStatus(hw);
                             return (
                                 <div key={hw.id} className="flex justify-between items-center border-b pb-2 last:border-b-0">
@@ -247,7 +248,7 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                                         <p className="text-sm text-gray-700">{hw.subject} &bull; Due {new Date(hw.dueDate).toLocaleDateString('en-GB')}</p>
                                     </div>
                                     <div className={`flex items-center space-x-2 text-xs font-semibold px-2 py-1 rounded-full ${status.bg} ${status.color}`}>
-                                        {React.cloneElement(status.icon, { className: `h-4 w-4 ${status.isComplete ? 'animate-checkmark-pop' : ''}`.trim() })}
+                                        {React.cloneElement(status.icon as React.ReactElement, { className: `h-4 w-4 ${status.isComplete ? 'animate-checkmark-pop' : ''}`.trim() })}
                                         <span>{status.text}</span>
                                     </div>
                                 </div>
@@ -256,35 +257,13 @@ const AcademicsTab = ({ student, navigateTo }: { student: Student; navigateTo: (
                     </div>
                 </div>
             </div>
-
-            {/* AI Generated Progress Report */}
-            {progressReport && (
-                <div className="bg-white p-4 rounded-xl shadow-sm">
-                    <div className="flex items-center space-x-2 mb-3">
-                        <SparklesIcon className="text-green-500" />
-                        <h4 className="font-bold text-gray-800">AI Progress Insights</h4>
-                    </div>
-                    <div className="space-y-3 text-sm">
-                        <div>
-                            <h5 className="font-semibold text-green-700 mb-1">Strengths</h5>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                {progressReport.strengths.map((s, i) => <li key={i}>{s}</li>)}
-                            </ul>
-                        </div>
-                        <div>
-                            <h5 className="font-semibold text-amber-700 mb-1">Areas for Improvement</h5>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                {progressReport.areasForImprovement.map((s, i) => <li key={i}>{s}</li>)}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
 
 const BehaviorTab = ({ student }: { student: Student }) => {
+    // Behavior notes should ideally come from Supabase too, likely 'behavior_logs' table.
+    // Assuming student object has them populated for now (which requires fetching in Dashboard)
     return (
         <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -294,7 +273,7 @@ const BehaviorTab = ({ student }: { student: Student }) => {
                         <div key={note.id} className={`p-4 rounded-xl border-l-4 ${isPositive ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'}`}>
                             <div className="flex justify-between items-start">
                                 <h5 className={`font-bold ${isPositive ? 'text-green-800' : 'text-red-800'}`}>{note.title}</h5>
-                                <p className="text-xs text-gray-700 font-medium flex-shrink-0 ml-2">{new Date(note.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                <p className="text-xs text-gray-700 font-medium flex-shrink-0 ml-2">{new Date(note.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                             </div>
                             <p className="text-sm text-gray-700 mt-1">{note.note}</p>
                             {note.suggestions && (
@@ -315,17 +294,36 @@ const BehaviorTab = ({ student }: { student: Student }) => {
 };
 
 const AttendanceTab = ({ student }: { student: Student }) => {
-    const studentAttendance = useMemo(() =>
-        mockStudentAttendance.filter(att => att.studentId === student.id)
-        , [student.id]);
+    const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAttendance = async () => {
+            const { data } = await supabase
+                .from('student_attendance')
+                .select('*')
+                .eq('student_id', student.id);
+
+            if (data) {
+                setAttendance(data.map((a: any) => ({
+                    id: a.id,
+                    studentId: a.student_id,
+                    date: a.date,
+                    status: a.status
+                })));
+            }
+            setLoading(false);
+        };
+        fetchAttendance();
+    }, [student.id]);
 
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const attendanceMap = useMemo(() => {
         const map = new Map<string, AttendanceStatus>();
-        studentAttendance.forEach(att => map.set(att.date, att.status));
+        attendance.forEach(att => map.set(att.date, att.status));
         return map;
-    }, [studentAttendance]);
+    }, [attendance]);
 
     const firstDayOfMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), [currentDate]);
     const daysInMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate(), [currentDate]);
@@ -418,8 +416,6 @@ const ChildDetailScreen = ({ student, initialTab, navigateTo }: { student: Stude
     );
 };
 
-import { supabase } from '../../lib/supabase';
-
 const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title: string, props?: any) => void, parentId?: number | null }) => {
     const theme = THEME_CONFIG[DashboardType.Parent];
     const [students, setStudents] = useState<Student[]>([]);
@@ -456,8 +452,6 @@ const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title:
 
                 if (relationError) throw relationError;
 
-                const studentIds = relations.map(r => r.student_id);
-
                 const fetchStudents = async (ids: number[]) => {
                     const { data: studentsData, error: studentsError } = await supabase
                         .from('students')
@@ -470,6 +464,7 @@ const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title:
                     const mappedStudents: Student[] = studentsData.map((s: any) => ({
                         id: s.id,
                         name: s.name,
+                        email: s.user?.email || '', // Assuming joined or empty
                         avatarUrl: s.avatar_url || 'https://via.placeholder.com/150',
                         grade: s.grade,
                         section: s.section,
@@ -483,7 +478,7 @@ const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title:
                     setStudents(mappedStudents);
                 };
 
-                if (relations.length > 0) {
+                if (relations && relations.length > 0) {
                     const studentIds = relations.map(r => r.student_id);
                     await fetchStudents(studentIds);
                 } else {
@@ -492,41 +487,91 @@ const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title:
 
             } catch (err) {
                 console.error("Error fetching children:", err);
-                setStudents(mockStudents.filter(s => [3, 4].includes(s.id))); // Fallback
             } finally {
                 setLoading(false);
             }
         };
 
+
+
         fetchChildren();
     }, [parentId]);
 
-    const childrenData = useMemo(() => students
-        .map(student => {
-            // We can still try to mix in mock data for the stats if we want the UI to look populated
-            // using the student ID if it matches mocks, or just generic randoms/zeros.
-            // For this specific 'fix', let's prioritize showing the REAL students.
+    const [notifications, setNotifications] = useState<any[]>([]);
 
-            // Try to find matching mock fee info or default
-            const feeInfo = mockStudentFees.find(f => f.id === student.id) || {
-                id: student.id,
-                name: student.name,
-                avatarUrl: student.avatarUrl,
-                grade: student.grade,
-                section: student.section,
-                totalFee: 50000,
-                paidAmount: 50000,
-                dueDate: '2023-12-01',
-                status: 'Paid'
-            } as any;
+    useEffect(() => {
+        // Fetch Notifications
+        const fetchNotifications = async () => {
+            const { data } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('is_read', false)
+                .contains('audience', ['parent']);
+            if (data) setNotifications(data);
+        };
+        fetchNotifications();
+    }, []);
 
-            const nextHomework = mockAssignments[0]; // Just picking one for display if real ones aren't linked yet
+    const notificationCount = notifications.length;
 
-            // Basic Attendance Calc (mock logic on real student)
-            const attendancePercentage = 95; // Default for now
+    // We need to fetch extra info for each child (fee, attendance stat) to populate the cards
+    const [childrenStats, setChildrenStats] = useState<any[]>([]);
 
-            return { student, feeInfo, nextHomework, recentGrades: [], attendancePercentage };
-        }), [students]);
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (students.length === 0) return;
+
+            const stats = await Promise.all(students.map(async (student) => {
+                // Fee
+                const { data: feeData } = await supabase
+                    .from('student_fees')
+                    .select('*')
+                    .eq('student_id', student.id)
+                    .single();
+
+                const feeInfo = feeData ? {
+                    totalFee: feeData.total_fee,
+                    paidAmount: feeData.paid_amount,
+                    status: feeData.status
+                } : null;
+
+                // Attendance %
+                const { count: totalAtt } = await supabase
+                    .from('student_attendance')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('student_id', student.id);
+
+                const { count: presentAtt } = await supabase
+                    .from('student_attendance')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('student_id', student.id)
+                    .eq('status', 'Present');
+
+                const attendancePercentage = totalAtt && totalAtt > 0 ? Math.round(((presentAtt || 0) / totalAtt) * 100) : 0;
+
+                // Next Homework
+                const { data: homework } = await supabase
+                    .from('assignments')
+                    .select('*')
+                    .eq('class_name', `${student.grade}${student.section}`)
+                    .gt('due_date', new Date().toISOString())
+                    .order('due_date', { ascending: true })
+                    .limit(1)
+                    .single();
+
+                return {
+                    student,
+                    feeInfo,
+                    nextHomework: homework ? { subject: homework.subject, title: homework.title } : null,
+                    attendancePercentage
+                };
+            }));
+
+            setChildrenStats(stats);
+        };
+
+        fetchStats();
+    }, [students]);
 
     const quickAccessItems = [
         { label: 'Bus Route', icon: <BusVehicleIcon className="h-7 w-7" />, action: () => navigateTo('busRoute', 'Bus Route') },
@@ -542,7 +587,7 @@ const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title:
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main content */}
                 <div className="lg:col-span-2 space-y-6">
-                    {childrenData.map((data, index) => (
+                    {childrenStats.map((data, index) => (
                         <ChildStatCard key={data.student.id} data={data} navigateTo={navigateTo} colorTheme={childColorThemes[index % childColorThemes.length]} />
                     ))}
                 </div>
@@ -584,6 +629,21 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         name: 'Parent',
         avatarUrl: 'https://i.pravatar.cc/150?u=parent'
     });
+
+    // Notifications fetched in main layout to share count
+    const [notificationCount, setNotificationCount] = useState(0);
+
+    useEffect(() => {
+        const fetchNotifsCount = async () => {
+            const { count } = await supabase
+                .from('notifications')
+                .select('id', { count: 'exact', head: true })
+                .eq('is_read', false)
+                .contains('audience', ['parent']);
+            setNotificationCount(count || 0);
+        }
+        fetchNotifsCount();
+    }, []);
 
     const forceUpdate = () => setVersion(v => v + 1);
 
@@ -627,8 +687,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         setIsHomePage(currentView.view === 'dashboard' && !isSearchOpen);
     }, [viewStack, isSearchOpen, setIsHomePage]);
 
-    const notificationCount = mockNotifications.filter(n => !n.isRead && n.audience.includes('parent')).length;
-
+    // Navigate function for reuse
     const navigateTo = (view: string, title: string, props: any = {}) => {
         setViewStack(stack => [...stack, { view, props, title }]);
     };
@@ -719,25 +778,23 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 notificationCount={notificationCount}
                 onSearchClick={() => setIsSearchOpen(true)}
             />
-            <div className="flex-grow overflow-y-auto h-full" style={{ marginTop: '-4rem' }}>
-                <div className="pt-16 h-full">
-                    <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
-                        {ComponentToRender ? (
-                            <ComponentToRender {...currentNavigation.props} {...commonProps} />
-                        ) : (
-                            <div className="p-6">View not found: {currentNavigation.view}</div>
-                        )}
+
+            <div className="flex-1 overflow-hidden relative">
+                {/* Search Overlay */}
+                {isSearchOpen && (
+                    <div className="absolute inset-0 z-50 bg-white">
+                        <GlobalSearchScreen onClose={() => setIsSearchOpen(false)} navigateTo={navigateTo} />
                     </div>
+                )}
+
+                <div className="h-full overflow-y-auto pb-20">
+                    <Suspense fallback={<DashboardSuspenseFallback />}>
+                        <ComponentToRender {...commonProps} {...currentNavigation.props} />
+                    </Suspense>
                 </div>
             </div>
+
             <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
-            {isSearchOpen && (
-                <GlobalSearchScreen
-                    dashboardType={DashboardType.Parent}
-                    navigateTo={navigateTo}
-                    onClose={() => setIsSearchOpen(false)}
-                />
-            )}
         </div>
     );
 };

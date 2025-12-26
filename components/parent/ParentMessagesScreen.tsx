@@ -103,7 +103,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ navigateTo,
 
                     // Determine name/avatar for display
                     let displayName = room.name;
-                    let displayAvatar = 'https://via.placeholder.com/150';
+                    let displayAvatar = '';
                     let otherParticipant = null;
 
                     if (!room.is_group && participants) {
@@ -122,7 +122,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ navigateTo,
                         }
                     } else {
                         // Group chat avatar logic (optional)
-                        displayAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName || 'Group');
+                        displayAvatar = ''; // Or handling group avatar logic differently if needed, but removing external link
                     }
 
                     return {
@@ -260,7 +260,13 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ navigateTo,
                                             }`}
                                     >
                                         <div className="relative flex-shrink-0">
-                                            <img src={room.displayAvatar} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            {room.displayAvatar ? (
+                                                <img src={room.displayAvatar} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center border border-gray-100 shadow-sm text-orange-600 font-bold">
+                                                    {room.displayName?.charAt(0) || 'U'}
+                                                </div>
+                                            )}
                                             {room.is_group && (
                                                 <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
                                                     <div className="bg-indigo-100 rounded-full p-1">

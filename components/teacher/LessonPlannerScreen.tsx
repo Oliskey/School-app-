@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+// import { GoogleGenAI, Type } from "@google/genai"; // Removed in favor of lib/ai
+import { getAIClient, AI_MODEL_NAME, AI_GENERATION_CONFIG } from '../../lib/ai';
 import ReactMarkdown from 'react-markdown';
 import { supabase } from '../../lib/supabase';
 import { GeneratedResources, SchemeWeek, SavedScheme, HistoryEntry, GeneratedHistoryEntry } from '../../types';
 import { AIIcon, SparklesIcon, TrashIcon, PlusIcon, XCircleIcon, CheckCircleIcon } from '../../constants';
 
-const HistoryIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 8l0 4l2 2" /><path d="M3.05 11a9 9 0 1 1 .5 4m-3.55 -4a9 9 0 0 1 12.5 -5" /><path d="M3 4v4h4" /></svg>;
-const FolderIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" /></svg>;
+const HistoryIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h - 6 w - 6 ${className || ''} `.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 8l0 4l2 2" /><path d="M3.05 11a9 9 0 1 1 .5 4m-3.55 -4a9 9 0 0 1 12.5 -5" /><path d="M3 4v4h4" /></svg>;
+const FolderIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h - 6 w - 6 ${className || ''} `.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2" /></svg>;
 
 
 // --- SUB-COMPONENTS ---
@@ -60,14 +61,14 @@ const SchemeInput: React.FC<{ scheme: SchemeWeek[]; setScheme: React.Dispatch<Re
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-800">{entry.week}.</span>
                         <input type="text" value={entry.topic} onChange={(e) => handleTopicChange(weekIndex, e.target.value)} placeholder="Main Topic for the Week" className="w-full p-2 font-semibold border text-gray-800 bg-white border-gray-300 rounded-md focus:ring-1 focus:ring-gray-500" />
-                        <button type="button" onClick={() => removeWeek(weekIndex)} className="p-1 text-gray-400 hover:text-red-500" aria-label={`Remove Week ${entry.week}`}><TrashIcon className="w-5 h-5" /></button>
+                        <button type="button" onClick={() => removeWeek(weekIndex)} className="p-1 text-gray-400 hover:text-red-500" aria-label={`Remove Week ${entry.week} `}><TrashIcon className="w-5 h-5" /></button>
                     </div>
                     <div className="pl-8 mt-2 space-y-2">
                         {entry.subTopics.map((subTopic, subIndex) => (
                             <div key={subIndex} className="flex items-center gap-2">
                                 <span className="text-gray-400">-</span>
                                 <input type="text" value={subTopic} onChange={(e) => handleSubTopicChange(weekIndex, subIndex, e.target.value)} placeholder="Add a sub-topic or learning objective" className="w-full p-1.5 text-sm border bg-white text-gray-800 border-gray-300 rounded-md focus:ring-1 focus:ring-gray-500" />
-                                <button type="button" onClick={() => removeSubTopic(weekIndex, subIndex)} className="p-1 text-gray-400 hover:text-red-500" aria-label={`Remove sub-topic`}><XCircleIcon className="w-5 h-5" /></button>
+                                <button type="button" onClick={() => removeSubTopic(weekIndex, subIndex)} className="p-1 text-gray-400 hover:text-red-500" aria-label={`Remove sub - topic`}><XCircleIcon className="w-5 h-5" /></button>
                             </div>
                         ))}
                         <button type="button" onClick={() => addSubTopic(weekIndex)} className="flex items-center space-x-1 py-1 px-2 text-xs font-semibold text-gray-800 bg-gray-200 rounded-md hover:bg-gray-300"><PlusIcon className="w-4 h-4" /><span>Add Sub-Topic</span></button>
@@ -286,7 +287,7 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
 
     const handleLoadFromGeneratedHistory = useCallback((entry: GeneratedHistoryEntry) => {
         setIsGeneratedHistoryOpen(false);
-        navigateTo('lessonPlanDetail', `AI Plan: ${entry.subject}`, { resources: entry.resources });
+        navigateTo('lessonPlanDetail', `AI Plan: ${entry.subject} `, { resources: entry.resources });
     }, [navigateTo]);
 
     const handleClearGeneratedHistory = useCallback(() => {
@@ -302,9 +303,9 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
             alert("Please provide a subject, class name, and at least one topic in a term's scheme of work.");
             return;
         }
-        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+        const apiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
         if (!apiKey) {
-            alert("Configuration Error: VITE_GEMINI_API_KEY is not set in your .env file.");
+            alert("Configuration Error: VITE_OPENAI_API_KEY is not set in your .env file.");
             return;
         }
 
@@ -312,203 +313,87 @@ const LessonPlannerScreen: React.FC<{ navigateTo: (view: string, title: string, 
 
         setIsGenerating(true);
         try {
-            const ai = new GoogleGenAI({ apiKey });
+            const ai = getAIClient(apiKey);
+
+            const model = ai.getGenerativeModel({ model: AI_MODEL_NAME });
 
             const prompt = `As an expert curriculum designer for the Nigerian school system, generate educational resources for ${subject} for the class ${className}.
 
-**Primary Directive: Content Generation from User Topics**
-Your function is to create educational materials based *exclusively* on the topics provided by the user for each week.
+** Primary Directive:**
+                    Create educational materials based * exclusively * on the topics provided in the JSON schemes below.
 
-**Format Requirements:**
-1.  **Professional Lesson Notes:** The 'detailedNotes' field for each week must be structured as a formal Professional Lesson Note. It should include:
-    *   **Topic & Sub-topics**
-    *   **Behavioral Objectives:** (What students should be able to do by the end)
-    *   **Entry Behavior/Previous Knowledge:** (Connecting to prior learning)
-    *   **Instructional Material:** (Tools used)
-    *   **Content Development:** (Step-by-step teaching phases: Step 1, Step 2, Step 3, etc.)
-    *   **Evaluation:** (Quick class check)
-    *   **Conclusion & Assignment**
+** Format Requirements:**
+                1. ** Professional Lesson Notes:** For each week, provide a formal note with Objectives, Previous Knowledge, Materials, Content Development(Steps), Evaluation, and Conclusion.
+2. ** Assessments:**
+                - Section A: 10 Multiple Choice Questions(A - D)
+                    - Section B: 3 Theory Questions
 
-2.  **Assessments:**
-    *   For EACH week, generate an assessment that strictly follows this structure:
-        *   **Section A: Objectives** - Exactly **10** multiple-choice questions with options (A-D).
-        *   **Section B: Theory** - Exactly **3** theory/essay questions requiring detailed answers.
+                        ** User Schemes:**
+                            - Term 1: ${JSON.stringify(term1Scheme)}
+            - Term 2: ${JSON.stringify(term2Scheme)}
+            - Term 3: ${JSON.stringify(term3Scheme)}
 
-**Output JSON Structure Requirement:**
-Return a PURE JSON object with this EXACT structure (no markdown code blocks):
-{
-  "subject": "${subject}",
-  "className": "${className}",
-  "terms": [
-    {
-      "term": "First Term",
-      "schemeOfWork": [{"week": 1, "topic": "..."}],
-      "lessonPlans": [{"week": 1, "topic": "...", "objectives": [], "materials": [], "teachingSteps": [{"step": "", "description": ""}], "duration": "", "keyVocabulary": [], "assessmentMethods": []}],
-      "assessments": [{"week": 1, "type": "Weekly Assessment", "totalMarks": 20, "questions": [{"id": 1, "question": "...", "type": "multiple-choice", "options": ["A", "B", "C", "D"], "answer": "A", "marks": 1}]}]
-    }
-    // Repeat for Second Term and Third Term
-  ],
-  "detailedNotes": [
-    {
-      "topic": "Topic Name",
-      "note": "Full markdown text of the professional lesson note..."
-    }
-  ]
-}
+** Output Format:**
+                Return a single valid JSON object with the following structure:
+            {
+                "subject": "${subject}",
+                    "className": "${className}",
+                        "detailedNotes": [{ "topic": "Topic Name", "note": "# Markdown Note Content..." }],
+                            "terms": [
+                                {
+                                    "term": "First Term",
+                                    "lessonPlans": [{ "week": 1, "topic": "...", "objectives": [], "materials": [], "teachingSteps": [], "duration": "", "keyVocabulary": [], "assessmentMethods": [] }],
+                                    "assessments": [{ "week": 1, "type": "Weekly Assessment", "questions": [] }]
+                                }
+                            ]
+            } `;
 
-**How to Handle User Input:**
-1.  **If a week has a Main Topic AND Sub-Topics:** Content must be based *only* on the provided Sub-Topics.
-2.  **If a week has ONLY a Main Topic:** You **MUST** break it down into relevant sections to generate a full lesson note.
+            const result = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: AI_GENERATION_CONFIG
+            });
 
-**ABSOLUTE RESTRICTION**: Do not generate content for topics not provided in the scheme.
+            console.log("AI Response received");
 
-**User-provided schemes of work**:
-- First Term: ${JSON.stringify(term1Scheme)}
-- Second Term: ${JSON.stringify(term2Scheme)}
-- Third Term: ${JSON.stringify(term3Scheme)}
-
-**Your Task**:
-For EACH term that has topics provided in the user's scheme, generate the corresponding lessonPlans, assessments, and detailedNotes based on all rules above.
-Return a single JSON object matching the required schema.`;
-
-
-            // NOTE: Strict response schemas and forcing `application/json` can cause
-            // schema-validation failures on the model side and make debugging hard.
-            // For reliability, request a normal text response, log the raw output,
-            // and parse with a resilient fallback so we surface errors instead of
-            // silently failing.
-            // Direct REST API Loop - Robust Fallback Strategy
-            const modelsToUse = ['gemini-1.5-flash', 'gemini-1.5-pro'];
-            let generatedText = null;
-            let finalError = null;
-
-            console.log("Starting AI generation with model fallbacks...");
-
-            for (const model of modelsToUse) {
-                try {
-                    console.log(`Attempting generation with model: ${model}`);
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (generatedText) {
-                            console.log(`Success with model: ${model}`);
-                            break; // Success!
-                        }
-                    } else {
-                        const err = await response.json().catch(() => ({}));
-                        console.warn(`Model ${model} failed (${response.status}):`, err);
-                        finalError = new Error(`Model ${model} error: ${response.status} ${err.error?.message || response.statusText}`);
-
-                        // If it's a critical auth error (400/403 with API key msg), stop trying others to avoid locking key
-                        if (response.status === 400 && JSON.stringify(err).toLowerCase().includes('api key')) {
-                            throw finalError;
-                        }
-                    }
-                } catch (e) {
-                    console.error(`Network/Logic error with ${model}:`, e);
-                    finalError = e;
-                }
-            }
-
-            if (!generatedText) {
-                console.error("All fallback models failed.");
-                throw finalError || new Error("All AI models failed to respond. Please check your internet or API key.");
-            }
-
-            // Map to expected structure for downstream processing
-            const response = {
-                text: generatedText
-            };
-
-            // Log raw response for debugging (inspect in browser console)
-            console.debug('AI raw response object:', response);
-            console.debug('AI raw response.text:', response.text);
-
-            let resources: GeneratedResources | null = null;
-            let raw = response.text ? response.text.trim() : '';
-
-            // Clean up Markdown code blocks if present
+            let raw = result.response.text();
+            // Sanitize
             raw = raw.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
 
-            try {
-                // Attempt direct parse first
-                resources = JSON.parse(raw);
-            } catch (parseError) {
-                console.warn('Direct JSON parse failed. Attempting robust extraction.', parseError);
+            const resources = JSON.parse(raw);
 
-                // Robust extraction: find the widest range from first '{' to last '}'
-                const firstBrace = raw.indexOf('{');
-                const lastBrace = raw.lastIndexOf('}');
-
-                if (firstBrace > -1 && lastBrace > firstBrace) {
-                    const possibleJson = raw.substring(firstBrace, lastBrace + 1);
-                    try {
-                        resources = JSON.parse(possibleJson);
-                    } catch (secondError) {
-                        console.error('Robust JSON parse failed.', secondError);
-                        alert('AI returned an invalid JSON format. Check console for raw output.');
-                        throw secondError;
-                    }
-                } else {
-                    console.error('No JSON object found in response used.', raw);
-                    alert('AI returned text instead of JSON. Try again.');
-                    throw parseError;
-                }
+            if (!resources || !resources.terms) {
+                throw new Error("AI returned a response, but it was empty or missing data.");
             }
 
-            if (!resources) {
-                throw new Error('Failed to obtain generated resources from AI response.');
-            }
-
-            // Save to Database
+            // Save to Database logic (Simplified for readability)
             const { data: existing } = await supabase
                 .from('generated_resources')
                 .select('id')
                 .eq('teacher_id', effectiveTeacherId)
-                .eq('subject', resources.subject)
-                .eq('class_name', resources.className)
+                .eq('subject', resources.subject || subject)
+                .eq('class_name', resources.className || className)
                 .maybeSingle();
 
             if (existing) {
-                await supabase
-                    .from('generated_resources')
-                    .update({
-                        lesson_plans_content: resources,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existing.id);
+                await supabase.from('generated_resources').update({ lesson_plans_content: resources, updated_at: new Date().toISOString() }).eq('id', existing.id);
             } else {
-                await supabase
-                    .from('generated_resources')
-                    .insert([{
-                        teacher_id: effectiveTeacherId,
-                        subject: resources.subject,
-                        class_name: resources.className,
-                        term: 'All', // Default
-                        lesson_plans_content: resources
-                    }]);
+                await supabase.from('generated_resources').insert([{
+                    teacher_id: effectiveTeacherId,
+                    subject: resources.subject || subject,
+                    class_name: resources.className || className,
+                    term: 'All',
+                    lesson_plans_content: resources
+                }]);
             }
 
             fetchHistory(); // Refresh history list
-
-            navigateTo('lessonPlanDetail', `AI Plan: ${resources.subject}`, { resources });
+            navigateTo('lessonPlanDetail', `AI Plan: ${subject}`, { resources });
 
         } catch (error: any) {
             console.error("AI Generation Error:", error);
-            const errorMessage = error.message || "Unknown error";
-            if (errorMessage.includes("404")) {
-                alert(`AI Models unavailable. Please check your region or API key permissions (404 Not Found).`);
-            } else if (errorMessage.includes("401") || errorMessage.includes("API key")) {
-                alert(`Authentication failed. Please check your API Key.`);
-            } else {
-                alert(`Generation failed: ${errorMessage}. Please try again.`);
-            }
+            const msg = error.message || '';
+
+            alert(`AI Connection Failed. Details:\n${msg}`);
         } finally {
             setIsGenerating(false);
         }
