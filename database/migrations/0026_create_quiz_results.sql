@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS quiz_submissions (
 ALTER TABLE quiz_submissions ENABLE ROW LEVEL SECURITY;
 
 -- Allow students to insert their own results
-CREATE POLICY IF NOT EXISTS "Students can insert their own quiz results"
+DROP POLICY IF EXISTS "Students can insert their own quiz results" ON quiz_submissions;
+CREATE POLICY "Students can insert their own quiz results"
     ON quiz_submissions FOR INSERT
     WITH CHECK (
         student_id IN (
@@ -29,7 +30,8 @@ CREATE POLICY IF NOT EXISTS "Students can insert their own quiz results"
     );
 
 -- Allow students to view their own results
-CREATE POLICY IF NOT EXISTS "Students can view their own quiz results"
+DROP POLICY IF EXISTS "Students can view their own quiz results" ON quiz_submissions;
+CREATE POLICY "Students can view their own quiz results"
     ON quiz_submissions FOR SELECT
     USING (
         student_id IN (
@@ -38,7 +40,8 @@ CREATE POLICY IF NOT EXISTS "Students can view their own quiz results"
     );
 
 -- Allow teachers/admins to view all results
-CREATE POLICY IF NOT EXISTS "Teachers and Admins can view all quiz results"
+DROP POLICY IF EXISTS "Teachers and Admins can view all quiz results" ON quiz_submissions;
+CREATE POLICY "Teachers and Admins can view all quiz results"
     ON quiz_submissions FOR SELECT
     USING (
         EXISTS (

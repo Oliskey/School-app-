@@ -1,7 +1,7 @@
 -- Create Report Cards Table
 CREATE TABLE IF NOT EXISTS report_cards (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    student_id BIGINT REFERENCES students(id) ON DELETE CASCADE,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
     term TEXT NOT NULL,
     session TEXT NOT NULL,
     status TEXT DEFAULT 'Draft', -- Draft, Submitted, Published
