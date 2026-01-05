@@ -16,14 +16,14 @@ CREATE TABLE IF NOT EXISTS timetable (
 ALTER TABLE timetable ENABLE ROW LEVEL SECURITY;
 
 -- Policies
-CREATE POLICY "Enable read access for authenticated users" ON timetable
+CREATE POLICY IF NOT EXISTS "Enable read access for authenticated users" ON timetable
   FOR SELECT USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Enable insert access for admins and teachers" ON timetable
+CREATE POLICY IF NOT EXISTS "Enable insert access for admins and teachers" ON timetable
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Enable update access for admins and teachers" ON timetable
+CREATE POLICY IF NOT EXISTS "Enable update access for admins and teachers" ON timetable
   FOR UPDATE USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Enable delete access for admins and teachers" ON timetable
+CREATE POLICY IF NOT EXISTS "Enable delete access for admins and teachers" ON timetable
   FOR DELETE USING (auth.role() = 'authenticated');
