@@ -3,7 +3,7 @@ import Header from '../ui/Header';
 import { AdminBottomNav } from '../ui/DashboardBottomNav';
 import { AdminSidebar } from '../ui/DashboardSidebar';
 import { DashboardType } from '../../types';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import ErrorBoundary from '../shared/ErrorBoundary';
 
 // Lazy load GlobalSearchScreen
