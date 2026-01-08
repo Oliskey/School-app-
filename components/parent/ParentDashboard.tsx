@@ -842,8 +842,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-gray-100">
-            {/* Desktop Sidebar - Hidden on mobile, fixed on desktop */}
-            <div className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
+            {/* Desktop Sidebar - Hidden on mobile/tablet, fixed on desktop (lg+) */}
+            <div className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
                 <ParentSidebar
                     activeScreen={activeBottomNav}
                     setActiveScreen={handleBottomNavClick}
@@ -852,7 +852,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col h-screen w-full md:ml-64 overflow-hidden">
+            <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
                 <Header
                     title={currentNavigation.title}
                     avatarUrl={parentProfile.avatarUrl}
@@ -872,15 +872,15 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                         </div>
                     )}
 
-                    <div className="h-full overflow-y-auto pb-20 md:pb-6">
+                    <div className="h-full overflow-y-auto pb-20 lg:pb-6">
                         <Suspense fallback={<DashboardSuspenseFallback />}>
                             <ComponentToRender {...commonProps} {...currentNavigation.props} />
                         </Suspense>
                     </div>
                 </div>
 
-                {/* Mobile Bottom Nav - Hidden on desktop */}
-                <div className="md:hidden">
+                {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
+                <div className="lg:hidden">
                     <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
                 </div>
             </div>

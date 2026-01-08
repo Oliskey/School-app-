@@ -489,8 +489,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-gray-50">
-            {/* Desktop Sidebar - Hidden on mobile, fixed on desktop */}
-            <div className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
+            {/* Desktop Sidebar - Hidden on mobile/tablet, fixed on desktop (lg+) */}
+            <div className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
                 <StudentSidebar
                     activeScreen={activeBottomNav} // Using existing state for active screen
                     setActiveScreen={handleBottomNavClick} // Reuse existing handler
@@ -499,7 +499,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col h-screen w-full md:ml-64 overflow-hidden">
+            <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
                 <Header
                     title={currentNavigation.title}
                     avatarUrl={student.avatarUrl}
@@ -513,8 +513,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto" style={{ marginTop: '-4rem' }}>
-                    <div className="pt-16 min-h-full pb-20 md:pb-6">
-                        {/* pb-20 only on mobile to clear bottom nav, md:pb-6 for desktop spacing */}
+                    <div className="pt-16 min-h-full pb-20 lg:pb-6">
+                        {/* pb-20 on mobile/tablet to clear bottom nav, lg:pb-6 for desktop spacing */}
                         <ErrorBoundary>
                             <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
                                 <Suspense fallback={<DashboardSuspenseFallback />}>
@@ -529,8 +529,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                     </div>
                 </div>
 
-                {/* Mobile Bottom Nav - Hidden on desktop */}
-                <div className="md:hidden">
+                {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
+                <div className="lg:hidden">
                     <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
                 </div>
 

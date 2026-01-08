@@ -282,8 +282,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-100">
-      {/* Desktop Sidebar - Hidden on mobile, fixed on desktop */}
-      <div className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
+      {/* Desktop Sidebar - Hidden on mobile/tablet, fixed on desktop (lg+) */}
+      <div className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
         <TeacherSidebar
           activeScreen={activeBottomNav}
           setActiveScreen={handleBottomNavClick}
@@ -292,7 +292,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen w-full md:ml-64 overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
         <Header
           title={currentNavigation.title}
           avatarUrl={teacherProfile.avatarUrl}
@@ -304,7 +304,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
           onSearchClick={() => setIsSearchOpen(true)}
         />
         <div className="flex-1 overflow-y-auto" style={{ marginTop: '-5rem' }}>
-          <main className="min-h-full pt-20 pb-20 md:pb-6">
+          <main className="min-h-full pt-20 pb-20 lg:pb-6">
             <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
               {ComponentToRender ? (
                 <ComponentToRender {...currentNavigation.props} {...commonProps} />
@@ -314,8 +314,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
             </div>
           </main>
         </div>
-        {/* Mobile Bottom Nav - Hidden on desktop */}
-        <div className="md:hidden">
+        {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
+        <div className="lg:hidden">
           <TeacherBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
         </div>
         <Suspense fallback={<DashboardSuspenseFallback />}>

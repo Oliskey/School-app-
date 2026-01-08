@@ -521,8 +521,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-gray-100">
-            {/* Desktop Sidebar - Hidden on mobile, fixed on desktop */}
-            <div className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
+            {/* Desktop Sidebar - Hidden on mobile/tablet, fixed on desktop (lg+) */}
+            <div className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
                 <AdminSidebar
                     activeScreen={activeBottomNav}
                     setActiveScreen={handleBottomNavClick}
@@ -531,7 +531,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col h-screen w-full md:ml-64 overflow-hidden">
+            <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
                 {dbStatus === 'error' && (
                     <div className="bg-red-600 text-white text-xs py-1 px-4 text-center font-medium z-50">
                         Network/Database Error: Cannot connect to the server. Please check your internet connection or try again later.
@@ -548,7 +548,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
                     onSearchClick={() => setIsSearchOpen(true)}
                 />
                 <div className="flex-1 overflow-y-auto">
-                    <div className="h-full pb-20 md:pb-6">
+                    <div className="h-full pb-20 lg:pb-6">
                         <ErrorBoundary key={`${viewStack.length}-${currentNavigation.view}`}>
                             <Suspense fallback={<DashboardSuspenseFallback />}>
                                 <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
@@ -558,8 +558,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
                         </ErrorBoundary>
                     </div>
                 </div>
-                {/* Mobile Bottom Nav - Hidden on desktop */}
-                <div className="md:hidden">
+                {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
+                <div className="lg:hidden">
                     <AdminBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
                 </div>
                 <Suspense fallback={<DashboardSuspenseFallback />}>
