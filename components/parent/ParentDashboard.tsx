@@ -880,7 +880,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 </div>
 
                 {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
-                <div className="lg:hidden">
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
                     <ParentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
                 </div>
             </div>
