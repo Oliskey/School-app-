@@ -109,7 +109,7 @@ const CurriculumSettingsScreen: React.FC<{
                                     <h3 className="text-sm md:text-base font-semibold text-gray-800">Subject List</h3>
                                     <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-md">{subjects.length} Subjects</span>
                                 </div>
-                                <div className="divide-y divide-gray-100 max-h-[400px] md:max-h-[500px] overflow-y-auto">
+                                <div className="divide-y divide-gray-100 max-h-[400px] md:max-h-[500px] overflow-y-auto pb-4">
                                     {subjects.map(subject => (
                                         <div key={subject.id} className="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-gray-50">
                                             <div className="flex items-center gap-2 md:gap-3">
