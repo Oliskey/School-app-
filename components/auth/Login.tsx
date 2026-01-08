@@ -303,8 +303,8 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen w-full bg-gradient-to-br from-sky-50 via-green-50 to-amber-50 p-2 sm:p-4 sm:justify-center overflow-y-auto">
-      <div className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-lg rounded-3xl p-4 sm:p-8 shadow-2xl transition-all border border-white/50 my-2 sm:my-0">
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-sky-50 via-green-50 to-amber-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-lg rounded-3xl p-4 sm:p-8 shadow-2xl transition-all border border-white/50 my-4">
 
         {/* Header */}
         <div className="flex flex-col items-center mb-4 sm:mb-8">

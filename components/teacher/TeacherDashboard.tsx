@@ -315,7 +315,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
           </main>
         </div>
         {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
-        <div className="lg:hidden">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
           <TeacherBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
         </div>
         <Suspense fallback={<DashboardSuspenseFallback />}>
