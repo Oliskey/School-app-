@@ -304,7 +304,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
           onSearchClick={() => setIsSearchOpen(true)}
         />
         <div className="flex-1 overflow-y-auto" style={{ marginTop: '-5rem' }}>
-          <main className="min-h-full pt-20 pb-20 lg:pb-6">
+          <main className="min-h-full pt-20 pb-16 lg:pb-4">
             <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
               {ComponentToRender ? (
                 <ComponentToRender {...currentNavigation.props} {...commonProps} />

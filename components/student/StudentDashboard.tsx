@@ -513,8 +513,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto" style={{ marginTop: '-4rem' }}>
-                    <div className="pt-16 min-h-full pb-20 lg:pb-6">
-                        {/* pb-20 on mobile/tablet to clear bottom nav, lg:pb-6 for desktop spacing */}
+                    <div className="pt-16 min-h-full pb-16 lg:pb-4">
+                        {/* pb-16 on mobile/tablet to clear bottom nav, lg:pb-4 for desktop spacing */}
                         <ErrorBoundary>
                             <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
                                 <Suspense fallback={<DashboardSuspenseFallback />}>
