@@ -553,7 +553,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
                     onSearchClick={() => setIsSearchOpen(true)}
                 />
                 <div className="flex-1 overflow-y-auto">
-                    <div className="h-full pb-16 lg:pb-4">
+                    <div className="h-full">
                         <ErrorBoundary key={`${viewStack.length}-${currentNavigation.view}`}>
                             <Suspense fallback={<DashboardSuspenseFallback />}>
                                 <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
