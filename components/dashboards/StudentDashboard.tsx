@@ -50,6 +50,7 @@ const MathSprintResultsScreen = lazy(() => import('../student/games/MathSprintRe
 const GamePlayerScreen = lazy(() => import('../shared/GamePlayerScreen'));
 const StudentCBTListScreen = lazy(() => import('../student/cbt/StudentCBTListScreen'));
 const StudentCBTPlayerScreen = lazy(() => import('../student/cbt/StudentCBTPlayerScreen'));
+const StudentProfileStandard = lazy(() => import('../student/StudentProfileStandard')); // Explicit standard profile
 import MessagingLayout from '../shared/MessagingLayout';
 
 
@@ -370,7 +371,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         achievements: AchievementsScreen,
         messages: (props: any) => <MessagingLayout {...props} dashboardType={DashboardType.Student} currentUserId={student?.id} />,
         newChat: StudentNewChatScreen,
-        profile: StudentProfileScreen,
+        profile: StudentProfileStandard,
         videoLesson: VideoLessonScreen,
         assignmentSubmission: AssignmentSubmissionScreen,
         assignmentFeedback: AssignmentFeedbackScreen,

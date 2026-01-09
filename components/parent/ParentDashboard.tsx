@@ -448,22 +448,88 @@ const Dashboard = ({ navigateTo, parentId }: { navigateTo: (view: string, title:
 
                 if (studentsError) throw studentsError;
 
-                // Map DB students to frontend Student type
-                const mappedStudents: Student[] = studentsData.map((s: any) => ({
-                    id: s.id,
-                    name: s.name,
-                    email: s.user?.email || '', // Assuming joined or empty
-                    avatarUrl: s.avatar_url || 'https://via.placeholder.com/150',
-                    grade: s.grade,
-                    section: s.section,
-                    department: s.department,
-                    attendanceStatus: s.attendance_status || 'Present',
-                    birthday: s.birthday,
-                    academicPerformance: [],
-                    behaviorNotes: [],
-                    reportCards: []
+                // Fetch Related Data for all students in parallel
+                const studentsWithData = await Promise.all(studentsData.map(async (s: any) => {
+                    // 1. Academic Performance
+                    const { data: academicData } = await supabase
+                        .from('academic_performance')
+                        .select('*')
+                        .eq('student_id', s.id);
+
+                    // 2. Behavior Records
+                    const { data: behaviorData } = await supabase
+                        .from('behavior_records')
+                        .select('*')
+                        .eq('student_id', s.id)
+                        .order('date', { ascending: false });
+
+                    // 3. Report Cards
+                    const { data: reportCardsData } = await supabase
+                        .from('report_cards')
+                        .select('*')
+                        .eq('student_id', s.id)
+                        .eq('status', 'Published') // Only published for parents
+                        .order('created_at', { ascending: false });
+
+                    return {
+                        id: s.id,
+                        name: s.name,
+                        email: s.user?.email || '',
+                        avatarUrl: s.avatar_url || 'https://via.placeholder.com/150',
+                        grade: s.grade,
+                        section: s.section,
+                        department: s.department,
+                        attendanceStatus: s.attendance_status || 'Present',
+                        birthday: s.birthday,
+
+                        // Map Real Data
+                        academicPerformance: academicData?.map((a: any) => ({
+                            subject: a.subject,
+                            score: a.total || a.score, // Handle potential schema diff
+                            term: a.term,
+                            teacherRemark: a.remark
+                        })) || [],
+
+                        behaviorNotes: behaviorData?.map((b: any) => ({
+                            id: b.id,
+                            date: b.date,
+                            type: b.type,
+                            title: b.title,
+                            note: b.description || '',
+                            by: b.reporter_name || 'Teacher',
+                            suggestions: b.suggestions || []
+                        })) || [],
+
+                        reportCards: reportCardsData?.map((r: any) => ({
+                            term: r.term,
+                            session: r.session,
+                            academicRecords: academicData && academicData.length > 0
+                                ? academicData.filter((a: any) => a.term === r.term && a.session === r.session).map((a: any) => ({
+                                    subject: a.subject,
+                                    ca: a.ca || 0,
+                                    exam: a.exam || 0,
+                                    total: a.total || a.score,
+                                    grade: a.grade || 'N/A',
+                                    remark: a.remark || ''
+                                }))
+                                : [], // If no detailed records, might rely on summary or fetch specifically. 
+                            // Logic assumes academic_performance held the details.
+                            skills: {}, // Placeholder as schema doesn't have skills table yet (Phase 2)
+                            psychomotor: {},
+                            attendance: {
+                                total: r.attendance_total || 0,
+                                present: r.attendance_present || 0,
+                                absent: r.attendance_absent || 0,
+                                late: r.attendance_late || 0
+                            },
+                            teacherComment: r.teacher_comment || '',
+                            principalComment: r.principal_comment || '',
+                            status: r.status
+                        })) || []
+                    };
                 }));
-                setStudents(mappedStudents);
+
+                setStudents(studentsWithData);
             };
 
             try {

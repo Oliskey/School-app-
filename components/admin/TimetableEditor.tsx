@@ -478,28 +478,35 @@ const TimetableEditor: React.FC<TimetableEditorProps> = ({ timetableData, naviga
     };
 
     const handleAiGenerate = async () => {
-        if (!aiPrompt) return;
-        setIsGenerating(true);
-        setTimeout(() => {
-            const newSchedule: Timetable = {};
-            const newAssignments: TeacherAssignments = {};
+        if (!teachers.length || Object.keys(SUBJECT_COLORS).length === 0) {
+            setToastMessage("Please ensure teachers and subjects are loaded.");
+            return;
+        }
 
-            DAYS.forEach(day => {
-                PERIODS.forEach((p, idx) => {
-                    if (!p.isBreak && Math.random() > 0.3) {
-                        const sub = ['Math', 'English', 'Science', 'History'][Math.floor(Math.random() * 4)];
-                        newSchedule[`${day}-${idx}`] = sub;
-                        newAssignments[`${day}-${idx}`] = teachers[Math.floor(Math.random() * teachers.length)];
-                    }
-                });
+        setIsGenerating(true);
+        try {
+            const { generateTimetableAI } = await import('../../lib/gemini');
+
+            const result = await generateTimetableAI({
+                className: selectedClass || "Grade X",
+                subjects: Object.keys(SUBJECT_COLORS),
+                teachers: teachers,
+                days: DAYS,
+                periodsPerDay: PERIODS.length
             });
 
-            setTimetable(newSchedule);
-            setTeacherAssignments(newAssignments);
+            if (result && result.schedule) {
+                setTimetable(result.schedule);
+                setTeacherAssignments(result.assignments);
+                setToastMessage("AI Schedule Generated Successfully!");
+                setShowAiModal(false);
+            }
+        } catch (error: any) {
+            console.error(error);
+            setToastMessage("AI Error: " + error.message);
+        } finally {
             setIsGenerating(false);
-            setShowAiModal(false);
-            setToastMessage("AI Schedule Generated!");
-        }, 1500);
+        }
     };
 
     // Mobile specific handlers

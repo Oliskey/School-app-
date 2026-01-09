@@ -253,7 +253,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     educationalGames: EducationalGamesScreen,
     aiGameCreator: AIGameCreatorScreen,
     gamePlayer: GamePlayerScreen,
-    appointments: TeacherAppointmentsScreen,
+    appointments: (props: any) => <TeacherAppointmentsScreen {...props} teacherId={teacherId ?? 2} />,
     virtualClass: VirtualClassScreen,
     resources: TeacherResourcesScreen,
     cbtScores: CBTScoresScreen,

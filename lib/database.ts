@@ -1606,7 +1606,7 @@ export async function fetchCBTExams(teacherId?: number, isPublished?: boolean): 
     try {
         let query = supabase
             .from('cbt_exams')
-            .select('*')
+            .select('*, classes(grade, section), subjects(name)')
             .order('created_at', { ascending: false }); // Newest first
 
         if (teacherId) query = query.eq('teacher_id', teacherId);
@@ -1619,6 +1619,9 @@ export async function fetchCBTExams(teacherId?: number, isPublished?: boolean): 
             id: exam.id,
             title: exam.title,
             subjectId: exam.subject_id,
+            subjectName: exam.subjects?.name, // Mapped from join
+            classId: exam.class_id,
+            className: exam.classes ? `Grade ${exam.classes.grade}${exam.classes.section}` : undefined, // Mapped from join
             classGrade: exam.class_grade,
             curriculumId: exam.curriculum_id,
             durationMinutes: exam.duration_minutes,
@@ -1655,6 +1658,21 @@ export async function fetchCBTQuestions(examId: number): Promise<any[]> {
     } catch (err) {
         console.error('Error fetching CBT questions:', err);
         return [];
+    }
+}
+
+export async function deleteCBTExam(examId: number): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('cbt_exams')
+            .delete()
+            .eq('id', examId);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting CBT exam:', err);
+        return false;
     }
 }
 
@@ -1855,5 +1873,167 @@ export async function createAuditLog(action: string, tableName: string, recordId
     } catch (err) {
         console.error('Error creating audit log:', err);
         return false;
+    }
+}
+
+// ============================================
+// BEHAVIOR NOTES
+// ============================================
+
+export async function fetchBehaviorNotes(studentId: number): Promise<any[]> {
+    try {
+        const { data, error } = await supabase
+            .from('behavior_notes')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('date', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map(n => ({
+            id: n.id,
+            studentId: n.student_id,
+            type: n.type,
+            title: n.title,
+            note: n.note,
+            date: n.date,
+            by: n.teacher_name || 'Teacher' // Assuming teacher name is stored or we join
+        }));
+    } catch (err) {
+        console.error('Error fetching behavior notes:', err);
+        return [];
+    }
+}
+
+export async function createBehaviorNote(noteData: {
+    studentId: number;
+    type: 'Positive' | 'Negative';
+    title: string;
+    note: string;
+    date: string;
+    teacherName: string;
+}): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('behavior_notes')
+            .insert({
+                student_id: noteData.studentId,
+                type: noteData.type,
+                title: noteData.title,
+                note: noteData.note,
+                date: noteData.date,
+                teacher_name: noteData.teacherName
+            });
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error creating behavior note:', err);
+        return false;
+    }
+}
+
+// ============================================
+// ACADEMIC PERFORMANCE (READ-ONLY VIEW)
+// ============================================
+
+export async function fetchAcademicPerformance(studentId: number): Promise<any[]> {
+    try {
+        const { data, error } = await supabase
+            .from('academic_performance')
+            .select('*')
+            .eq('student_id', studentId);
+
+        if (error) throw error;
+        return (data || []).map(p => ({
+            subject: p.subject,
+            score: p.score,
+            grade: p.grade,
+            remark: p.remark,
+            term: p.term,
+            session: p.session
+        }));
+    } catch (err) {
+        console.error('Error fetching academic performance:', err);
+        return [];
+    }
+}
+
+// ============================================
+// STUDENT DASHBOARD AGGREGATORS
+// ============================================
+
+export async function fetchStudentStats(studentId: number) {
+    try {
+        // Parallel queries for efficiency
+        const [attendanceRes, assignmentsRes, activitiesRes] = await Promise.all([
+            supabase.from('attendance').select('status').eq('student_id', studentId),
+            supabase.from('submissions').select('id').eq('student_id', studentId),
+            supabase.from('academic_performance').select('score').eq('student_id', studentId) // Proxy for achievements/activities for now
+        ]);
+
+        const attendanceTotal = attendanceRes.data?.length || 0;
+        const presentCount = attendanceRes.data?.filter(a => a.status === 'Present').length || 0;
+        const attendanceRate = attendanceTotal > 0 ? Math.round((presentCount / attendanceTotal) * 100) : 100;
+
+        const assignmentsSubmitted = assignmentsRes.data?.length || 0;
+
+        // Calculate average score
+        const scores = activitiesRes.data?.map(s => s.score) || [];
+        const average = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+        return {
+            attendanceRate,
+            assignmentsSubmitted,
+            averageScore: average,
+            studyHours: 24, // Placeholder until we have a study timer
+            achievements: Math.floor(average / 20) // simple gamification derived from score
+        };
+    } catch (err) {
+        console.error("Error fetching student stats:", err);
+        return { attendanceRate: 0, assignmentsSubmitted: 0, averageScore: 0, studyHours: 0, achievements: 0 };
+    }
+}
+
+export async function fetchUpcomingEvents(grade: number | string, section: string, studentId: number) {
+    try {
+        const today = new Date().toISOString();
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+
+        // 1. Fetch Assignments Due Soon
+        const { data: assignments } = await supabase
+            .from('assignments')
+            .select('id, title, due_date, subject')
+            .gte('due_date', today)
+            .lte('due_date', nextWeek.toISOString())
+            .limit(3);
+
+        // 2. Fetch Notices (Events)
+        const { data: notices } = await supabase
+            .from('notices')
+            .select('id, title, created_at, category')
+            .eq('category', 'Event')
+            .limit(3);
+
+        const events = [
+            ...(assignments || []).map(a => ({
+                id: `assign-${a.id}`,
+                title: `${a.subject}: ${a.title}`,
+                date: a.due_date,
+                type: 'Assignment'
+            })),
+            ...(notices || []).map(n => ({
+                id: `notice-${n.id}`,
+                title: n.title,
+                date: n.created_at, // Ideally notices have an event_date
+                type: 'Event'
+            }))
+        ];
+
+        // Sort by date
+        return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5);
+    } catch (err) {
+        console.error("Error fetching upcoming events:", err);
+        return [];
     }
 }

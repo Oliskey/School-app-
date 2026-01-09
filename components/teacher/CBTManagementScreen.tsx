@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { CloudUploadIcon, EyeIcon, ExamIcon, TrashIcon, XCircleIcon, WifiIcon, getFormattedClassName } from '../../constants';
 import { CBTExam, Subject } from '../../types';
 import ConfirmationModal from '../ui/ConfirmationModal';
-import { fetchSubjects, fetchCBTExams } from '../../lib/database';
+import { fetchSubjects, fetchCBTExams, deleteCBTExam } from '../../lib/database';
 import { useTeacherClasses } from '../../hooks/useTeacherClasses';
 
 interface CBTManagementScreenProps {
@@ -139,7 +139,7 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo, t
 
             // 2. Insert Questions
             const questionsPayload = parsedQuestions.map(q => ({
-                cbt_exam_id: examData.id,
+                exam_id: examData.id,
                 ...q
             }));
 
@@ -178,6 +178,16 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo, t
         }
     };
 
+    const handleDelete = async (id: number) => {
+        const success = await deleteCBTExam(id);
+        if (success) {
+            toast.success("Exam deleted successfully");
+            setExams(prev => prev.filter(e => e.id !== id));
+        } else {
+            toast.error("Failed to delete exam");
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-slate-50">
             <main className="flex-grow p-4 md:p-6 space-y-6 overflow-y-auto w-full">
@@ -210,6 +220,8 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo, t
                     </div>
 
                     <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+
                         {/* Configuration Inputs */}
                         <div className="space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -284,20 +296,38 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo, t
                         <div className="grid grid-cols-1 gap-4">
                             {exams.map(exam => (
                                 <div key={exam.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <h4 className="font-bold text-slate-800 text-lg">{exam.title}</h4>
-                                            <p className="text-sm text-slate-600">{exam.type} • {exam.duration} mins • {exam.totalMarks} Marks</p>
+                                    <div className="flex flex-col mb-2">
+                                        <div className="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                                            {exam.className && <span className="bg-slate-100 px-2 py-0.5 rounded">{exam.className}</span>}
+                                            {exam.subjectName && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded">{exam.subjectName}</span>}
                                         </div>
+                                        <h4 className="font-bold text-slate-800 text-lg">{exam.title}</h4>
+                                        <p className="text-sm text-slate-600 mt-1">
+                                            {exam.type} • {exam.duration} mins • {exam.totalMarks || exam.totalQuestions} Marks • {exam.totalQuestions} Questions
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
                                         <div className="flex items-center gap-3">
                                             <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${exam.isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                                 {exam.isPublished ? 'Live' : 'Draft'}
                                             </span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => togglePublish(exam)}
                                                 className="text-sm text-indigo-600 font-semibold hover:underline"
                                             >
                                                 {exam.isPublished ? 'Unpublish' : 'Publish'}
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteId(exam.id);
+                                                }}
+                                                className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                                                title="Delete Exam"
+                                            >
+                                                <TrashIcon className="w-5 h-5" />
                                             </button>
                                         </div>
                                     </div>
@@ -309,6 +339,20 @@ const CBTManagementScreen: React.FC<CBTManagementScreenProps> = ({ navigateTo, t
                         </div>
                     )}
                 </div>
+
+                {/* Confirmation Modal for Deletion */}
+                <ConfirmationModal
+                    isOpen={!!deleteId}
+                    title="Delete Exam"
+                    message="Are you sure you want to delete this exam? This action cannot be undone."
+                    onConfirm={async () => {
+                        if (deleteId) {
+                            await handleDelete(deleteId);
+                            setDeleteId(null);
+                        }
+                    }}
+                    onClose={() => setDeleteId(null)}
+                />
             </main>
         </div>
     );

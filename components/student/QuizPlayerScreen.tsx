@@ -112,8 +112,9 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
       // Map CBT questions to UI format
       const mappedQuestions: Question[] = (cbtQuestions || []).map((q: any) => ({
         id: q.id,
+        quizId: quizId,
         text: q.question_text,
-        type: 'MCQ', // Excel upload implies MCQ usually
+        type: 'MultipleChoice', // Excel upload implies MCQ usually
         points: q.marks || 1,
         options: [
           { id: 'A', text: q.option_a, isCorrect: q.correct_option === 'A' },
@@ -164,6 +165,15 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
 
   // ...
 
+  const handleNext = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedAnswerId(null);
+    } else {
+      finishQuiz();
+    }
+  };
+
   const finishQuiz = async (autoSubmit = false) => {
     setIsFinished(true);
     if (autoSubmit) {
@@ -197,7 +207,7 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
       setScore(finalScore);
 
       const submissionData = {
-        cbt_exam_id: quizId,
+        exam_id: quizId,
         student_id: student.id,
         score: finalScore,
         answers: submissionAnswers, // Store detailed JSON

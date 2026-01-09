@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Quiz } from '../../types';
-import { SUBJECT_COLORS, HelpIcon, ChevronRightIcon, ClockIcon } from '../../constants';
+import { SUBJECT_COLORS, HelpIcon, ChevronRightIcon, ClockIcon, ExamIcon } from '../../constants';
 import { toast } from 'react-hot-toast';
 
 interface QuizzesScreenProps {
@@ -39,7 +39,8 @@ const QuizzesScreen: React.FC<QuizzesScreenProps> = ({ navigateTo }) => {
         .from('cbt_exams')
         .select(`
             *,
-            subjects ( name )
+            subjects ( name ),
+            classes ( grade, section )
         `)
         .eq('is_published', true)
         // .eq('class_id', student.class_id) // Optional: restrict to class if needed
@@ -56,22 +57,31 @@ const QuizzesScreen: React.FC<QuizzesScreenProps> = ({ navigateTo }) => {
       // 3. Fetch submissions for this student
       const { data: submissions } = await supabase
         .from('cbt_submissions')
-        .select('cbt_exam_id, score, status')
-        .eq('student_id', student.id);
+        .select('exam_id, score, status')
+        .eq('student_id', user.id);
+
+      let subMap: Record<number, any> = {};
+      if (submissions) {
+        submissions.forEach(s => {
+          subMap[s.exam_id] = s;
+        });
+      }
 
       // 4. Merge
       const merged = (examsData || []).map((exam: any) => {
-        const sub = submissions?.find(s => s.cbt_exam_id === exam.id);
+        const sub = subMap[exam.id];
         const subjectName = exam.subjects?.name || 'General';
+        const className = exam.classes ? `Grade ${exam.classes.grade}${exam.classes.section}` : undefined;
 
         return {
           id: exam.id,
           title: exam.title,
           subject: subjectName,
+          className: className, // New field for UI
           durationMinutes: exam.duration_minutes,
-          questionsCount: 0, // We could count questions if needed, but maybe not critical for list
+          questionsCount: 0,
           submission: sub ? { score: sub.score, status: sub.status } : undefined,
-          isNewConfig: true // Flag to tell Player to use new system
+          isNewConfig: true
         };
       });
 
@@ -121,10 +131,14 @@ const QuizzesScreen: React.FC<QuizzesScreenProps> = ({ navigateTo }) => {
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <main className="flex-grow p-4 space-y-4 overflow-y-auto">
-        <div className="bg-orange-50 p-4 rounded-xl text-center border border-orange-200 shadow-sm">
-          <HelpIcon className="h-10 w-10 mx-auto text-orange-400 mb-2" />
-          <h3 className="font-bold text-lg text-orange-800">Assessments & Quizzes</h3>
-          <p className="text-sm text-orange-700">Complete your assigned tasks.</p>
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-orange-100 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <ExamIcon className="w-6 h-6 text-orange-500" />
+              CBT & Examinations
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">Take your scheduled exams and view results</p>
+          </div>
         </div>
 
         {quizzes.length === 0 ? (
@@ -148,6 +162,10 @@ const QuizzesScreen: React.FC<QuizzesScreenProps> = ({ navigateTo }) => {
                       <HelpIcon className="w-6 h-6 text-white" />
                     </div>
                     <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        {(quiz as any).className && <span className="text-[10px] uppercase font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{(quiz as any).className}</span>}
+                      </div>
+
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-gray-800 line-clamp-1">{quiz.title}</h4>
                         {(quiz as any).submission && (

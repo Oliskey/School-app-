@@ -910,7 +910,9 @@ export interface LessonNote {
 export interface CBTExam {
   id: number;
   title: string;
-  type?: 'Test' | 'Exam'; // Added
+  type?: 'Test' | 'Exam';
+  className?: string; // Added for UI display
+  subjectName?: string; // Added for UI display
   subjectId: number;
   classId?: number; // Added
   classGrade: string;

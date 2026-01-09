@@ -12,27 +12,97 @@ import {
     Clock, Target, Briefcase, Globe
 } from 'lucide-react';
 import { getAIClient, AI_MODEL_NAME, SchemaType as Type } from '../../lib/ai';
+import { fetchAcademicPerformance, fetchStudentStats, fetchUpcomingEvents } from '../../lib/database';
 
 // ... (existing imports)
 
 interface StudentProfileEnhancedProps {
     studentId?: number;
+    student?: any; // Accept passed down student object to avoid re-fetching if possible
 }
 
-export default function StudentProfileEnhanced({ studentId }: StudentProfileEnhancedProps) {
-    const [student, setStudent] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+export default function StudentProfileEnhanced({ studentId, student: initialStudent }: StudentProfileEnhancedProps) {
+    const [student, setStudent] = useState<any>(initialStudent || null);
+    const [loading, setLoading] = useState(!initialStudent);
     const [activeTab, setActiveTab] = useState('overview');
+
+    // Real Data State
+    const [performance, setPerformance] = useState<any[]>([]);
+    const [stats, setStats] = useState({ attendanceRate: 0, assignmentsSubmitted: 0, averageScore: 0, studyHours: 0, achievements: 0 });
+    const [events, setEvents] = useState<any[]>([]);
 
     // AI Focus State
     const [learningFocus, setLearningFocus] = useState<any>(null);
     const [focusLoading, setFocusLoading] = useState(false);
 
     useEffect(() => {
-        fetchStudentData();
-    }, [studentId]);
+        if (studentId || initialStudent?.id) {
+            fetchProfileData(studentId || initialStudent.id);
+        }
+    }, [studentId, initialStudent]);
 
-    const generateLearningFocus = async (studentData: any) => {
+    const fetchProfileData = async (id: number) => {
+        try {
+            // 1. Fetch Basic Student Info (if not provided)
+            let currentStudent = initialStudent;
+            if (!currentStudent) {
+                setLoading(true);
+                const { data } = await supabase.from('students').select('*').eq('id', id).single();
+                if (data) {
+                    currentStudent = {
+                        ...data,
+                        first_name: data.name.split(' ')[0],
+                        last_name: data.name.split(' ').slice(1).join(' '),
+                        class_name: `Grade ${data.grade}${data.section}`,
+                        admission_number: data.school_generated_id || `STU${data.id}`,
+                        date_of_birth: data.birthday || '2000-01-01',
+                        phone: data.phone || 'N/A',
+                        address: data.address || 'N/A',
+                        email: data.email,
+                        guardian_name: data.parent_name || 'Guardian',
+                        guardian_phone: data.parent_phone || 'N/A',
+                        average_grade: 0 // Will be updated by stats
+                    };
+                    setStudent(currentStudent);
+                }
+            } else if (!student) {
+                // Ensure we format the initialStudent if it came from dashboard props raw
+                setStudent({
+                    ...initialStudent,
+                    first_name: initialStudent.name.split(' ')[0],
+                    last_name: initialStudent.name.split(' ').slice(1).join(' '),
+                    class_name: `Grade ${initialStudent.grade}${initialStudent.section}`,
+                    admission_number: initialStudent.schoolId || `STU${initialStudent.id}`,
+                });
+            }
+
+            if (!currentStudent) return; // Should handle not found
+
+            // 2. Fetch Related Data in Parallel
+            const [perfData, statsData, eventsData] = await Promise.all([
+                fetchAcademicPerformance(id),
+                fetchStudentStats(id),
+                fetchUpcomingEvents(currentStudent.grade, currentStudent.section, id)
+            ]);
+
+            setPerformance(perfData);
+            setStats(statsData);
+            setEvents(eventsData);
+
+            // Update student object with real stats
+            setStudent(prev => ({ ...prev, average_grade: statsData.averageScore, attendance_rate: statsData.attendanceRate }));
+
+            // 3. Trigger AI Analysis
+            generateLearningFocus(currentStudent, statsData.averageScore);
+
+        } catch (error) {
+            console.error('Error fetching profile data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const generateLearningFocus = async (studentData: any, averageScore: number) => {
         setFocusLoading(true);
         try {
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
@@ -40,8 +110,8 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
 
             const prompt = `Analyze this student's performance and suggest 2 key learning focus areas for today.
             Student: ${studentData.first_name}
-            Grade: ${studentData.class_name}
-            Performance: Average ${studentData.average_grade}%
+            Grade: ${studentData.class_name || '10'}
+            Performance: Average ${averageScore}%
             
             Return JSON with:
             - title (string) e.g. "Quadratic Equations"
@@ -88,43 +158,26 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
         }
     };
 
-    const fetchStudentData = async () => {
-        setLoading(true);
-        try {
-            const { data } = await supabase
-                .from('students')
-                .select('*')
-                .eq('id', studentId || 1)
-                .single();
-
-            const sData = data || {
-                first_name: 'Alex',
-                last_name: 'Johnson',
-                email: 'alex.johnson@school.com',
-                phone: '+234 803 XXX XXXX',
-                class_name: 'Grade 10A',
-                admission_number: 'STU2024001',
-                date_of_birth: '2008-05-15',
-                address: 'Victoria Island, Lagos',
-                guardian_name: 'Jennifer Johnson',
-                guardian_phone: '+234 803 XXX XXXX',
-                attendance_rate: 95,
-                average_grade: 88,
-                profile_photo: null,
-            };
-            setStudent(sData);
-
-            // Trigger AI after data load
-            generateLearningFocus(sData);
-
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
-        }
+    // ... Helper functions for colors ...
+    const getGradeColor = (score: number) => {
+        if (score >= 90) return 'blue';
+        if (score >= 80) return 'green';
+        if (score >= 70) return 'purple';
+        if (score >= 60) return 'pink';
+        return 'indigo';
     };
 
-    if (loading) {
+    const getGradeLetter = (score: number) => {
+        if (score >= 90) return 'A+';
+        if (score >= 80) return 'A';
+        if (score >= 75) return 'B+';
+        if (score >= 70) return 'B';
+        if (score >= 60) return 'C';
+        if (score >= 50) return 'D';
+        return 'F';
+    };
+
+    if (loading || !student) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-slate-50">
                 <div className="flex flex-col items-center gap-4">
@@ -160,16 +213,17 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                 <div className="relative group">
                                     <div className="absolute -inset-1 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300"></div>
                                     <div className="relative w-32 h-32 lg:w-40 lg:h-40 bg-white rounded-full p-1.5 shadow-2xl">
-                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
-                                            <span className="text-4xl lg:text-5xl font-bold tracking-tight">
-                                                {student.first_name?.[0]}{student.last_name?.[0]}
-                                            </span>
+                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+                                            {student.avatarUrl || student.profile_photo ? (
+                                                <img src={student.avatarUrl || student.profile_photo} alt="Profile" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-4xl lg:text-5xl font-bold tracking-tight">
+                                                    {student.first_name?.[0]}{student.last_name?.[0]}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="absolute bottom-2 right-2 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-lg"></div>
-                                    <button className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Edit className="w-4 h-4 text-slate-700" />
-                                    </button>
                                 </div>
 
                                 {/* Name & Title */}
@@ -180,10 +234,10 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-4">
                                         <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 text-sm font-semibold">
                                             <GraduationCap className="w-4 h-4 mr-2" />
-                                            {student.class_name}
+                                            {student.class_name || `Grade ${student.grade}`}
                                         </Badge>
                                         <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 text-sm">
-                                            ID: {student.admission_number}
+                                            ID: {student.admission_number || `STU${student.id}`}
                                         </Badge>
                                     </div>
                                     <div className="flex flex-wrap gap-2 text-sm text-white/90">
@@ -201,28 +255,28 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                     <StatCard
                                         icon={<TrendingUp className="w-5 h-5" />}
                                         label="Attendance"
-                                        value={`${student.attendance_rate}%`}
-                                        trend="+2.5%"
-                                        trendUp={true}
+                                        value={`${stats.attendanceRate}%`}
+                                        trend={stats.attendanceRate > 90 ? "+ Good" : "Needs Imp."}
+                                        trendUp={stats.attendanceRate > 90}
                                     />
                                     <StatCard
                                         icon={<Award className="w-5 h-5" />}
                                         label="Average"
-                                        value={`${student.average_grade}%`}
-                                        trend="+4.2%"
-                                        trendUp={true}
+                                        value={`${stats.averageScore}%`}
+                                        trend={stats.averageScore > 75 ? "+ Good" : "Fair"}
+                                        trendUp={stats.averageScore > 75}
                                     />
                                     <StatCard
                                         icon={<BookOpen className="w-5 h-5" />}
-                                        label="Subjects"
-                                        value="12"
-                                        badge="Active"
+                                        label="Performance"
+                                        value={performance.length.toString()}
+                                        badge="Subjects"
                                     />
                                     <StatCard
                                         icon={<Target className="w-5 h-5" />}
-                                        label="Rank"
-                                        value="#3"
-                                        badge="Top 5%"
+                                        label="Submitted"
+                                        value={stats.assignmentsSubmitted.toString()}
+                                        badge="Assign."
                                     />
                                 </div>
 
@@ -297,7 +351,7 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                         </CardHeader>
                                         <CardContent className="p-6">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <InfoField icon={<Mail />} label="Email Address" value={student.email} />
+                                                <InfoField icon={<Mail />} label="Email Address" value={student.email || 'N/A'} />
                                                 <InfoField icon={<Phone />} label="Phone Number" value={student.phone} />
                                                 <InfoField icon={<Calendar />} label="Date of Birth" value={new Date(student.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
                                                 <InfoField icon={<MapPin />} label="Address" value={student.address} />
@@ -353,11 +407,17 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                         </CardHeader>
                                         <CardContent className="p-6">
                                             <div className="space-y-5">
-                                                <PerformanceBar subject="Mathematics" score={92} grade="A" color="blue" />
-                                                <PerformanceBar subject="English Language" score={88} grade="B+" color="green" />
-                                                <PerformanceBar subject="Physics" score={85} grade="B" color="purple" />
-                                                <PerformanceBar subject="Chemistry" score={90} grade="A-" color="pink" />
-                                                <PerformanceBar subject="Biology" score={87} grade="B+" color="indigo" />
+                                                {performance.length > 0 ? performance.map((p, i) => (
+                                                    <PerformanceBar
+                                                        key={i}
+                                                        subject={p.subject}
+                                                        score={p.score}
+                                                        grade={getGradeLetter(p.score)}
+                                                        color={getGradeColor(p.score)}
+                                                    />
+                                                )) : (
+                                                    <div className="text-center py-4 text-slate-500">No performance records found yet.</div>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -368,13 +428,13 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                     {/* Quick Stats */}
                                     <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-indigo-50 to-purple-50">
                                         <CardHeader>
-                                            <CardTitle className="text-lg">Week Overview</CardTitle>
+                                            <CardTitle className="text-lg">Stats</CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            <QuickStat icon={<CheckCircle />} label="Classes Attended" value="28/30" color="emerald" />
-                                            <QuickStat icon={<FileText />} label="Assignments" value="12/15" color="blue" />
-                                            <QuickStat icon={<Clock />} label="Study Hours" value="24h" color="purple" />
-                                            <QuickStat icon={<Award />} label="Achievements" value="3" color="amber" />
+                                            <QuickStat icon={<CheckCircle />} label="Classes Attended" value={`${stats.attendanceRate}%`} color="emerald" />
+                                            <QuickStat icon={<FileText />} label="Assignments Submitted" value={stats.assignmentsSubmitted} color="blue" />
+                                            <QuickStat icon={<Clock />} label="Est. Study Hours" value={`${stats.studyHours}h`} color="purple" />
+                                            <QuickStat icon={<Award />} label="Achievements" value={stats.achievements} color="amber" />
                                         </CardContent>
                                     </Card>
 
@@ -387,9 +447,16 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-0">
-                                            <EventItem date="Jan 15" title="Mathematics Test" time="9:00 AM" />
-                                            <EventItem date="Jan 18" title="Science Fair" time="2:00 PM" />
-                                            <EventItem date="Jan 22" title="Sports Day" time="All Day" />
+                                            {events.length > 0 ? events.map((event, i) => (
+                                                <EventItem
+                                                    key={i}
+                                                    date={new Date(event.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                                    title={event.title}
+                                                    time={event.type === 'Assignment' ? 'Due Date' : new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                />
+                                            )) : (
+                                                <div className="p-4 text-center text-slate-500 text-sm">No upcoming events.</div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -400,21 +467,21 @@ export default function StudentProfileEnhanced({ studentId }: StudentProfileEnha
                         <TabsContent value="academic" className="p-6 lg:p-8">
                             <div className="text-center py-12">
                                 <BookOpen className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                                <p className="text-slate-500">Academic records will appear here</p>
+                                <p className="text-slate-500">Full academic records will appear here.</p>
                             </div>
                         </TabsContent>
 
                         <TabsContent value="activities" className="p-6 lg:p-8">
                             <div className="text-center py-12">
                                 <Briefcase className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                                <p className="text-slate-500">Extracurricular activities will appear here</p>
+                                <p className="text-slate-500">Extracurricular activities will appear here.</p>
                             </div>
                         </TabsContent>
 
                         <TabsContent value="documents" className="p-6 lg:p-8">
                             <div className="text-center py-12">
                                 <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                                <p className="text-slate-500">Documents will appear here</p>
+                                <p className="text-slate-500">Documents will appear here.</p>
                             </div>
                         </TabsContent>
                     </Tabs>

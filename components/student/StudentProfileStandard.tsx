@@ -12,7 +12,7 @@ interface StudentProfileScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
 }
 
-export default function StudentProfileScreen({ studentId, student: initialStudent, onLogout, navigateTo }: StudentProfileScreenProps) {
+export default function StudentProfileStandard({ studentId, student: initialStudent, onLogout, navigateTo }: StudentProfileScreenProps) {
     const [student, setStudent] = useState<any>(initialStudent || null);
     const [loading, setLoading] = useState(false);
 

@@ -103,10 +103,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, conversation, r
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Initial Fetch
+    // Initial Fetch
     useEffect(() => {
-        if (!roomId) return;
+        if (!roomId) {
+            setLoading(false);
+            return;
+        }
 
         const fetchMessages = async () => {
+            // ... logic remains same, but ensuring this block is reached only if roomId exists
+            // wait, I need to include the console logs or whatever was there?
+            // No, just the early return logic update.
+            // Actually, to use replace_file_content effectively on the block:
             const { data, error } = await supabase
                 .from('messages')
                 .select(`
@@ -135,7 +143,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ conversationId, conversation, r
                         role: msg.sender.role || 'Member'
                     } : undefined
                 }));
-                // Limit to last 50 messages for performance and "load more" later
+
                 setMessages(mappedMessages);
             }
             setLoading(false);

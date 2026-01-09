@@ -143,13 +143,50 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
                 }
             }
 
+            // FETCH CORRECT USER ID (Public Users Table)
+            // The chat_rooms table references public.users(id), which is a BigInt.
+            // student.id is from students table, which might not match or satisfy the FK if they are separate.
+            const { data: publicUser, error: userError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', student.email)
+                .single();
+
+            let publicUserId = publicUser?.id;
+
+            if (!publicUserId) {
+                console.log('User not found in public.users, creating record...');
+                // Auto-create the user in public.users to fix the missing identity
+                const { data: newUser, error: createError } = await supabase
+                    .from('users')
+                    .insert([{
+                        name: student.name,
+                        email: student.email,
+                        role: 'Student', // Map role correctly
+                        avatar_url: student.avatarUrl,
+                        // If users table is linked to auth, we might need user_id (UUID)
+                        // but for now we heavily rely on this table's ID (BigInt)
+                        // If user_id column exists in public.users, we should try to set it if we have it
+                        user_id: student.user_id || undefined
+                    }])
+                    .select('id')
+                    .single();
+
+                if (createError || !newUser) {
+                    console.error('Error creating public user:', createError);
+                    setError('Could not verify or create user identity for chat.');
+                    return;
+                }
+                publicUserId = newUser.id;
+            }
+
             // Create new room
             const { data: newRoom, error: createError } = await supabase
                 .from('chat_rooms')
                 .insert({
                     type: 'direct',
                     is_group: false,
-                    creator_id: student.id,
+                    creator_id: publicUserId,
                     // Name is often null for direct chats, or we can set it for easy debugging
                 })
                 .select()
@@ -165,7 +202,7 @@ const StudentNewChatScreen: React.FC<StudentNewChatScreenProps> = ({ navigateTo,
             const { error: partError } = await supabase
                 .from('chat_participants')
                 .insert([
-                    { room_id: newRoom.id, user_id: student.id, role: 'member' },
+                    { room_id: newRoom.id, user_id: publicUserId, role: 'member' },
                     { room_id: newRoom.id, user_id: user.id, role: 'member' }
                 ]);
 
