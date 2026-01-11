@@ -40,10 +40,14 @@ const ExtracurricularsScreen = lazy(() => import('../student/ExtracurricularsScr
 const NotificationsScreen = lazy(() => import('../shared/NotificationsScreen'));
 const QuizzesScreen = lazy(() => import('../student/QuizzesScreen'));
 const QuizPlayerScreen = lazy(() => import('../student/QuizPlayerScreen'));
-const GamesHubScreen = lazy(() => import('../student/games/GamesHubScreen'));
-const MathSprintLobbyScreen = lazy(() => import('../student/games/MathSprintLobbyScreen'));
-const MathSprintGameScreen = lazy(() => import('../student/games/MathSprintGameScreen'));
-const MathSprintResultsScreen = lazy(() => import('../student/games/MathSprintResultsScreen'));
+const GamesHubScreen = lazy(() => import('./games/GamesHubScreen'));
+const MathSprintLobbyScreen = lazy(() => import('./games/MathSprintLobbyScreen'));
+const MathSprintGameScreen = lazy(() => import('./games/MathSprintGameScreen'));
+const MathSprintResultsScreen = lazy(() => import('./games/MathSprintResultsScreen'));
+const GeoGuesserLobbyScreen = lazy(() => import('./games/GeoGuesserLobbyScreen'));
+const GeoGuesserGameScreen = lazy(() => import('./games/GeoGuesserGameScreen'));
+const CodeChallengeLobbyScreen = lazy(() => import('./games/CodeChallengeLobbyScreen'));
+const CodeChallengeGameScreen = lazy(() => import('./games/CodeChallengeGameScreen'));
 const GamePlayerScreen = lazy(() => import('../shared/GamePlayerScreen'));
 
 const DashboardSuspenseFallback = () => (
@@ -284,6 +288,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
     // State for student data
     const [student, setStudent] = useState<Student | null>(null);
     const [loadingStudent, setLoadingStudent] = useState(true);
+    const [version, setVersion] = useState(0);
 
     // Real-time notifications
     const notificationCount = useRealtimeNotifications('student');
@@ -497,6 +502,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         mathSprintGame: MathSprintGameScreen,
         mathSprintResults: MathSprintResultsScreen,
         gamePlayer: GamePlayerScreen,
+        geoGuesserLobby: GeoGuesserLobbyScreen,
+        geoGuesserGame: GeoGuesserGameScreen,
+        codeChallengeLobby: CodeChallengeLobbyScreen,
+        codeChallengeGame: CodeChallengeGameScreen,
     }), [student]);
 
     // Optimistic UI: Only show full loading spinner if we are loading AND have no student data
@@ -560,23 +569,24 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
-                <Header
-                    title={currentNavigation.title}
-                    avatarUrl={student.avatarUrl}
-                    bgColor={THEME_CONFIG[DashboardType.Student].mainBg}
-                    onLogout={onLogout}
-                    onBack={viewStack.length > 1 ? handleBack : undefined}
-                    onNotificationClick={handleNotificationClick}
-                    notificationCount={notificationCount}
-                    onSearchClick={() => setIsSearchOpen(true)}
-                />
+                {!['profile', 'mathSprintGame', 'geoGuesserGame', 'codeChallengeGame'].includes(currentNavigation.view) && (
+                    <Header
+                        title={currentNavigation.title}
+                        avatarUrl={student.avatarUrl}
+                        bgColor={THEME_CONFIG[DashboardType.Student].mainBg}
+                        onLogout={onLogout}
+                        onBack={viewStack.length > 1 ? handleBack : undefined}
+                        onNotificationClick={handleNotificationClick}
+                        notificationCount={notificationCount}
+                        onSearchClick={() => setIsSearchOpen(true)}
+                    />
+                )}
 
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto" style={{ marginTop: '-4rem' }}>
-                    <div className="pt-16 min-h-full">
-                        {/* Removed bottom padding to maximize viewable content */}
+                {/* Scrollable Content or Full Screen Game */}
+                <div className={`flex-1 ${['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer'].includes(currentNavigation.view) ? 'h-full overflow-hidden' : 'overflow-y-auto'}`}>
+                    <div className={`${['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer'].includes(currentNavigation.view) ? 'h-full' : 'min-h-full pb-20 lg:pb-0'}`}>
                         <ErrorBoundary>
-                            <div key={`${viewStack.length}-${currentNavigation.view}`} className="animate-slide-in-up">
+                            <div key={`${viewStack.length}-${currentNavigation.view}`} className="animate-slide-in-up h-full">
                                 <Suspense fallback={<DashboardSuspenseFallback />}>
                                     {ComponentToRender ? (
                                         <ComponentToRender {...currentNavigation.props} studentId={student.id} student={student} {...commonProps} />
@@ -589,10 +599,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                     </div>
                 </div>
 
-                {/* Mobile/Tablet Bottom Nav - Hidden on desktop (lg+) */}
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
-                    <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
-                </div>
+                {/* Mobile/Tablet Bottom Nav - Hidden on Games */}
+                {!['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer'].includes(currentNavigation.view) && (
+                    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+                        <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+                    </div>
+                )}
 
                 {/* Search Overlay */}
                 <Suspense fallback={<DashboardSuspenseFallback />}>

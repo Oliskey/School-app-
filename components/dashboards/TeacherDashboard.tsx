@@ -65,6 +65,7 @@ import VirtualClassScreen from '../teacher/VirtualClassScreen';
 import TeacherResourcesScreen from '../teacher/TeacherResourcesScreen';
 import CBTManagementScreen from '../teacher/CBTManagementScreen';
 import CBTScoresScreen from '../teacher/CBTScoresScreen';
+import QuizBuilderScreen from '../teacher/QuizBuilderScreen';
 import MessagingLayout from '../shared/MessagingLayout';
 
 
@@ -203,6 +204,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     resources: TeacherResourcesScreen,
     cbtScores: CBTScoresScreen,
     cbtManagement: CBTManagementScreen,
+    quizBuilder: QuizBuilderScreen,
   }), []);
 
   const currentNavigation = viewStack[viewStack.length - 1];

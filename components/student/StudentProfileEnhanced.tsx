@@ -16,12 +16,17 @@ import { fetchAcademicPerformance, fetchStudentStats, fetchUpcomingEvents } from
 
 // ... (existing imports)
 
+import { toast } from 'react-hot-toast';
+
+// ... (existing imports)
+
 interface StudentProfileEnhancedProps {
     studentId?: number;
     student?: any; // Accept passed down student object to avoid re-fetching if possible
+    navigateTo?: (view: string, title: string, props?: any) => void;
 }
 
-export default function StudentProfileEnhanced({ studentId, student: initialStudent }: StudentProfileEnhancedProps) {
+export default function StudentProfileEnhanced({ studentId, student: initialStudent, navigateTo }: StudentProfileEnhancedProps) {
     const [student, setStudent] = useState<any>(initialStudent || null);
     const [loading, setLoading] = useState(!initialStudent);
     const [activeTab, setActiveTab] = useState('overview');
@@ -193,7 +198,7 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
             {/* Premium Header Section */}
             <div className="relative overflow-hidden">
                 {/* Decorative Elements */}
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 opacity-90"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-500 opacity-90"></div>
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
 
                 <div className="relative px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
@@ -211,9 +216,9 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 flex-shrink-0">
                                 {/* Avatar with Status */}
                                 <div className="relative group">
-                                    <div className="absolute -inset-1 bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300"></div>
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300"></div>
                                     <div className="relative w-32 h-32 lg:w-40 lg:h-40 bg-white rounded-full p-1.5 shadow-2xl">
-                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white overflow-hidden">
+                                        <div className="w-full h-full rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white overflow-hidden">
                                             {student.avatarUrl || student.profile_photo ? (
                                                 <img src={student.avatarUrl || student.profile_photo} alt="Profile" className="w-full h-full object-cover" />
                                             ) : (
@@ -251,7 +256,7 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
 
                             {/* Stats Cards - Horizontal on Desktop */}
                             <div className="flex-1 w-full">
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                     <StatCard
                                         icon={<TrendingUp className="w-5 h-5" />}
                                         label="Attendance"
@@ -281,18 +286,23 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-wrap gap-3 mt-6">
-                                    <Button className="bg-white text-indigo-600 hover:bg-white/90 shadow-lg font-semibold">
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-3 mt-6">
+                                    <Button onClick={() => window.print()} className="w-full sm:w-auto bg-white text-orange-600 hover:bg-white/90 shadow-lg font-semibold order-2 sm:order-1">
                                         <Download className="w-4 h-4 mr-2" />
                                         Download Transcript
                                     </Button>
-                                    <Button className="bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur-sm">
+                                    <Button onClick={() => {
+                                        navigator.clipboard.writeText(window.location.href);
+                                        toast.success('Profile link copied to clipboard!');
+                                    }} className="w-full sm:w-auto bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur-sm order-1 sm:order-2">
                                         <Share2 className="w-4 h-4 mr-2" />
                                         Share Profile
                                     </Button>
-                                    <Button className="bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur-sm">
-                                        <Settings className="w-4 h-4" />
-                                    </Button>
+                                    {navigateTo && (
+                                        <Button onClick={() => navigateTo('editProfile', 'Edit Profile')} className="w-full sm:w-auto bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur-sm order-3">
+                                            <Settings className="w-4 h-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -309,25 +319,25 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                             <TabsList className="bg-transparent h-auto p-0 gap-6">
                                 <TabsTrigger
                                     value="overview"
-                                    className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-4 pt-4 font-semibold"
+                                    className="data-[state=active]:bg-transparent data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-600 rounded-none px-0 pb-4 pt-4 font-semibold"
                                 >
                                     Overview
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="academic"
-                                    className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-4 pt-4 font-semibold"
+                                    className="data-[state=active]:bg-transparent data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-600 rounded-none px-0 pb-4 pt-4 font-semibold"
                                 >
                                     Academic
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="activities"
-                                    className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-4 pt-4 font-semibold"
+                                    className="data-[state=active]:bg-transparent data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-600 rounded-none px-0 pb-4 pt-4 font-semibold"
                                 >
                                     Activities
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="documents"
-                                    className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-600 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none px-0 pb-4 pt-4 font-semibold"
+                                    className="data-[state=active]:bg-transparent data-[state=active]:text-orange-600 data-[state=active]:border-b-2 data-[state=active]:border-orange-600 rounded-none px-0 pb-4 pt-4 font-semibold"
                                 >
                                     Documents
                                 </TabsTrigger>
@@ -343,8 +353,8 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                                     <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                                         <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                                             <CardTitle className="flex items-center gap-3 text-lg">
-                                                <div className="p-2 bg-indigo-100 rounded-lg">
-                                                    <User className="w-5 h-5 text-indigo-600" />
+                                                <div className="p-2 bg-orange-100 rounded-lg">
+                                                    <User className="w-5 h-5 text-orange-600" />
                                                 </div>
                                                 Personal Information
                                             </CardTitle>
@@ -363,7 +373,7 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
 
                                     {/* AI Personal Focus */}
                                     {learningFocus && (
-                                        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-1 shadow-lg mb-6 transform hover:scale-[1.01] transition-transform">
+                                        <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-xl p-1 shadow-lg mb-6 transform hover:scale-[1.01] transition-transform">
                                             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-5">
                                                 <div className="flex items-start gap-4">
                                                     <div className="p-3 bg-white/20 rounded-lg text-white animate-pulse">
@@ -371,7 +381,7 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                                                     </div>
                                                     <div className="flex-1">
                                                         <h3 className="text-lg font-bold text-white mb-1">🎯 Today's Learning Focus</h3>
-                                                        <p className="text-indigo-100 text-sm mb-3">Based on your recent performance, we recommend focusing on:</p>
+                                                        <p className="text-orange-100 text-sm mb-3">Based on your recent performance, we recommend focusing on:</p>
                                                         <div className="space-y-2">
                                                             {learningFocus.map((item: any, idx: number) => {
                                                                 const colors: any = {
@@ -426,7 +436,7 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                                 {/* Right Column - 1/3 */}
                                 <div className="space-y-6">
                                     {/* Quick Stats */}
-                                    <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-indigo-50 to-purple-50">
+                                    <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-orange-50 to-red-50">
                                         <CardHeader>
                                             <CardTitle className="text-lg">Stats</CardTitle>
                                         </CardHeader>
@@ -442,7 +452,7 @@ export default function StudentProfileEnhanced({ studentId, student: initialStud
                                     <Card className="border-slate-200 shadow-sm">
                                         <CardHeader className="border-b border-slate-100">
                                             <CardTitle className="text-lg flex items-center gap-2">
-                                                <Bell className="w-5 h-5 text-indigo-600" />
+                                                <Bell className="w-5 h-5 text-orange-600" />
                                                 Upcoming
                                             </CardTitle>
                                         </CardHeader>
@@ -588,9 +598,9 @@ function QuickStat({ icon, label, value, color }: any) {
 function EventItem({ date, title, time }: any) {
     return (
         <div className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
-            <div className="flex flex-col items-center justify-center w-14 h-14 bg-indigo-50 rounded-xl flex-shrink-0">
-                <span className="text-xs font-semibold text-indigo-600 uppercase">{date.split(' ')[0]}</span>
-                <span className="text-xl font-bold text-indigo-600">{date.split(' ')[1]}</span>
+            <div className="flex flex-col items-center justify-center w-14 h-14 bg-orange-50 rounded-xl flex-shrink-0">
+                <span className="text-xs font-semibold text-orange-600 uppercase">{date.split(' ')[0]}</span>
+                <span className="text-xl font-bold text-orange-600">{date.split(' ')[1]}</span>
             </div>
             <div className="flex-1 min-w-0">
                 <div className="font-semibold text-slate-900 truncate">{title}</div>

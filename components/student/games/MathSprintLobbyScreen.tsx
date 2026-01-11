@@ -2,11 +2,14 @@ import { toast } from 'react-hot-toast';
 import React from 'react';
 import { ShareIcon } from '../../../constants';
 
+import { Student } from '../../../types';
+
 interface MathSprintLobbyScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
+    student?: Student;
 }
 
-const MathSprintLobbyScreen: React.FC<MathSprintLobbyScreenProps> = ({ navigateTo }) => {
+const MathSprintLobbyScreen: React.FC<MathSprintLobbyScreenProps> = ({ navigateTo, student }) => {
 
     const handleShareChallenge = () => {
         if (navigator.share) {
@@ -29,7 +32,7 @@ const MathSprintLobbyScreen: React.FC<MathSprintLobbyScreenProps> = ({ navigateT
 
             <div className="w-full max-w-sm mt-8 space-y-4">
                 <button
-                    onClick={() => navigateTo('mathSprintGame', 'Math Sprint', {})}
+                    onClick={() => navigateTo('mathSprintGame', 'Math Sprint', { student })}
                     className="w-full py-4 text-lg font-bold text-white bg-orange-500 rounded-xl shadow-lg hover:bg-orange-600 transition-colors"
                 >
                     Play Solo

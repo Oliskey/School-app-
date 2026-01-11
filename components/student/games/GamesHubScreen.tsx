@@ -48,7 +48,7 @@ const GameCard: React.FC<{ game: EducationalGame | (AIGame & { mode: 'Online' })
     );
 };
 
-const LevelAccordion: React.FC<{ level: string; games: EducationalGame[]; defaultOpen?: boolean; navigateTo: (view: string, title: string, props?: any) => void; }> = ({ level, games, defaultOpen = false, navigateTo }) => {
+const LevelAccordion: React.FC<{ level: string; games: EducationalGame[]; defaultOpen?: boolean; navigateTo: (view: string, title: string, props?: any) => void; student: Student }> = ({ level, games, defaultOpen = false, navigateTo, student }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
@@ -72,7 +72,7 @@ const LevelAccordion: React.FC<{ level: string; games: EducationalGame[]; defaul
                             <GameCard
                                 key={index}
                                 game={game}
-                                onClick={isPlayable ? () => navigateTo('mathSprintLobby', 'Math Sprint', {}) : undefined}
+                                onClick={isPlayable ? () => navigateTo('mathSprintLobby', 'Math Sprint', { student }) : undefined}
                             />
                         )
                     })}
@@ -130,21 +130,21 @@ const GamesHubScreen: React.FC<GamesHubScreenProps> = ({ navigateTo, student }) 
             description: 'Test your calculation speed!',
             icon: <div className="text-2xl font-bold text-white">123</div>,
             bgColor: 'bg-sky-500 bg-gradient-to-br from-sky-500 to-blue-600',
-            action: () => navigateTo('mathSprintLobby', 'Math Sprint', {})
+            action: () => navigateTo('mathSprintLobby', 'Math Sprint', { student })
         },
         {
             title: 'GeoGuesser',
             description: 'Guess locations around the world.',
             icon: <SearchIcon className="w-7 h-7 text-white" />,
             bgColor: 'bg-green-500 bg-gradient-to-br from-green-500 to-teal-600',
-            action: () => toast('GeoGuesser is coming soon!', { icon: '🌍' })
+            action: () => navigateTo('geoGuesserLobby', 'GeoGuesser', { student })
         },
         {
             title: 'Code Challenge',
             description: 'Learn logic with fun code blocks.',
             icon: <BriefcaseIcon className="w-7 h-7 text-white" />,
             bgColor: 'bg-purple-500 bg-gradient-to-br from-purple-500 to-indigo-600',
-            action: () => toast('Code Challenge is coming soon!', { icon: '💻' })
+            action: () => navigateTo('codeChallengeLobby', 'Code Challenge', { student })
         },
     ];
 
@@ -198,6 +198,7 @@ const GamesHubScreen: React.FC<GamesHubScreenProps> = ({ navigateTo, student }) 
                                 games={gamesByLevel[level]}
                                 defaultOpen={level === studentLevel}
                                 navigateTo={navigateTo}
+                                student={student}
                             />
                         )
                     ))}
