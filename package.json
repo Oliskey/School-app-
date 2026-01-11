@@ -28,6 +28,7 @@
     "babel-preset-expo": "^54.0.8",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "expo": "^54.0.27",
     "express": "^5.1.0",

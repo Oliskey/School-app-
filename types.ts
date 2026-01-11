@@ -215,6 +215,17 @@ export interface Driver {
   phone: string;
 }
 
+export interface Bus {
+  id: string; // UUID from Supabase
+  name: string;
+  routeName: string;
+  capacity: number;
+  plateNumber: string;
+  driverName?: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  createdAt?: string;
+}
+
 export interface PickupPoint {
   id: number;
   name: string;

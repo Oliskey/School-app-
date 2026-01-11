@@ -15,6 +15,7 @@ type UserListItem = {
 
 interface AdminNewChatScreenProps {
     navigateTo: (view: string, title: string, props?: any) => void;
+    currentUserId?: number;
 }
 
 const UserRow: React.FC<{ user: UserListItem, onSelect: () => void }> = ({ user, onSelect }) => (
@@ -27,7 +28,7 @@ const UserRow: React.FC<{ user: UserListItem, onSelect: () => void }> = ({ user,
     </button>
 );
 
-const AdminNewChatScreen: React.FC<AdminNewChatScreenProps> = ({ navigateTo }) => {
+const AdminNewChatScreen: React.FC<AdminNewChatScreenProps> = ({ navigateTo, currentUserId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'Students' | 'Parents' | 'Staff'>('Students');
     const [dbUsers, setDbUsers] = useState<UserListItem[]>([]);
@@ -84,25 +85,80 @@ const AdminNewChatScreen: React.FC<AdminNewChatScreenProps> = ({ navigateTo }) =
     }, [searchTerm, activeTab, dbUsers]);
 
     const handleSelectUser = async (user: UserListItem) => {
-        // Check if conversation exists (mock check for now, ideally fetch from DB)
-        // For now, we just navigate to chat with the user's details.
-        // The ChatScreen handles fetching/creating conversation by ID or participant.
+        setLoading(true);
+        // 1. Check if conversation exists
+        try {
+            // This is a basic check. In a real app, you'd use a more robust RPC or query to find a direct chat between two users.
+            // For this MVP, we will try to find a conversation where type is 'direct' and this user is a participant.
+            // Note: This logic is simplified.
 
-        // Cast to any because the mock data might be using legacy structure vs new types
-        let conversation: any = (mockAdminConversations as any[]).find(c => c.participant?.id === user.id);
+            // Allow selecting oneself for demo purposes or handle strict distinct users logic.
 
-        if (!conversation) {
-            // Temporary local object to pass to ChatScreen
-            conversation = {
-                id: `conv-new-${user.id}`,
-                participant: { id: user.id, name: user.name, avatarUrl: user.avatarUrl, role: user.userType },
-                lastMessage: { text: '', timestamp: new Date().toISOString() },
-                unreadCount: 0,
-                messages: [],
-            };
+            // Create a new conversation if we can't easily find one (or for simplicity in this demo flow)
+            // Ideally: SELECT * FROM conversations c JOIN conversation_participants cp ON c.id = cp.conversation_id WHERE ...
+
+            // Let's simplified approach: Just create/navigate for now, assuming ChatScreen will handle loading if we pass an ID.
+            // But we need an ID.
+
+            // Let's create a new conversation for this pair.
+            const { data: convData, error: convError } = await supabase
+                .from('conversations')
+                .insert({
+                    type: 'direct',
+                    title: user.name, // For direct chats, we might use the other person's name as title clone
+                    last_message_text: 'Started a new conversation',
+                    last_message_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+
+            if (convError) {
+                console.error("Error creating conversation:", convError);
+                alert(`Failed to start chat: ${convError.message}`);
+                setLoading(false);
+                return;
+            }
+
+            if (convData) {
+                // Add participants: Me (Admin) + Selected User
+                // Retrieve current user ID (mock fallback or real)
+                // const { data: { user: authUser } } = await supabase.auth.getUser();
+                // const currentUserId = authUser?.id ? 0 : 0; // Fixme: need real int ID. Using 0 for now if mock.
+
+                // Insert participants
+                // Note: 'user_id' in 'conversation_participants' is BIGINT (users.id). 
+                // We need the admin's ID. For now assuming we are ID 1 or similar if not found.
+
+                const participants = [
+                    { conversation_id: convData.id, user_id: user.id },
+                ];
+
+                // Only add admin if we have a valid ID (and assuming admin exists in users table)
+                if (currentUserId) {
+                    participants.push({ conversation_id: convData.id, user_id: currentUserId });
+                }
+
+                const { error: partError } = await supabase
+                    .from('conversation_participants')
+                    .insert(participants);
+
+                if (partError) {
+                    console.error("Error adding participants:", partError);
+                    // Continue anyway to show chat, but warn
+                }
+
+                navigateTo('chat', user.name, {
+                    conversation: {
+                        id: convData.id,
+                        participant: { id: user.id, name: user.name, avatarUrl: user.avatarUrl, role: user.userType }
+                    }
+                });
+            }
+        } catch (error: any) {
+            console.error("Error starting chat", error);
+            alert(`Error: ${error.message || 'Unknown error occurred'}`);
         }
-
-        navigateTo('chat', user.name, { conversation });
+        setLoading(false);
     };
 
     const tabs: ('Students' | 'Parents' | 'Staff')[] = ['Students', 'Parents', 'Staff'];

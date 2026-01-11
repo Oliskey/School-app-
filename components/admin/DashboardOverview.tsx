@@ -296,7 +296,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
     useEffect(() => {
         fetchCounts();
         fetchDashboardData();
-        fetchBusRosterLocal(); // Initial load for bus roster
+        fetchBusRoster();
 
         // 1. SUPABASE REALTIME SUBSCRIPTION (Global Refresh)
         const channel = supabase.channel('dashboard-global-changes')
@@ -308,37 +308,40 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ navigateTo, handl
                     // Re-fetch data instantly
                     fetchCounts();
                     fetchDashboardData();
+                    fetchBusRoster();
                 }
             )
             .subscribe();
 
-        // 2. LOCAL STORAGE LISTENER (For Bus Roster Sync)
-        const loadBusRoster = () => fetchBusRosterLocal();
-        window.addEventListener('storage', loadBusRoster);
-
-        // 3. BUS ROSTER POLLING (Fail-safe for same-tab updates if storage event doesn't fire)
-        const busInterval = setInterval(loadBusRoster, 2000);
-
         return () => {
             supabase.removeChannel(channel);
-            window.removeEventListener('storage', loadBusRoster);
-            clearInterval(busInterval);
         };
     }, []);
 
-    const fetchBusRosterLocal = () => {
-        // Sync with LocalStorage (managed by Admin Page)
-        const saved = localStorage.getItem('schoolApp_busRoster');
-        let currentRoster = [];
-        if (saved) {
-            try { currentRoster = JSON.parse(saved); } catch (e) { console.error(e); }
-        }
+    const fetchBusRoster = async () => {
+        if (isSupabaseConfigured) {
+            const { data, error } = await supabase
+                .from('transport_buses')
+                .select('id, driver_name, status');
 
-        const today = new Date().toISOString().split('T')[0];
-        const assigned = currentRoster.filter((r: any) => r.date === today && r.driverId).length;
-        // Total routes - can fetch from DB later, for now assuming 4 or 0
-        setBusRosterAssigned(assigned);
-        setBusRosterTotal(4); // Default to 4 routes
+            if (!error && data) {
+                setBusRosterTotal(data.length);
+                // Count assigned if they have a driver and are active
+                const assigned = data.filter(b => b.driver_name && b.status === 'active').length;
+                setBusRosterAssigned(assigned);
+            }
+        } else {
+            // Sync with LocalStorage (Mock Mode) - Using 'schoolApp_buses' to match BusDutyRosterScreen
+            const saved = localStorage.getItem('schoolApp_buses');
+            if (saved) {
+                try {
+                    const buses = JSON.parse(saved);
+                    setBusRosterTotal(buses.length);
+                    // Check for driverName based on refactored screen
+                    setBusRosterAssigned(buses.filter((b: any) => (b.driverName || b.driver) && b.status === 'active').length);
+                } catch (e) { console.error(e); }
+            }
+        }
     };
 
     const fetchCounts = async () => {

@@ -132,7 +132,29 @@ const AssignmentSubmissionsScreen: React.FC<AssignmentSubmissionsScreenProps> = 
             }
         };
         fetchData();
-    }, [assignment.id, assignment.className, forceUpdate]); // forceUpdate in deps ensures re-fetch on parent trigger
+
+        // Real-time Subscription for new submissions
+        const channel = supabase
+            .channel(`submissions_${assignment.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'submissions',
+                    filter: `assignment_id=eq.${assignment.id}`
+                },
+                (payload) => {
+                    console.log('Submission update received:', payload);
+                    fetchData();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [assignment.id, assignment.className, forceUpdate]);
 
     const { submittedStudents, notSubmittedStudents } = useMemo(() => {
         const submittedStudentIds = new Set(submissions.map(s => s.student.id));

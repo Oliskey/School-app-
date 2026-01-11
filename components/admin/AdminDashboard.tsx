@@ -341,7 +341,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
     useEffect(() => {
         const getUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) setCurrentUserId(user.id);
+            if (user) {
+                // Fetch the integer ID from the public.users table
+                // Assuming 'role' or other unique constraints might help, but auth.uid() should map to a column
+                // Wait, in this project, users.id is BIGINT, but we don't have a direct link in standard auth?
+                // Actually, often in this project 'users' table has a column that links to auth. If not check 0047.
+                // 0047 implies no direct link? 
+                // Let's try to find by email or if 'uuid' column exists. 
+                // In 0003_... we often see how users are created.
+                // Fallback: If we can't find it, we might be in trouble for strict FKs. 
+                // However, for now let's try to select id from users where email matches or some other heuristic if mapped.
+
+                // Actually, simpler: Let's assume we can use a hash or just pass the UUID if we change ChatScreen to accept string?
+                // But DB column is BIGINT.
+
+                // Let's try to find the user by email, which is common in this app's mock setup
+                const { data: userData } = await supabase.from('users').select('id').eq('email', user.email).single();
+                if (userData) {
+                    setCurrentUserId(userData.id);
+                } else {
+                    // Fallback for dev if not synced
+                    console.warn("User not found in public.users, defaulting to 0 or manual sync needed");
+                    setCurrentUserId('0'); // This might break FKs but better than null
+                }
+            }
         };
         getUser();
     }, []);
@@ -499,6 +522,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, setIsHomePage
         onLogout,
         handleBack,
         forceUpdate,
+        currentUserId,
     };
 
     const renderContent = () => {

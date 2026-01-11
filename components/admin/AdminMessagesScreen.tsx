@@ -46,7 +46,7 @@ const AdminMessagesScreen: React.FC<AdminMessagesScreenProps> = ({ onSelectChat,
 
     // 1. Fetch Conversations
     useEffect(() => {
-        if (!currentUserId) return;
+        if (currentUserId === undefined || currentUserId === null) return;
 
         const fetchConversations = async () => {
             setIsLoading(true);

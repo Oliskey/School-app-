@@ -9,7 +9,8 @@ import {
     Exam,
     Conversation,
     Message,
-    ReportCard
+    ReportCard,
+    Bus
 } from '../types';
 
 /**
@@ -2035,5 +2036,119 @@ export async function fetchUpcomingEvents(grade: number | string, section: strin
     } catch (err) {
         console.error("Error fetching upcoming events:", err);
         return [];
+    }
+}
+
+// ============================================
+// BUS & TRANSPORT
+// ============================================
+
+export async function fetchBuses(): Promise<Bus[]> {
+    try {
+        const { data, error } = await supabase
+            .from('transport_buses')
+            .select('*')
+            .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        return (data || []).map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            routeName: b.route_name,
+            capacity: b.capacity,
+            plateNumber: b.plate_number,
+            driverName: b.driver_name,
+            status: b.status || 'active',
+            createdAt: b.created_at
+        }));
+    } catch (err) {
+        console.error('Error fetching buses:', err);
+        return [];
+    }
+}
+
+export async function createBus(busData: {
+    name: string;
+    routeName: string;
+    capacity: number;
+    plateNumber: string;
+    driverName?: string;
+    status: 'active' | 'inactive' | 'maintenance';
+}): Promise<Bus | null> {
+    try {
+        const { data, error } = await supabase
+            .from('transport_buses')
+            .insert({
+                name: busData.name,
+                route_name: busData.routeName,
+                capacity: busData.capacity,
+                plate_number: busData.plateNumber,
+                driver_name: busData.driverName,
+                status: busData.status
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            name: data.name,
+            routeName: data.route_name,
+            capacity: data.capacity,
+            plateNumber: data.plate_number,
+            driverName: data.driver_name,
+            status: data.status,
+            createdAt: data.created_at
+        };
+    } catch (err) {
+        console.error('Error creating bus:', err);
+        return null;
+    }
+}
+
+export async function updateBus(id: string, updates: Partial<{
+    name: string;
+    routeName: string;
+    capacity: number;
+    plateNumber: string;
+    driverName: string;
+    status: 'active' | 'inactive' | 'maintenance';
+}>): Promise<boolean> {
+    try {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.routeName !== undefined) dbUpdates.route_name = updates.routeName;
+        if (updates.capacity !== undefined) dbUpdates.capacity = updates.capacity;
+        if (updates.plateNumber !== undefined) dbUpdates.plate_number = updates.plateNumber;
+        if (updates.driverName !== undefined) dbUpdates.driver_name = updates.driverName;
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+
+        const { error } = await supabase
+            .from('transport_buses')
+            .update(dbUpdates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error updating bus:', err);
+        return false;
+    }
+}
+
+export async function deleteBus(id: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('transport_buses')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (err) {
+        console.error('Error deleting bus:', err);
+        return false;
     }
 }

@@ -14,7 +14,7 @@ import { PWAInstallPrompt } from './components/shared/PWAInstallPrompt';
 import { Toaster } from 'react-hot-toast';
 
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
-const TeacherDashboard = lazy(() => import('./components/teacher/TeacherDashboard'));
+const TeacherDashboard = lazy(() => import('./components/dashboards/TeacherDashboard'));
 const ParentDashboard = lazy(() => import('./components/parent/ParentDashboard'));
 const StudentDashboard = lazy(() => import('./components/student/StudentDashboard'));
 const ProprietorDashboard = lazy(() => import('./components/dashboards/ProprietorDashboard'));

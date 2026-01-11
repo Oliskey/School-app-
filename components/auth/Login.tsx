@@ -20,7 +20,7 @@ const getDashboardTypeFromRole = (role: string): DashboardType => {
   }
 };
 
-const Login: React.FC = () => {
+const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignup }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -389,6 +389,19 @@ const Login: React.FC = () => {
           >
             {isLoading ? 'Signing in...' : 'Login'}
           </button>
+
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={onNavigateToSignup}
+                className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                Sign up
+              </button>
+            </p>
+          </div>
         </form>
 
         {/* Separator */}

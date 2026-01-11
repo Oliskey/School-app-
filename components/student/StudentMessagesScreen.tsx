@@ -42,7 +42,7 @@ const StudentMessagesScreen: React.FC<StudentMessagesScreenProps> = ({ navigateT
     }, []);
 
     useEffect(() => {
-        if (!studentId) return;
+        if (studentId === undefined || studentId === null) return;
 
         const fetchConversations = async () => {
             try {

@@ -157,7 +157,43 @@ const Overview: React.FC<{ navigateTo: (view: string, title: string, props?: any
             }
         };
 
-        if (student) fetchData();
+        if (student) {
+            fetchData();
+
+            // Real-time Subscription
+            const channel = supabase
+                .channel('student_dashboard_overview')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'assignments',
+                    },
+                    (payload) => {
+                        console.log('Assignment change received!', payload);
+                        // Ideally check if it matches student class, but for MVP simple refresh is safer
+                        fetchData();
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'timetable',
+                    },
+                    (payload) => {
+                        console.log('Timetable change received!', payload);
+                        fetchData();
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
     }, [student]);
 
     const quickAccessItems = [
@@ -223,13 +259,27 @@ import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 // ... (top level)
 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHomePage, currentUser }) => {
-
-    // ... inside component ...
-
-    const [viewStack, setViewStack] = useState<ViewStackItem[]>([{ view: 'overview', title: 'Student Dashboard' }]);
+    const [scrolled, setScrolled] = useState(false);
+    const [viewStack, setViewStack] = useState<ViewStackItem[]>([{ view: 'overview', title: 'Student Dashboard', props: {} }]);
     const [activeBottomNav, setActiveBottomNav] = useState('home');
-    const [version, setVersion] = useState(0);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+    // Fetch Integer User ID
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: userData } = await supabase.from('users').select('id').eq('email', user.email).single();
+                if (userData) {
+                    setCurrentUserId(userData.id);
+                } else {
+                    setCurrentUserId((currentUser as any)?.id || 0);
+                }
+            }
+        };
+        getUser();
+    }, [currentUser]);
 
     // State for student data
     const [student, setStudent] = useState<Student | null>(null);
@@ -415,7 +465,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         results: ResultsScreen,
         finances: StudentFinanceScreen,
         achievements: AchievementsScreen,
-        messages: StudentMessagesScreen,
+        messages: (props: any) => {
+            const { navigateTo } = props;
+            return (
+                <StudentMessagesScreen
+                    {...props}
+                    onSelectChat={(conversation: any) => navigateTo('chat', conversation.participant?.name || 'Chat', { conversation })}
+                    onNewChat={() => navigateTo('newChat', 'New Chat')}
+                />
+            );
+        },
         newChat: StudentNewChatScreen,
         profile: (props: any) => <StudentProfileEnhanced
             {...props}
@@ -484,6 +543,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         navigateTo,
         handleBack,
         forceUpdate,
+        currentUserId,
     };
 
 
@@ -516,7 +576,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                     <div className="pt-16 min-h-full">
                         {/* Removed bottom padding to maximize viewable content */}
                         <ErrorBoundary>
-                            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up">
+                            <div key={`${viewStack.length}-${currentNavigation.view}`} className="animate-slide-in-up">
                                 <Suspense fallback={<DashboardSuspenseFallback />}>
                                     {ComponentToRender ? (
                                         <ComponentToRender {...currentNavigation.props} studentId={student.id} student={student} {...commonProps} />

@@ -764,6 +764,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
     const [version, setVersion] = useState(0);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [parentId, setParentId] = useState<number | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [parentProfile, setParentProfile] = useState<{ name: string; avatarUrl: string }>({
         name: 'Parent',
         avatarUrl: 'https://i.pravatar.cc/150?u=parent'
@@ -773,6 +774,22 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
     const notificationCount = useRealtimeNotifications('parent');
 
     const forceUpdate = () => setVersion(v => v + 1);
+
+    // Fetch Integer User ID for Chat
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: userData } = await supabase.from('users').select('id').eq('email', user.email).single();
+                if (userData) {
+                    setCurrentUserId(userData.id);
+                } else {
+                    setCurrentUserId((currentUser as any)?.id ? parseInt((currentUser as any).id) : 0);
+                }
+            }
+        };
+        getUser();
+    }, [currentUser]);
 
     const fetchProfile = async () => {
         let query = supabase.from('parents').select('id, name, email, phone, avatar_url');
@@ -878,9 +895,18 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         permissionSlips: PermissionSlipScreen,
         appointments: AppointmentScreen,
         aiParentingTips: AIParentingTipsScreen,
-        messages: ParentMessagesScreen,
+        messages: (props: any) => {
+            const { navigateTo } = props;
+            return (
+                <ParentMessagesScreen
+                    {...props}
+                    onSelectChat={(conversation: any) => navigateTo('chat', conversation.participant?.name || 'Chat', { conversation })}
+                    onNewChat={() => navigateTo('newChat', 'New Chat')}
+                />
+            );
+        },
         newChat: ParentNewChatScreen,
-        chat: (props: any) => <ChatScreen {...props} currentUserId={parentId ?? 100} />,
+        chat: (props: any) => <ChatScreen {...props} currentUserId={currentUserId ?? 0} />,
         schoolUtilities: SchoolUtilitiesScreen,
 
         // Phase 5: Parent & Community Empowerment
@@ -903,7 +929,8 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         handleBack,
         forceUpdate,
         parentId,
-        currentUser
+        currentUser,
+        currentUserId
     };
 
     return (

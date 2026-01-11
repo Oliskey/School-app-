@@ -47,7 +47,7 @@ const ParentMessagesScreen: React.FC<ParentMessagesScreenProps> = ({ navigateTo,
     const myId = currentUserId || parentId;
 
     useEffect(() => {
-        if (!myId) return;
+        if (myId === undefined || myId === null) return;
 
         const fetchConversations = async () => {
             try {

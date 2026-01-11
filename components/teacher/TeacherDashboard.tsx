@@ -97,6 +97,23 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
   const [version, setVersion] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [teacherId, setTeacherId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  // Fetch Integer User ID for Chat
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userData } = await supabase.from('users').select('id').eq('email', user.email).single();
+        if (userData) {
+          setCurrentUserId(userData.id);
+        } else {
+          setCurrentUserId((currentUser as any)?.id ? parseInt((currentUser as any).id) : 0);
+        }
+      }
+    };
+    getUser();
+  }, [currentUser]);
 
   // Profile State
   const [teacherProfile, setTeacherProfile] = useState({
@@ -165,12 +182,16 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
   const notificationCount = useRealtimeNotifications('teacher');
 
   const navigateTo = (view: string, title: string, props: any = {}) => {
-    setViewStack(stack => [...stack, { view, props, title }]);
+    if (view === 'overview') {
+      setViewStack([{ view: 'overview', title: 'Teacher Dashboard', props }]);
+    } else {
+      setViewStack((prev) => [...prev, { view, title, props }]);
+    }
   };
 
   const handleBack = () => {
     if (viewStack.length > 1) {
-      setViewStack(stack => stack.slice(0, -1));
+      setViewStack((prev) => prev.slice(0, -1));
     }
   };
 
@@ -233,7 +254,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     collaborationForum: CollaborationForumScreen,
     forumTopic: ForumTopicScreen,
     timetable: (props: any) => <TimetableScreen {...props} context={{ userType: 'teacher', userId: teacherId ?? 2 }} />,
-    chat: (props: any) => <ChatScreen {...props} currentUserId={teacherId ?? 2} />,
+    chat: (props: any) => <ChatScreen {...props} currentUserId={currentUserId ?? 0} />,
     reports: TeacherReportsScreen,
     reportCardPreview: TeacherReportCardPreviewScreen,
     settings: (props: any) => <TeacherSettingsScreen {...props} dashboardProfile={teacherProfile} refreshDashboardProfile={fetchProfile} />,
@@ -277,7 +298,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     teacherProfile, // Make profile available to all screens
     refreshProfile: fetchProfile, // Allow any screen to trigger refresh
     teacherId, // Pass the dynamic teacher ID
-    currentUser
+    currentUser,
+    currentUserId,
   };
 
   return (

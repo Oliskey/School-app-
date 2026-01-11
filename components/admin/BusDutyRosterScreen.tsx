@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { BusVehicleIcon, PlusIcon, TrashIcon, EditIcon } from '../../constants';
-
-interface Bus {
-    id: string;
-    name: string;
-    routeName: string;
-    capacity: number;
-    plateNumber: string;
-    driver?: string;
-    status: 'active' | 'inactive' | 'maintenance';
-}
+import { Bus } from '../../types';
+import { fetchBuses, createBus, updateBus, deleteBus } from '../../lib/database';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 interface BusFormData {
     name: string;
     routeName: string;
     capacity: number;
     plateNumber: string;
-    driver: string;
+    driverName: string;
     status: 'active' | 'inactive' | 'maintenance';
 }
 
@@ -25,44 +18,37 @@ const BusDutyRosterScreen: React.FC = () => {
     const [buses, setBuses] = useState<Bus[]>([]);
     const [isAddingBus, setIsAddingBus] = useState(false);
     const [editingBusId, setEditingBusId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState<BusFormData>({
         name: '',
         routeName: '',
         capacity: 30,
         plateNumber: '',
-        driver: '',
+        driverName: '',
         status: 'active'
     });
 
-    // Load buses from localStorage on mount
+    // Load buses from Supabase (or fallback/mock)
     useEffect(() => {
-        const saved = localStorage.getItem('schoolApp_buses');
-        if (saved) {
-            try {
-                const parsedBuses = JSON.parse(saved);
-                setBuses(parsedBuses);
-
-                // If no buses exist, show the form to add the first bus
-                if (parsedBuses.length === 0) {
-                    setIsAddingBus(true);
-                }
-            } catch (e) {
-                console.error('Failed to parse buses from storage');
-                // Show form if parsing fails
-                setIsAddingBus(true);
-            }
-        } else {
-            // No saved buses, show the form to add first bus
-            setIsAddingBus(true);
-        }
+        loadBuses();
     }, []);
 
-    // Save buses to localStorage whenever they change
-    useEffect(() => {
-        if (buses.length > 0) {
-            localStorage.setItem('schoolApp_buses', JSON.stringify(buses));
+    const loadBuses = async () => {
+        setLoading(true);
+        if (isSupabaseConfigured) {
+            const data = await fetchBuses();
+            setBuses(data);
+        } else {
+            // Fallback to LocalStorage for Mock Mode / No Connection
+            const saved = localStorage.getItem('schoolApp_buses');
+            if (saved) {
+                try {
+                    setBuses(JSON.parse(saved));
+                } catch (e) { console.error(e); }
+            }
         }
-    }, [buses]);
+        setLoading(false);
+    };
 
     const resetForm = () => {
         setFormData({
@@ -70,30 +56,49 @@ const BusDutyRosterScreen: React.FC = () => {
             routeName: '',
             capacity: 30,
             plateNumber: '',
-            driver: '',
+            driverName: '',
             status: 'active'
         });
         setIsAddingBus(false);
         setEditingBusId(null);
     };
 
-    const handleAddBus = () => {
+    const handleAddBus = async () => {
         if (!formData.name || !formData.routeName || !formData.plateNumber) {
             toast.error('Please fill in all required fields');
             return;
         }
 
-        const newBus: Bus = {
-            id: Date.now().toString(),
-            ...formData
-        };
-
-        setBuses([...buses, newBus]);
-        toast.success(`Bus "${formData.name}" added successfully!`);
-        resetForm();
+        try {
+            if (isSupabaseConfigured) {
+                const newBus = await createBus(formData);
+                if (newBus) {
+                    setBuses([...buses, newBus]);
+                    toast.success(`Bus "${formData.name}" added successfully!`);
+                    resetForm();
+                } else {
+                    toast.error("Failed to add bus to database.");
+                }
+            } else {
+                // Mock Mode
+                const newBus: Bus = {
+                    id: Date.now().toString(),
+                    ...formData,
+                    driverName: formData.driverName // Map correct field
+                };
+                const updatedBuses = [...buses, newBus];
+                setBuses(updatedBuses);
+                localStorage.setItem('schoolApp_buses', JSON.stringify(updatedBuses));
+                toast.success(`Bus "${formData.name}" added successfully! (Mock)`);
+                resetForm();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("An error occurred.");
+        }
     };
 
-    const handleUpdateBus = () => {
+    const handleUpdateBus = async () => {
         if (!editingBusId) return;
 
         if (!formData.name || !formData.routeName || !formData.plateNumber) {
@@ -101,14 +106,32 @@ const BusDutyRosterScreen: React.FC = () => {
             return;
         }
 
-        setBuses(buses.map(bus =>
-            bus.id === editingBusId
-                ? { ...bus, ...formData }
-                : bus
-        ));
-
-        toast.success('Bus updated successfully!');
-        resetForm();
+        try {
+            if (isSupabaseConfigured) {
+                const success = await updateBus(editingBusId, formData);
+                if (success) {
+                    setBuses(buses.map(bus => bus.id === editingBusId ? { ...bus, ...formData } : bus));
+                    toast.success('Bus updated successfully!');
+                    resetForm();
+                } else {
+                    toast.error("Failed to update bus in database.");
+                }
+            } else {
+                // Mock Mode
+                const updatedBuses = buses.map(bus =>
+                    bus.id === editingBusId
+                        ? { ...bus, ...formData }
+                        : bus
+                );
+                setBuses(updatedBuses);
+                localStorage.setItem('schoolApp_buses', JSON.stringify(updatedBuses));
+                toast.success('Bus updated successfully! (Mock)');
+                resetForm();
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("An error occurred.");
+        }
     };
 
     const handleEditBus = (bus: Bus) => {
@@ -117,22 +140,40 @@ const BusDutyRosterScreen: React.FC = () => {
             routeName: bus.routeName,
             capacity: bus.capacity,
             plateNumber: bus.plateNumber,
-            driver: bus.driver || '',
+            driverName: bus.driverName || '',
             status: bus.status
         });
         setEditingBusId(bus.id);
         setIsAddingBus(false);
     };
 
-    const handleDeleteBus = (busId: string) => {
-        if (buses.length <= 3 && buses.length > 0) {
-            toast.error('You must maintain at least 3 buses. Cannot delete.');
-            return;
+    const handleDeleteBus = async (busId: string) => {
+        if (buses.length <= 3 && buses.length > 0 && !isSupabaseConfigured) {
+            // Keep mock mode rule if desired, or remove constraint
+            // toast.error('You must maintain at least 3 buses. Cannot delete.');
+            // return;
         }
 
         if (confirm('Are you sure you want to delete this bus?')) {
-            setBuses(buses.filter(bus => bus.id !== busId));
-            toast.success('Bus deleted successfully');
+            try {
+                if (isSupabaseConfigured) {
+                    const success = await deleteBus(busId);
+                    if (success) {
+                        setBuses(buses.filter(bus => bus.id !== busId));
+                        toast.success('Bus deleted successfully');
+                    } else {
+                        toast.error("Failed to delete bus from database.");
+                    }
+                } else {
+                    const filtered = buses.filter(bus => bus.id !== busId);
+                    setBuses(filtered);
+                    localStorage.setItem('schoolApp_buses', JSON.stringify(filtered));
+                    toast.success('Bus deleted successfully (Mock)');
+                }
+            } catch (error) {
+                console.error(error);
+                toast.error("An error occurred.");
+            }
         }
     };
 
@@ -154,9 +195,10 @@ const BusDutyRosterScreen: React.FC = () => {
                 <p className="text-sm text-indigo-700">
                     Manage school buses and assign drivers to routes
                 </p>
-                <p className="text-xs text-indigo-600 mt-1">
-                    {buses.length} bus{buses.length !== 1 ? 'es' : ''} registered • Minimum 3 required
-                </p>
+                <div className="text-xs text-indigo-600 mt-1 flex justify-center gap-2">
+                    <span>{buses.length} bus{buses.length !== 1 ? 'es' : ''} registered</span>
+                    {!isSupabaseConfigured && <span className="bg-orange-200 px-1 rounded text-orange-800">Mock Mode</span>}
+                </div>
             </div>
 
             {/* Add Bus Button */}
@@ -239,8 +281,8 @@ const BusDutyRosterScreen: React.FC = () => {
                             </label>
                             <input
                                 type="text"
-                                value={formData.driver}
-                                onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
+                                value={formData.driverName}
+                                onChange={(e) => setFormData({ ...formData, driverName: e.target.value })}
                                 placeholder="e.g., Mr. Johnson"
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
@@ -280,75 +322,71 @@ const BusDutyRosterScreen: React.FC = () => {
             )}
 
             {/* Bus List */}
-            {buses.length === 0 && !isAddingBus && (
-                <div className="bg-white p-8 rounded-xl text-center border-2 border-dashed border-gray-300">
-                    <BusVehicleIcon className="h-16 w-16 mx-auto text-gray-300 mb-3" />
-                    <h3 className="font-bold text-lg text-gray-600 mb-2">No Buses Added Yet</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Add at least 3 buses to start managing your bus roster
-                    </p>
-                </div>
-            )}
-
-            <div className="space-y-3">
-                {buses.map((bus) => (
-                    <div key={bus.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-grow">
-                                <div className="flex items-center space-x-2 mb-2">
-                                    <h4 className="font-bold text-lg text-gray-800">{bus.name}</h4>
-                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getStatusColor(bus.status)}`}>
-                                        {bus.status.charAt(0).toUpperCase() + bus.status.slice(1)}
-                                    </span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-semibold">Route:</span> {bus.routeName}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-semibold">Plate:</span> {bus.plateNumber}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                        <span className="font-semibold">Capacity:</span> {bus.capacity} passengers
-                                    </p>
-                                    {bus.driver && (
-                                        <p className="text-sm text-gray-600">
-                                            <span className="font-semibold">Driver:</span> {bus.driver}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex space-x-2">
-                                <button
-                                    onClick={() => handleEditBus(bus)}
-                                    className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                                    title="Edit Bus"
-                                >
-                                    <EditIcon className="h-5 w-5" />
-                                </button>
-                                <button
-                                    onClick={() => handleDeleteBus(bus.id)}
-                                    className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                                    title="Delete Bus"
-                                    disabled={buses.length <= 3}
-                                >
-                                    <TrashIcon className="h-5 w-5" />
-                                </button>
-                            </div>
+            {loading ? (
+                <div className="py-10 text-center text-gray-500">Loading buses...</div>
+            ) : (
+                <>
+                    {buses.length === 0 && !isAddingBus && (
+                        <div className="bg-white p-8 rounded-xl text-center border-2 border-dashed border-gray-300">
+                            <BusVehicleIcon className="h-16 w-16 mx-auto text-gray-300 mb-3" />
+                            <h3 className="font-bold text-lg text-gray-600 mb-2">No Buses Added Yet</h3>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Add buses to start managing your bus roster
+                            </p>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    )}
 
-            {/* Warning if less than 3 buses */}
-            {buses.length < 3 && buses.length > 0 && (
-                <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-xl">
-                    <p className="text-sm text-orange-800 font-semibold text-center">
-                        ⚠️ You need at least {3 - buses.length} more bus{3 - buses.length !== 1 ? 'es' : ''} to meet the minimum requirement
-                    </p>
-                </div>
+                    <div className="space-y-3">
+                        {buses.map((bus) => (
+                            <div key={bus.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-grow">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <h4 className="font-bold text-lg text-gray-800">{bus.name}</h4>
+                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getStatusColor(bus.status)}`}>
+                                                {bus.status.charAt(0).toUpperCase() + bus.status.slice(1)}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <p className="text-sm text-gray-600">
+                                                <span className="font-semibold">Route:</span> {bus.routeName}
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                <span className="font-semibold">Plate:</span> {bus.plateNumber}
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                <span className="font-semibold">Capacity:</span> {bus.capacity} passengers
+                                            </p>
+                                            {bus.driverName && (
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-semibold">Driver:</span> {bus.driverName}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex space-x-2">
+                                        <button
+                                            onClick={() => handleEditBus(bus)}
+                                            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                            title="Edit Bus"
+                                        >
+                                            <EditIcon className="h-5 w-5" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteBus(bus.id)}
+                                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                            title="Delete Bus"
+                                        >
+                                            <TrashIcon className="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
             )}
         </div>
     );

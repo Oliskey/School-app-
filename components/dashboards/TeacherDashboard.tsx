@@ -140,6 +140,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     navigateTo('notifications', 'Notifications', {});
   };
 
+  const TeacherMessagesScreen = React.lazy(() => import('../teacher/TeacherMessagesScreen'));
+
   const viewComponents = React.useMemo(() => ({
     overview: TeacherOverview,
     classDetail: ClassDetailScreen,
@@ -160,7 +162,16 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, setIsHome
     curriculumSelection: TeacherCurriculumSelectionScreen,
     curriculum: CurriculumScreen,
     gradeEntry: GradeEntryScreen,
-    messages: (props: any) => <MessagingLayout {...props} dashboardType={DashboardType.Teacher} />,
+    messages: (props: any) => {
+      const { navigateTo } = props;
+      return (
+        <TeacherMessagesScreen
+          {...props}
+          onSelectChat={(conversation: any) => navigateTo('chat', conversation.participant?.name || 'Chat', { conversation })}
+          onNewChat={() => navigateTo('newChat', 'New Chat')}
+        />
+      );
+    },
     newChat: NewChatScreen,
     communication: TeacherCommunicationScreen,
     reportCardInput: ReportCardInputScreen,
