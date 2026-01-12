@@ -7,7 +7,7 @@ interface UserProfile {
   email: string;
   phone: string;
   avatarUrl: string;
-  role?: 'Student' | 'Teacher' | 'Parent' | 'Admin' | 'Proprietor' | 'Inspector' | 'Exam Officer' | 'Compliance Officer';
+  role?: 'Student' | 'Teacher' | 'Parent' | 'Admin' | 'Proprietor' | 'Inspector' | 'Exam Officer' | 'Compliance Officer' | 'Super Admin' | 'Counselor' | string;
   supabaseId?: string;
 }
 
@@ -15,7 +15,7 @@ interface ProfileContextType {
   profile: UserProfile;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
-  loadProfileFromDatabase: (userId?: number | string, email?: string) => Promise<void>;
+  loadProfileFromDatabase: (userId?: number | string, email?: string) => Promise<void | UserProfile>;
   isLoading: boolean;
   setProfile: (profile: UserProfile) => void;
 }

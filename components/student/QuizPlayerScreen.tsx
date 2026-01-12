@@ -1,26 +1,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Quiz, Question, QuestionOption } from '../../types';
-import { CheckCircleIcon, XCircleIcon, ClockIcon } from '../../constants';
+import { Quiz, Question, QuestionOption, Student } from '../../types';
+import { CheckCircleIcon, XCircleIcon, ClockIcon, ChevronRightIcon, ChevronLeftIcon } from '../../constants';
 import { toast } from 'react-hot-toast';
 
 interface QuizPlayerScreenProps {
-  quizId: number;
+  quizId?: string | number;
+  cbtExamId?: string | number;
   handleBack: () => void;
-  title?: string; // Optional title passed from nav
+  title?: string;
+  student?: Student;
 }
 
-const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack, title }) => {
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
+const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, cbtExamId, handleBack, title, student }) => {
+  const [quizInfo, setQuizInfo] = useState<{ id: any; title: string; durationMinutes: number; type: 'cbt' | 'quiz' } | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
-  const [score, setScore] = useState(0);
+  const [answersLog, setAnswersLog] = useState<Record<string, string>>({}); // questionId -> optionId
   const [isFinished, setIsFinished] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
 
   // Integrity State
   const [timeLeft, setTimeLeft] = useState<number | null>(null); // in seconds
@@ -28,11 +30,11 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
 
   useEffect(() => {
     fetchQuizDetails();
-  }, [quizId]);
+  }, [quizId, cbtExamId]);
 
   // Timer Logic
   useEffect(() => {
-    if (!timeLeft || isFinished || loading) return;
+    if (timeLeft === null || isFinished || loading) return;
 
     if (timeLeft <= 0) {
       finishQuiz(true); // Auto-submit
@@ -55,9 +57,7 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
         setFocusViolations(prev => {
           const newVal = prev + 1;
           if (newVal <= 3) {
-            toast.error(`⚠️ Warning: Playing elsewhere? Focus violation ${newVal}/3 recorded.`);
-          } else {
-            toast.error(`⚠️ Multiple violations detected. Exam flagged.`);
+            toast.error(`⚠️ Warning: View changed! Violation ${newVal}/3 recorded.`);
           }
           return newVal;
         });
@@ -68,133 +68,154 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [isFinished, loading]);
 
-  // New State for detailed answers
-  const [answersLog, setAnswersLog] = useState<Record<string, string>>({}); // questionId -> optionId
-
-  // ... (inside useEffect)
-
   const fetchQuizDetails = async () => {
+    setLoading(true);
     try {
-      // 1. Fetch Exam Details (CBT Schema)
-      const { data: examData, error: examError } = await supabase
-        .from('cbt_exams')
-        .select('*')
-        .eq('id', quizId)
-        .single();
+      if (cbtExamId) {
+        // Fetch CBT Exam
+        const { data: examData, error: examError } = await supabase
+          .from('cbt_exams')
+          .select('*')
+          .eq('id', cbtExamId)
+          .single();
 
-      if (examError) {
-        console.error("Error loading CBT exam:", examError);
-        // Fallback to legacy quiz table if not found? 
-        // For now, assume unification.
-        throw examError;
+        if (examError) throw examError;
+
+        setQuizInfo({
+          id: examData.id,
+          title: examData.title,
+          durationMinutes: examData.duration_minutes || 0,
+          type: 'cbt'
+        });
+
+        if (examData.duration_minutes) {
+          setTimeLeft(examData.duration_minutes * 60);
+        }
+
+        const { data: qData, error: qError } = await supabase
+          .from('cbt_questions')
+          .select('*')
+          .eq('exam_id', cbtExamId); // Field might be exam_id or cbt_exam_id
+
+        if (qError) {
+          // Try fallback field name if needed
+          const { data: qData2, error: qError2 } = await supabase
+            .from('cbt_questions')
+            .select('*')
+            .eq('cbt_exam_id', cbtExamId);
+          if (qError2) throw qError;
+          setQuestions(mapCBTQuestions(qData2, cbtExamId));
+        } else {
+          setQuestions(mapCBTQuestions(qData, cbtExamId));
+        }
+
+      } else if (quizId) {
+        // Fetch Regular Quiz
+        const { data: quizData, error: quizError } = await supabase
+          .from('quizzes')
+          .select('*')
+          .eq('id', quizId)
+          .single();
+
+        if (quizError) throw quizError;
+
+        setQuizInfo({
+          id: quizData.id,
+          title: quizData.title,
+          durationMinutes: quizData.duration_minutes || 0,
+          type: 'quiz'
+        });
+
+        if (quizData.duration_minutes) {
+          setTimeLeft(quizData.duration_minutes * 60);
+        }
+
+        const { data: qData, error: qError } = await supabase
+          .from('questions')
+          .select('*')
+          .eq('quiz_id', quizId);
+
+        if (qError) throw qError;
+        setQuestions(mapRegularQuestions(qData, quizId));
       }
-
-      setQuiz({
-        id: examData.id,
-        title: examData.title,
-        durationMinutes: examData.duration_minutes,
-        subject: 'Exam', // Or fetch from relation
-        questions: []
-      } as any);
-
-      if (examData.duration_minutes) {
-        setTimeLeft(examData.duration_minutes * 60);
-      }
-
-      // 2. Fetch Questions (CBT Schema)
-      const { data: cbtQuestions, error: qError } = await supabase
-        .from('cbt_questions')
-        .select('*')
-        .eq('cbt_exam_id', quizId);
-
-      if (qError) throw qError;
-
-      // Map CBT questions to UI format
-      const mappedQuestions: Question[] = (cbtQuestions || []).map((q: any) => ({
-        id: q.id,
-        quizId: quizId,
-        text: q.question_text,
-        type: 'MultipleChoice', // Excel upload implies MCQ usually
-        points: q.marks || 1,
-        options: [
-          { id: 'A', text: q.option_a, isCorrect: q.correct_option === 'A' },
-          { id: 'B', text: q.option_b, isCorrect: q.correct_option === 'B' },
-          { id: 'C', text: q.option_c, isCorrect: q.correct_option === 'C' },
-          { id: 'D', text: q.option_d, isCorrect: q.correct_option === 'D' },
-        ]
-      }));
-
-      // Randomization
-      let loadedQuestions = mappedQuestions;
-      for (let i = loadedQuestions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [loadedQuestions[i], loadedQuestions[j]] = [loadedQuestions[j], loadedQuestions[i]];
-      }
-
-      setQuestions(loadedQuestions);
-
     } catch (err: any) {
-      console.error('Error fetching quiz details:', err);
-      toast.error('Failed to load quiz');
+      console.error('Error fetching details:', err);
+      toast.error('Failed to load quiz content');
       handleBack();
     } finally {
       setLoading(false);
     }
   };
 
+  const mapCBTQuestions = (data: any[], qzId: any): Question[] => {
+    return (data || []).map((q: any) => ({
+      id: q.id,
+      quizId: qzId,
+      text: q.question_text,
+      type: 'MultipleChoice',
+      points: q.marks || 1,
+      options: [
+        { id: 'A', text: q.option_a, isCorrect: q.correct_option === 'A' },
+        { id: 'B', text: q.option_b, isCorrect: q.correct_option === 'B' },
+        { id: 'C', text: q.option_c, isCorrect: q.correct_option === 'C' },
+        { id: 'D', text: q.option_d, isCorrect: q.correct_option === 'D' },
+      ]
+    }));
+  };
+
+  const mapRegularQuestions = (data: any[], qzId: any): Question[] => {
+    return (data || []).map((q: any) => ({
+      id: q.id,
+      quizId: qzId,
+      text: q.text,
+      type: q.type as any,
+      points: q.points || 1,
+      options: q.options || [] // Assuming options stored as JSONB in 'questions' table
+    }));
+  };
+
   const handleAnswerSelect = (optionId: string) => {
-    // Allow changing answer if not locked? Actually, for CBT, usually we select and can submit later?
-    // But adhering to previous flow: instant feedback/lock? 
-    // User request: "student will have to answer the question in real time"
-    // "only teacher... can see the score".
-    // This suggests NO immediate feedback on correct/wrong.
-    // So I should REMOVE immediate grading feedback in the UI for Security.
-
-    setSelectedAnswerId(optionId);
-
-    // Log for final submission
     const currentQ = questions[currentQuestionIndex];
     setAnswersLog(prev => ({
       ...prev,
       [currentQ.id]: optionId
     }));
-
-    // Calculate score silently? Or just on submit.
-    // Better to calculate on submit to avoid state drift.
   };
-
-  // ...
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswerId(null);
     } else {
       finishQuiz();
     }
   };
 
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  };
+
   const finishQuiz = async (autoSubmit = false) => {
-    setIsFinished(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     if (autoSubmit) {
-      toast('Time is up! Submitting automatically.', { icon: '⏰' });
+      toast('Time is up! Submitting your answers...', { icon: '⏰' });
+    } else {
+      toast.loading('Submitting assessment...');
     }
 
-    setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      let score = 0;
+      let totalMaxPoints = 0;
 
-      const { data: student } = await supabase.from('students').select('id').eq('user_id', user.id).single();
-      if (!student) throw new Error("Student profile not found");
-
-      // Calculate Score Final
-      let finalScore = 0;
       const submissionAnswers = questions.map(q => {
         const selected = answersLog[q.id];
         const correctOpt = q.options?.find(o => o.isCorrect);
         const isCorrect = correctOpt?.id === selected;
-        if (isCorrect) finalScore += (q.points || 1);
+        if (isCorrect) score += (q.points || 1);
+        totalMaxPoints += (q.points || 1);
 
         return {
           questionId: q.id,
@@ -203,34 +224,45 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
         };
       });
 
-      // Override local score state with final calculation
-      setScore(finalScore);
+      setFinalScore(score);
+      const percentage = Math.round((score / (totalMaxPoints || 1)) * 100);
 
-      const submissionData = {
-        exam_id: quizId,
-        student_id: student.id,
-        score: finalScore,
-        answers: submissionAnswers, // Store detailed JSON
-        status: 'Graded',
-        submitted_at: new Date().toISOString()
-      };
+      const studentId = student?.id;
+      if (!studentId) throw new Error("Student ID missing");
 
-      const { error } = await supabase.from('cbt_submissions').insert(submissionData);
-
-      if (error) {
-        console.error('Error saving quiz result:', error);
-        toast.error('Failed to save result. Please screenshot this page.');
+      if (quizInfo?.type === 'cbt') {
+        await supabase.from('cbt_submissions').insert({
+          exam_id: quizInfo.id,
+          student_id: studentId,
+          score: percentage, // Usually stored as percentage in CBT systems
+          answers: submissionAnswers,
+          status: 'Graded',
+          submitted_at: new Date().toISOString()
+        });
       } else {
-        toast.success('Exam submitted successfully!');
+        await supabase.from('quiz_submissions').insert({
+          quiz_id: quizInfo?.id,
+          student_id: studentId,
+          score: percentage,
+          total_questions: questions.length,
+          answers: answersLog,
+          focus_violations: focusViolations,
+          status: 'Graded',
+          submitted_at: new Date().toISOString()
+        });
       }
 
-    } catch (err) {
-      console.error("Quiz submission error:", err);
+      toast.dismiss();
+      toast.success('Submitted successfully!');
+      setIsFinished(true);
+
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      toast.error('Submission failed. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -240,158 +272,155 @@ const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({ quizId, handleBack,
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
-
-  if (!quiz || questions.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-gray-50">
-        <p className="text-gray-500 mb-4">Quiz not found or has no questions.</p>
-        <button onClick={handleBack} className="text-blue-600 hover:underline">Go Back</button>
+      <div className="flex flex-col justify-center items-center h-full bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+        <p className="text-gray-500 font-medium">Preparing your assessment...</p>
       </div>
     );
   }
 
   if (isFinished) {
-    const percentage = Math.round((score / questions.length) * 100);
-    const totalPoints = questions.reduce((acc, q) => acc + (q.points || 1), 0);
-    const earnedPoints = Math.round((score / questions.length) * totalPoints);
-
     return (
-      <div className="p-6 flex flex-col items-center justify-center h-full text-center bg-gray-50 animate-fade-in">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-          <CheckCircleIcon className="w-10 h-10 text-green-600" />
+      <div className="p-8 flex flex-col items-center justify-center h-full text-center bg-gray-50 animate-fade-in">
+        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8 shadow-inner">
+          <CheckCircleIcon className="w-12 h-12 text-green-600" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Quiz Complete!</h2>
-        <p className="text-5xl font-bold my-6 text-orange-500">{percentage}%</p>
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">Well Done!</h2>
+        <p className="text-gray-500 mb-8">You have successfully completed the assessment.</p>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm w-full max-w-sm mb-6 space-y-2">
-          <div className="flex justify-between text-gray-600">
-            <span>Correct Answers</span>
-            <span className="font-bold text-gray-800">{score} / {questions.length}</span>
+        <div className="bg-white p-6 rounded-3xl shadow-sm w-full max-w-sm mb-8 border border-gray-100">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">Your Score</span>
+          <div className="text-5xl font-black text-orange-500 mb-2">{finalScore}%</div>
+          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+            <div className="bg-orange-500 h-full transition-all duration-1000" style={{ width: `${finalScore}%` }}></div>
           </div>
-          <div className="flex justify-between text-gray-600">
-            <span>Points Earned</span>
-            <span className="font-bold text-green-600">+{earnedPoints} XP</span>
-          </div>
-          {focusViolations > 0 && (
-            <div className="flex justify-between text-red-500 mt-2 pt-2 border-t border-gray-100">
-              <span className="flex items-center"><XCircleIcon className="w-4 h-4 mr-1" /> Focus Violations</span>
-              <span className="font-bold">{focusViolations}</span>
-            </div>
-          )}
         </div>
 
-        <button onClick={handleBack} className="w-full max-w-sm px-6 py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 transition-transform active:scale-95">
-          Back to Assessments
+        <button
+          onClick={handleBack}
+          className="w-full max-w-sm py-4 bg-orange-500 text-white font-black rounded-2xl shadow-xl hover:bg-orange-600 hover:shadow-orange-200 transition-all active:scale-95"
+        >
+          Return to Dashboard
         </button>
       </div>
     );
   }
 
   const currentQuestion = questions[currentQuestionIndex];
+  const selectedAnswerId = answersLog[currentQuestion?.id];
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Header / Progress */}
-      <div className="p-4 border-b bg-white sticky top-0 z-10 transition-colors duration-300">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-bold text-gray-700 truncate max-w-[150px]">{quiz.title}</h3>
+    <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
+      {/* Quiz Header */}
+      <div className="bg-white px-4 py-4 border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div className="flex justify-between items-center max-w-3xl mx-auto w-full">
+          <div className="flex items-center gap-3">
+            <button onClick={handleBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <ChevronLeftIcon className="w-6 h-6 text-slate-400" />
+            </button>
+            <div>
+              <h3 className="font-bold text-slate-800 truncate max-w-[180px] leading-tight">{quizInfo?.title}</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </p>
+            </div>
+          </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
             {timeLeft !== null && (
-              <div className={`flex items-center text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${timeLeft < 60 ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-orange-50 text-orange-600'}`}>
-                <ClockIcon className="w-4 h-4 mr-1.5" />
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm shadow-sm transition-all ${timeLeft < 60 ? 'bg-red-500 text-white animate-pulse' : 'bg-orange-100 text-orange-700'
+                }`}>
+                <ClockIcon className="w-4 h-4" />
                 <span>{formatTime(timeLeft)}</span>
               </div>
             )}
-
-            <div className="flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-1.5 rounded-lg">
-              <span>{currentQuestionIndex + 1}/{questions.length}</span>
-            </div>
           </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+
+        {/* Progress Bar */}
+        <div className="max-w-3xl mx-auto w-full mt-4 h-1.5 bg-slate-100 rounded-full overflow-hidden">
           <div
-            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+            className="h-full bg-orange-500 transition-all duration-500 ease-out"
             style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-          ></div>
+          />
         </div>
       </div>
 
-      <main className="flex-grow p-4 md:p-6 overflow-y-auto flex flex-col max-w-2xl mx-auto w-full">
-        {focusViolations > 0 && !isFinished && (
-          <div className="mb-4 bg-red-50 border border-red-200 p-2 rounded-lg flex items-center text-red-700 text-xs font-bold animate-bounce">
-            <XCircleIcon className="w-4 h-4 mr-2" />
-            Focus Lost Detected! ({focusViolations})
-          </div>
-        )}
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-2xl mx-auto w-full space-y-6">
 
-        <div className="flex-grow">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-            <span className="text-xs font-bold text-blue-500 uppercase tracking-wide mb-2 block">Question {currentQuestionIndex + 1}</span>
-            <h3 className="text-xl font-bold text-gray-800 leading-snug">{currentQuestion.text}</h3>
-            {currentQuestion.type === 'Theory' && (
-              <p className="mt-2 text-sm text-gray-400 italic">This is a theory question. Please write your answer in your notebook.</p>
-            )}
+          {/* Question Card */}
+          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
+            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-snug">
+              {currentQuestion?.text}
+            </h2>
           </div>
 
+          {/* Options */}
           <div className="space-y-3">
-            {currentQuestion.options && currentQuestion.options.map((option) => {
+            {currentQuestion?.options?.map((option) => {
               const isSelected = selectedAnswerId === option.id;
-              // Only show correct/wrong feedback AFTER selection
-              const showFeedback = selectedAnswerId !== null;
-              const isCorrect = option.isCorrect;
-
-              let cardClass = 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300';
-              let icon = null;
-
-              if (showFeedback) {
-                // SECURE MODE: Do not show correct/wrong feedback
-                // Just show selected state
-                if (isSelected) {
-                  cardClass = 'bg-orange-50 border-orange-500 ring-1 ring-orange-500';
-                  // icon = <CheckCircleIcon className="text-orange-600 w-6 h-6" />; // Maybe just a checkmark to show selected?
-                } else {
-                  cardClass = 'bg-gray-50 opacity-50 border-gray-100';
-                }
-              }
 
               return (
                 <button
                   key={option.id}
                   onClick={() => handleAnswerSelect(option.id)}
-                  // allow changing answer? The previous logic disabled it. 
-                  disabled={selectedAnswerId !== null}
-                  className={`w-full p-4 rounded-xl border-2 text-left font-semibold text-gray-700 transition-all flex justify-between items-center ${cardClass} shadow-sm`}
+                  className={`w-full group p-4 md:p-5 rounded-2xl border-2 text-left transition-all flex items-center gap-4 ${isSelected
+                      ? 'bg-orange-50 border-orange-500 shadow-md ring-1 ring-orange-500/20'
+                      : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                    }`}
                 >
-                  <span>{option.text}</span>
-                  {isSelected && <div className="w-4 h-4 bg-orange-500 rounded-full" />}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm transition-all ${isSelected ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'
+                    }`}>
+                    {option.id}
+                  </div>
+                  <span className={`flex-1 font-bold ${isSelected ? 'text-orange-900' : 'text-slate-700'}`}>
+                    {option.text}
+                  </span>
+                  {isSelected && (
+                    <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white text-[10px]">
+                      ✓
+                    </div>
+                  )}
                 </button>
               );
             })}
-
-            {currentQuestion.type === 'Theory' && (
-              <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-yellow-800 text-sm">
-                Theory questions are not auto-graded in this mode. Tap 'Next' to continue.
-              </div>
-            )}
           </div>
         </div>
-
-        <div className="mt-6 pt-4 border-t border-gray-100 sticky bottom-0 bg-gray-50 pb-2">
-          <button
-            onClick={handleNext}
-            disabled={selectedAnswerId === null && currentQuestion.type !== 'Theory'} // Theory allows skip for now, MCQ requires answer
-            className="w-full py-4 px-6 font-bold text-white bg-orange-600 rounded-xl shadow-lg hover:bg-orange-700 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none disabled:active:scale-100"
-          >
-            {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Finish Quiz'}
-          </button>
-        </div>
       </main>
+
+      {/* Footer Navigation */}
+      <footer className="bg-white p-4 border-t border-slate-200">
+        <div className="max-w-2xl mx-auto w-full flex gap-3">
+          <button
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+            className="flex-1 py-4 px-6 font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-2xl disabled:opacity-30 transition-all flex items-center justify-center gap-2"
+          >
+            <ChevronLeftIcon className="w-5 h-5" />
+            Back
+          </button>
+
+          {currentQuestionIndex < questions.length - 1 ? (
+            <button
+              onClick={handleNext}
+              className="flex-[2] py-4 px-6 font-bold text-white bg-slate-800 rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              Next Question
+              <ChevronRightIcon className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={() => finishQuiz()}
+              disabled={isSubmitting}
+              className="flex-[2] py-4 px-6 font-black text-white bg-orange-600 rounded-2xl shadow-lg hover:bg-orange-700 transition-all active:scale-95"
+            >
+              {isSubmitting ? 'Submitting...' : 'Finish & Submit'}
+            </button>
+          )}
+        </div>
+      </footer>
     </div>
   );
 };

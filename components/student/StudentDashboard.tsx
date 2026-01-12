@@ -9,6 +9,11 @@ import { StudentBottomNav } from '../ui/DashboardBottomNav';
 import { } from '../../data'; // Ensure no mocks imported
 import ErrorBoundary from '../ui/ErrorBoundary';
 import { StudentSidebar } from '../ui/DashboardSidebar';
+import { GamificationProvider } from '../../context/GamificationContext';
+import { realtimeService } from '../../services/RealtimeService';
+import { toast } from 'react-hot-toast';
+import { offlineStorage } from '../../lib/offlineStorage';
+import { useOnlineStatus, OfflineIndicator } from '../shared/OfflineIndicator';
 
 // Lazy load all view components
 const GlobalSearchScreen = lazy(() => import('../shared/GlobalSearchScreen'));
@@ -64,6 +69,9 @@ const SharkTankGame = lazy(() => import('./games/SharkTankGame'));
 const PhysicsLabGame = lazy(() => import('./games/PhysicsLabGame'));
 const StockMarketGame = lazy(() => import('./games/StockMarketGame'));
 const CBTExamGame = lazy(() => import('./games/CBTExamGame'));
+const VocabularyPictionaryGame = lazy(() => import('./games/VocabularyPictionaryGame'));
+const SimpleMachineScavengerHuntGame = lazy(() => import('./games/SimpleMachineScavengerHuntGame'));
+const HistoricalHotSeatGame = lazy(() => import('./games/HistoricalHotSeatGame'));
 const GamePlayerScreen = lazy(() => import('../shared/GamePlayerScreen'));
 
 const DashboardSuspenseFallback = () => (
@@ -304,6 +312,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
     // State for student data
     const [student, setStudent] = useState<Student | null>(null);
     const [loadingStudent, setLoadingStudent] = useState(true);
+    const [isRevalidating, setIsRevalidating] = useState(false);
+    const isOnline = useOnlineStatus();
     const [version, setVersion] = useState(0);
 
     // Real-time notifications
@@ -313,9 +323,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
     useEffect(() => {
         const fetchStudentAndNotifications = async () => {
+            const cacheKey = `student_profile_${currentUser?.id}`;
+            const cachedStudent = offlineStorage.load<Student>(cacheKey);
+
+            if (cachedStudent) {
+                setStudent(cachedStudent);
+                setLoadingStudent(false);
+                if (isOnline) setIsRevalidating(true);
+            } else {
+                setLoadingStudent(true);
+            }
+
             try {
                 if (!currentUser?.email) {
                     setLoadingStudent(false);
+                    return;
+                }
+
+                if (!isOnline && cachedStudent) {
+                    setIsRevalidating(false);
                     return;
                 }
 
@@ -365,40 +391,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                         avatarUrl: studentData.avatar_url,
                     } as any;
 
-                    // Update state immediately when student is found
                     setStudent(mappedStudent);
+                    offlineStorage.save(cacheKey, mappedStudent);
                 } else if (isDemoEmail) {
-                    // Use demo student fallback for quick logins
-                    setStudent(createDemoStudent());
-                } else {
-                    console.warn('No linked student profile found.');
+                    const demo = createDemoStudent();
+                    setStudent(demo);
+                    offlineStorage.save(cacheKey, demo);
                 }
 
             } catch (e) {
-                console.error('Error loading dashboard:', e);
-                // Final fallback
-                const isDemoEmail = currentUser?.email?.endsWith('@school.com') ||
-                    currentUser?.email?.includes('student') ||
-                    currentUser?.email?.includes('demo');
-
-                if (isDemoEmail) {
-                    setStudent({
-                        id: 1,
-                        name: 'Demo Student',
-                        grade: 10,
-                        section: 'A',
-                        avatarUrl: 'https://i.pravatar.cc/150?img=1',
-                        email: currentUser?.email || '',
-                        department: 'Science',
-                        attendanceStatus: 'Present',
-                    } as Student);
+                if (!cachedStudent) {
+                    console.error('Error loading dashboard:', e);
                 }
             } finally {
                 setLoadingStudent(false);
+                setIsRevalidating(false);
             }
         };
         fetchStudentAndNotifications();
-    }, [currentUser]);
+    }, [currentUser, isOnline]);
 
     useEffect(() => {
         const currentView = viewStack[viewStack.length - 1];
@@ -429,8 +440,42 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         }
     }, [viewStack, isSearchOpen, setIsHomePage]);
 
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+    // Real-time Service Integration
+    useEffect(() => {
+        const userId = (currentUser as any)?.id;
+        if (userId) {
+            // Subscribe to personal notifications
+            realtimeService.subscribeToNotifications(userId, (notif) => {
+                toast(notif.message || notif.content || 'New Event', {
+                    icon: '🔔',
+                    duration: 4000
+                });
+                forceUpdate();
+            });
+
+            // Subscribe to messages
+            realtimeService.subscribeToMessages(userId, (msg) => {
+                toast.success(`Message from ${msg.sender_name || 'Teacher'}`, {
+                    icon: '💬',
+                    duration: 4000
+                });
+                forceUpdate();
+            });
+        }
+
+        return () => {
+            realtimeService.unsubscribeAll();
+        };
+    }, [currentUser]);
+
     const navigateTo = (view: string, title: string, props: any = {}) => {
         setViewStack(stack => [...stack, { view, props, title }]);
+        // Scroll to top on navigation
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo(0, 0);
+        }
     };
 
     const handleBack = () => {
@@ -440,11 +485,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
             // Fallback: If we are stuck, go to overview
             setViewStack([{ view: 'overview', title: 'Student Dashboard' }]);
         }
+        // Scroll to top on back navigation
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo(0, 0);
+        }
     };
 
     const handleBottomNavClick = (screen: string) => {
         if (!student) return;
         setActiveBottomNav(screen);
+
+        // Reset scroll when switching tabs via bottom nav
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo(0, 0);
+        }
+
         switch (screen) {
             case 'home':
                 setViewStack([{ view: 'overview', title: 'Student Dashboard' }]);
@@ -542,6 +597,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
         physicsLab: (props: any) => <PhysicsLabGame onBack={handleBack} />,
         stockMarket: (props: any) => <StockMarketGame onBack={handleBack} />,
         cbtExamGame: (props: any) => <CBTExamGame onBack={handleBack} />,
+        vocabularyPictionary: (props: any) => <VocabularyPictionaryGame onBack={handleBack} />,
+        simpleMachineHunt: (props: any) => <SimpleMachineScavengerHuntGame onBack={handleBack} />,
+        historicalHotSeat: (props: any) => <HistoricalHotSeatGame onBack={handleBack} />,
     }), [student]);
 
     // Optimistic UI: Only show full loading spinner if we are loading AND have no student data
@@ -593,67 +651,72 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
 
 
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-gray-50">
-            {/* Desktop Sidebar - Hidden on mobile/tablet, fixed on desktop (lg+) */}
-            <div className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
-                <StudentSidebar
-                    activeScreen={activeBottomNav} // Using existing state for active screen
-                    setActiveScreen={handleBottomNavClick} // Reuse existing handler
-                    onLogout={onLogout}
-                />
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
-                {!['profile', 'mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'peekabooLetters', 'mathBattleArena', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame'].includes(currentNavigation.view) && (
-                    <Header
-                        title={currentNavigation.title}
-                        avatarUrl={student.avatarUrl}
-                        bgColor={THEME_CONFIG[DashboardType.Student].mainBg}
+        <GamificationProvider studentId={student?.id}>
+            <div className="flex h-screen w-full overflow-hidden bg-gray-50">
+                {/* Desktop Sidebar - Hidden on mobile/tablet, fixed on desktop (lg+) */}
+                <div className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-50">
+                    <StudentSidebar
+                        activeScreen={activeBottomNav} // Using existing state for active screen
+                        setActiveScreen={handleBottomNavClick} // Reuse existing handler
                         onLogout={onLogout}
-                        onBack={viewStack.length > 1 ? handleBack : undefined}
-                        onNotificationClick={handleNotificationClick}
-                        notificationCount={notificationCount}
-                        onSearchClick={() => setIsSearchOpen(true)}
                     />
-                )}
-
-                {/* Scrollable Content or Full Screen Game */}
-                <div className={`flex-1 ${['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer', 'peekabooLetters', 'mathBattleArena', 'cbtExamGame', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame'].includes(currentNavigation.view) ? 'h-full overflow-hidden' : 'overflow-y-auto'}`}>
-                    <div className={`${['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer', 'peekabooLetters', 'mathBattleArena', 'cbtExamGame', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame'].includes(currentNavigation.view) ? 'h-full' : 'min-h-full pb-20 lg:pb-0'}`}>
-                        <ErrorBoundary>
-                            <div key={`${viewStack.length}-${currentNavigation.view}`} className="animate-slide-in-up h-full">
-                                <Suspense fallback={<DashboardSuspenseFallback />}>
-                                    {ComponentToRender ? (
-                                        <ComponentToRender {...currentNavigation.props} studentId={student.id} student={student} {...commonProps} />
-                                    ) : (
-                                        <div className="p-6">View not found: {currentNavigation.view}</div>
-                                    )}
-                                </Suspense>
-                            </div>
-                        </ErrorBoundary>
-                    </div>
                 </div>
 
-                {/* Mobile/Tablet Bottom Nav - Hidden on Games */}
-                {!['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer', 'peekabooLetters', 'mathBattleArena', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame'].includes(currentNavigation.view) && (
-                    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
-                        <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
-                    </div>
-                )}
-
-                {/* Search Overlay */}
-                <Suspense fallback={<DashboardSuspenseFallback />}>
-                    {isSearchOpen && (
-                        <GlobalSearchScreen
-                            dashboardType={DashboardType.Student}
-                            navigateTo={navigateTo}
-                            onClose={() => setIsSearchOpen(false)}
+                {/* Main Content Area */}
+                <div className="flex-1 flex flex-col h-screen w-full lg:ml-64 overflow-hidden min-w-0">
+                    {!['profile', 'mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'peekabooLetters', 'mathBattleArena', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame', 'vocabularyPictionary', 'simpleMachineHunt', 'historicalHotSeat'].includes(currentNavigation.view) && (
+                        <Header
+                            title={currentNavigation.title}
+                            avatarUrl={student.avatarUrl}
+                            bgColor={THEME_CONFIG[DashboardType.Student].mainBg}
+                            onLogout={onLogout}
+                            onBack={viewStack.length > 1 ? handleBack : undefined}
+                            onNotificationClick={handleNotificationClick}
+                            notificationCount={notificationCount}
+                            onSearchClick={() => setIsSearchOpen(true)}
                         />
                     )}
-                </Suspense>
+
+                    {/* Scrollable Content or Full Screen Game */}
+                    <div
+                        ref={scrollContainerRef}
+                        className={`flex-1 ${['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer', 'peekabooLetters', 'mathBattleArena', 'cbtExamGame', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame', 'vocabularyPictionary', 'simpleMachineHunt', 'historicalHotSeat'].includes(currentNavigation.view) ? 'h-full overflow-hidden' : 'overflow-y-auto'}`}
+                    >
+                        <div className={`${['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer', 'peekabooLetters', 'mathBattleArena', 'cbtExamGame', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame', 'vocabularyPictionary', 'simpleMachineHunt', 'historicalHotSeat'].includes(currentNavigation.view) ? 'h-full' : 'min-h-full pb-32 lg:pb-0'}`}>
+                            <ErrorBoundary>
+                                <div key={`${viewStack.length}-${currentNavigation.view}`} className="animate-slide-in-up h-full">
+                                    <Suspense fallback={<DashboardSuspenseFallback />}>
+                                        {ComponentToRender ? (
+                                            <ComponentToRender {...currentNavigation.props} studentId={student.id} student={student} {...commonProps} />
+                                        ) : (
+                                            <div className="p-6">View not found: {currentNavigation.view}</div>
+                                        )}
+                                    </Suspense>
+                                </div>
+                            </ErrorBoundary>
+                        </div>
+                    </div>
+
+                    {/* Mobile/Tablet Bottom Nav - Hidden on Games */}
+                    {!['mathSprintGame', 'geoGuesserGame', 'codeChallengeGame', 'gamePlayer', 'peekabooLetters', 'mathBattleArena', 'countingShapesTap', 'simonSays', 'alphabetFishing', 'beanBagToss', 'redLightGreenLight', 'spellingSparkle', 'vocabularyAdventure', 'virtualScienceLab', 'debateDash', 'geometryJeopardy', 'sharkTank', 'physicsLab', 'stockMarket', 'cbtExamGame', 'vocabularyPictionary', 'simpleMachineHunt', 'historicalHotSeat'].includes(currentNavigation.view) && (
+                        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+                            <StudentBottomNav activeScreen={activeBottomNav} setActiveScreen={handleBottomNavClick} />
+                        </div>
+                    )}
+
+                    {/* Search Overlay */}
+                    <Suspense fallback={<DashboardSuspenseFallback />}>
+                        {isSearchOpen && (
+                            <GlobalSearchScreen
+                                dashboardType={DashboardType.Student}
+                                navigateTo={navigateTo}
+                                onClose={() => setIsSearchOpen(false)}
+                            />
+                        )}
+                    </Suspense>
+                </div>
             </div>
-        </div>
+        </GamificationProvider>
     );
 
 };

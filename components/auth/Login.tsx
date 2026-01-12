@@ -6,18 +6,18 @@ import { useProfile } from '../../context/ProfileContext';
 import { authenticateUser } from '../../lib/auth';
 
 const getDashboardTypeFromRole = (role: string): DashboardType => {
-  switch (role.toLowerCase()) {
-    case 'admin': return DashboardType.Admin;
-    case 'teacher': return DashboardType.Teacher;
-    case 'parent': return DashboardType.Parent;
-    case 'student': return DashboardType.Student;
-    case 'proprietor': return DashboardType.Proprietor;
-    case 'inspector': return DashboardType.Inspector;
-    case 'examofficer': return DashboardType.ExamOfficer;
-    case 'complianceofficer': return DashboardType.ComplianceOfficer;
-    case 'counselor': return DashboardType.Counselor;
-    default: return DashboardType.Student;
-  }
+  const lower = role.toLowerCase().replace(/\s/g, '');
+  if (lower === 'superadmin') return DashboardType.SuperAdmin;
+  if (lower === 'admin') return DashboardType.Admin;
+  if (lower === 'teacher') return DashboardType.Teacher;
+  if (lower === 'parent') return DashboardType.Parent;
+  if (lower === 'student') return DashboardType.Student;
+  if (lower === 'proprietor') return DashboardType.Proprietor;
+  if (lower === 'inspector') return DashboardType.Inspector;
+  if (lower === 'examofficer') return DashboardType.ExamOfficer;
+  if (lower === 'complianceofficer' || lower === 'compliance') return DashboardType.ComplianceOfficer;
+  if (lower === 'counselor') return DashboardType.Counselor;
+  return DashboardType.Student;
 };
 
 const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignup }) => {
@@ -67,6 +67,7 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
           // Helper to get DashboardType from string
           const getDashboardType = (r: string) => {
             const lower = r.toLowerCase();
+            if (lower === 'superadmin') return DashboardType.SuperAdmin;
             if (lower === 'admin') return DashboardType.Admin;
             if (lower === 'teacher') return DashboardType.Teacher;
             if (lower === 'parent') return DashboardType.Parent;
@@ -88,6 +89,7 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
 
         // Pattern 1: Explicit Demo Credentials
         const demoCredentials: Record<string, string> = {
+          'superadmin@school.com': 'superadmin',
           'admin@school.com': 'admin',
           'teacher@school.com': 'teacher',
           'parent@school.com': 'parent',
@@ -231,6 +233,7 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
           // Helper to get DashboardType from string
           const getDashboardType = (r: string) => {
             const lower = r.toLowerCase();
+            if (lower === 'superadmin') return DashboardType.SuperAdmin;
             if (lower === 'admin') return DashboardType.Admin;
             if (lower === 'teacher') return DashboardType.Teacher;
             if (lower === 'parent') return DashboardType.Parent;
@@ -252,6 +255,7 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
 
         // Map string to DashboardType
         const getMockDashboard = (r: string) => {
+          if (r === 'superadmin') return DashboardType.SuperAdmin;
           if (r === 'admin') return DashboardType.Admin;
           if (r === 'teacher') return DashboardType.Teacher;
           if (r === 'parent') return DashboardType.Parent;
@@ -404,27 +408,37 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
           </div>
         </form>
 
-        {/* Separator */}
-        <div className="my-4 sm:my-8">
-          <div className="flex items-center">
-            <div className="flex-1 border-t border-gray-200"></div>
-            <span className="px-3 sm:px-4 text-xs sm:text-sm text-gray-500 font-semibold tracking-wide">QUICK LOGINS:</span>
-            <div className="flex-1 border-t border-gray-200"></div>
-          </div>
-        </div>
+        {/* Separator & Quick Logins (Hidden in Production) */}
+        {!import.meta.env.PROD && (
+          <>
+            <div className="my-4 sm:my-8 text-center px-4">
+              <div className="flex items-center">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="px-3 sm:px-4 text-xs sm:text-sm text-gray-500 font-semibold tracking-wide uppercase">Dev Mode: Quick Access</span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
+            </div>
 
-        {/* Quick Login Buttons */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <button onClick={() => handleQuickLogin('admin')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200 transition-all shadow-sm text-xs sm:text-sm">Admin</button>
-          <button onClick={() => handleQuickLogin('teacher')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-purple-100 text-purple-700 rounded-xl font-bold hover:bg-purple-200 transition-all shadow-sm text-xs sm:text-sm">Teacher</button>
-          <button onClick={() => handleQuickLogin('parent')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-green-100 text-green-700 rounded-xl font-bold hover:bg-green-200 transition-all shadow-sm text-xs sm:text-sm">Parent</button>
-          <button onClick={() => handleQuickLogin('student')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-amber-100 text-amber-700 rounded-xl font-bold hover:bg-amber-200 transition-all shadow-sm text-xs sm:text-sm">Student</button>
-          <button onClick={() => handleQuickLogin('proprietor')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-pink-100 text-pink-700 rounded-xl font-bold hover:bg-pink-200 transition-all shadow-sm text-xs sm:text-sm">Proprietor</button>
-          <button onClick={() => handleQuickLogin('inspector')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-cyan-100 text-cyan-700 rounded-xl font-bold hover:bg-cyan-200 transition-all shadow-sm text-xs sm:text-sm">Inspector</button>
-          <button onClick={() => handleQuickLogin('examofficer')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-orange-100 text-orange-700 rounded-xl font-bold hover:bg-orange-200 transition-all shadow-sm text-xs sm:text-sm">Exam Officer</button>
-          <button onClick={() => handleQuickLogin('complianceofficer')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-teal-100 text-teal-700 rounded-xl font-bold hover:bg-teal-200 transition-all shadow-sm text-xs sm:text-sm">Compliance</button>
-          <button onClick={() => handleQuickLogin('counselor')} className="px-3 sm:px-4 py-2 sm:py-2.5 bg-rose-100 text-rose-700 rounded-xl font-bold hover:bg-rose-200 transition-all shadow-sm col-span-2 text-xs sm:text-sm">Counselor</button>
-        </div>
+            {/* Quick Login Buttons - Only visible during development */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 px-1">
+              <button
+                onClick={() => handleQuickLogin('superadmin')}
+                className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-md active:scale-95 text-xs sm:text-sm col-span-2 border border-slate-700 flex items-center justify-center gap-2"
+              >
+                <span role="img" aria-label="rocket">🚀</span> Super Admin Portal
+              </button>
+              <button onClick={() => handleQuickLogin('admin')} className="px-3 sm:px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold hover:bg-indigo-100 transition-all shadow-sm active:scale-95 text-xs">Admin</button>
+              <button onClick={() => handleQuickLogin('teacher')} className="px-3 sm:px-4 py-2.5 bg-purple-50 text-purple-700 rounded-xl font-bold hover:bg-purple-100 transition-all shadow-sm active:scale-95 text-xs">Teacher</button>
+              <button onClick={() => handleQuickLogin('parent')} className="px-3 sm:px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-all shadow-sm active:scale-95 text-xs">Parent</button>
+              <button onClick={() => handleQuickLogin('student')} className="px-3 sm:px-4 py-2.5 bg-amber-50 text-amber-700 rounded-xl font-bold hover:bg-amber-100 transition-all shadow-sm active:scale-95 text-xs">Student</button>
+              <button onClick={() => handleQuickLogin('proprietor')} className="px-3 sm:px-4 py-2.5 bg-pink-50 text-pink-700 rounded-xl font-bold hover:bg-pink-100 transition-all shadow-sm active:scale-95 text-xs">Proprietor</button>
+              <button onClick={() => handleQuickLogin('inspector')} className="px-3 sm:px-4 py-2.5 bg-cyan-50 text-cyan-700 rounded-xl font-bold hover:bg-cyan-100 transition-all shadow-sm active:scale-95 text-xs">Inspector</button>
+              <button onClick={() => handleQuickLogin('examofficer')} className="px-3 sm:px-4 py-2.5 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition-all shadow-sm active:scale-95 text-xs">Exams</button>
+              <button onClick={() => handleQuickLogin('complianceofficer')} className="px-3 sm:px-4 py-2.5 bg-teal-50 text-teal-700 rounded-xl font-bold hover:bg-teal-100 transition-all shadow-sm active:scale-95 text-xs">Compliance</button>
+              <button onClick={() => handleQuickLogin('counselor')} className="px-3 sm:px-4 py-2.5 bg-rose-50 text-rose-700 rounded-xl font-bold hover:bg-rose-100 transition-all shadow-sm active:scale-95 col-span-2 text-xs">Counselor Portal</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

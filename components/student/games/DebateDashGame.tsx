@@ -79,6 +79,29 @@ const DEBATE_SCENARIOS: DebateRound[] = [
                 ]
             }
         ]
+    },
+    {
+        topic: "Climate Change: Individual Action Matters",
+        aiSide: "Pro",
+        playerSide: "Con", // Challenging!
+        rounds: [
+            {
+                aiArgument: "Every small action counts. If everyone reduced waste, it would solve the crisis.",
+                options: [
+                    { text: "While good, we need systemic change from corporations who produce 70% of emissions.", type: 'strong', score: 20 },
+                    { text: "Recycling is too hard.", type: 'weak', score: 5 },
+                    { text: "Scientists are making it up.", type: 'fallacy', score: -10 }
+                ]
+            },
+            {
+                aiArgument: "Buying electric cars is the best solution for individuals.",
+                options: [
+                    { text: "Better public transport infrastructure would be far more efficient than individual EVs.", type: 'strong', score: 20 },
+                    { text: "I like loud cars.", type: 'weak', score: 0 },
+                    { text: "Cars are faster than walking.", type: 'fallacy', score: -5 }
+                ]
+            }
+        ]
     }
 ];
 
@@ -91,9 +114,16 @@ const DebateDashGame: React.FC<DebateDashGameProps> = ({ onBack }) => {
     const [timeLeft, setTimeLeft] = useState(30);
     const [feedback, setFeedback] = useState("");
     const [finalResult, setFinalResult] = useState("");
+    const [winStreak, setWinStreak] = useState(0);
 
     // Timer Ref
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load Streak
+    useEffect(() => {
+        const saved = localStorage.getItem('debate_dash_streak');
+        if (saved) setWinStreak(parseInt(saved));
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -184,9 +214,15 @@ const DebateDashGame: React.FC<DebateDashGameProps> = ({ onBack }) => {
             unlockBadge('master-debater');
             confetti({ particleCount: 150 });
             speak("You won the debate! Congratulations.");
+
+            const newStreak = winStreak + 1;
+            setWinStreak(newStreak);
+            localStorage.setItem('debate_dash_streak', newStreak.toString());
         } else {
             setFinalResult("Defeat. The crowd sided with the opponent.");
             speak("You lost this time.");
+            setWinStreak(0);
+            localStorage.setItem('debate_dash_streak', '0');
         }
     };
 

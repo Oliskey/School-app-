@@ -80,6 +80,18 @@ const VirtualScienceLabGame: React.FC<VirtualScienceLabGameProps> = ({ onBack })
     const [feedback, setFeedback] = useState("Select an experiment to begin.");
     const [score, setScore] = useState(0);
 
+    // Persistence
+    useEffect(() => {
+        const saved = localStorage.getItem('science_lab_exp_id');
+        if (saved) {
+            setActiveExperimentId(parseInt(saved));
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('science_lab_exp_id', activeExperimentId.toString());
+    }, [activeExperimentId]);
+
     // Derived state for contents
     const hasIndicator = beakerContents.some(c => c.id === 'indicator');
 
@@ -179,7 +191,8 @@ const VirtualScienceLabGame: React.FC<VirtualScienceLabGameProps> = ({ onBack })
             // Wait and next
             setTimeout(() => {
                 if (activeExperimentId < EXPERIMENTS.length) {
-                    setActiveExperimentId(prev => prev + 1);
+                    const nextId = activeExperimentId + 1;
+                    setActiveExperimentId(nextId);
                     resetBeaker();
                 } else {
                     setFeedback("All Experiments Completed! You are a master scientist.");

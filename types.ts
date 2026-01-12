@@ -2,15 +2,16 @@
 import React from 'react';
 
 export enum DashboardType {
-  Admin = 'Admin',
-  Teacher = 'Teacher',
-  Parent = 'Parent',
-  Student = 'Student',
-  Proprietor = 'Proprietor',
-  Inspector = 'Inspector',
-  ExamOfficer = 'Exam Officer',
-  ComplianceOfficer = 'Compliance Officer',
-  Counselor = 'Counselor',
+  Admin = 'admin',
+  SuperAdmin = 'superadmin',
+  Teacher = 'teacher',
+  Parent = 'parent',
+  Student = 'student',
+  Proprietor = 'proprietor',
+  Inspector = 'inspector',
+  ExamOfficer = 'examofficer',
+  ComplianceOfficer = 'complianceofficer',
+  Counselor = 'counselor',
 }
 
 export interface Exam {
@@ -107,6 +108,11 @@ export interface Student {
   reportCards?: ReportCard[];
   birthday?: string; // YYYY-MM-DD
   user_id?: string; // Link to auth user
+
+  // Gamification
+  xp?: number;
+  level?: number;
+  badges?: Badge[];
 }
 
 export type StudentReportInfo = Student & { status: 'Draft' | 'Submitted' | 'Published'; };
@@ -239,7 +245,7 @@ export interface Permission {
   enabled: boolean;
 }
 
-export type RoleName = 'Admin' | 'Teacher' | 'Parent' | 'Student' | 'Principal' | 'Counselor' | 'Proprietor' | 'Inspector' | 'Exam Officer' | 'Compliance Officer';
+export type RoleName = 'Super Admin' | 'Admin' | 'Teacher' | 'Student' | 'Parent' | 'Proprietor' | 'Inspector' | 'Exam Officer' | 'Compliance Officer' | 'Counselor' | 'Principal';
 
 export interface Role {
   id: RoleName;
@@ -795,6 +801,41 @@ export interface SavedScheme {
   term1Scheme: SchemeWeek[];
   term2Scheme: SchemeWeek[];
   term3Scheme: SchemeWeek[];
+}
+
+export interface Plan {
+  id: number;
+  name: string;
+  price_monthly: number;
+  price_yearly: number;
+  features: Record<string, any>;
+  limits: Record<string, any>;
+  is_active: boolean;
+}
+
+export interface SaaSSchool {
+  id: string; // UUID
+  name: string;
+  subdomain?: string;
+  logoUrl?: string;
+  status: 'active' | 'pending' | 'suspended';
+  plan_id?: number;
+  plan?: Plan;
+  subscription_status: 'active' | 'past_due' | 'canceled' | 'trial';
+  trial_ends_at?: string;
+  next_billing_date?: string;
+  contact_email?: string;
+  created_at: string;
+  stats?: {
+    users: number;
+    storage_used_gb: number;
+  };
+}
+
+export interface SuperAdmin {
+  id: number;
+  user_id: string; // UUID
+  created_at: string;
 }
 
 export type HistoryEntry = SavedScheme & {

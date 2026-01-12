@@ -1,33 +1,37 @@
-// Simple service worker without Workbox dependencies
-const CACHE_NAME = 'school-app-v1';
-const ASSETS_CACHE = 'assets-v1';
-const API_CACHE = 'api-v1';
+const CACHE_NAME = 'school-app-v2';
+const ASSETS_CACHE = 'assets-v2';
+const API_CACHE = 'api-v2';
 
 // Assets to precache
 const PRECACHE_URLS = [
     '/',
     '/index.html',
     '/offline.html',
+    '/manifest.json',
 ];
 
 // Install event - precache critical assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
+            console.log('[SW] Pre-caching App Shell');
             return cache.addAll(PRECACHE_URLS);
         })
     );
     self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames
-                    .filter((name) => name !== CACHE_NAME && name !== ASSETS_CACHE && name !== API_CACHE)
-                    .map((name) => caches.delete(name))
+                    .filter((name) => name.startsWith('school-app-') && name !== CACHE_NAME)
+                    .map((name) => {
+                        console.log('[SW] Deleting old cache:', name);
+                        return caches.delete(name);
+                    })
             );
         })
     );
@@ -39,6 +43,18 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
+    // COMPLETELY IGNORE all localhost/dev traffic to avoid Vite HMR/Import issues
+    if (
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1' ||
+        url.port === '3000' ||
+        url.port === '5173' ||
+        url.hostname.includes('192.168.')
+    ) {
+        // Do not call respondWith at all, let the browser handle it
+        return;
+    }
+
     // Ignore non-HTTP/HTTPS requests (chrome-extension://, etc.)
     if (!url.protocol.startsWith('http')) {
         return;
@@ -46,6 +62,18 @@ self.addEventListener('fetch', (event) => {
 
     // Ignore non-GET requests (POST, PUT, DELETE, etc.)
     if (request.method !== 'GET') {
+        return;
+    }
+
+    // Ignore Vite development requests (HMR, internal modules)
+    if (
+        url.pathname.includes('/@vite/') ||
+        url.pathname.includes('/@id/') ||
+        url.searchParams.has('t') ||
+        url.searchParams.has('v') ||
+        url.pathname.endsWith('.tsx') ||
+        url.pathname.endsWith('.ts')
+    ) {
         return;
     }
 
@@ -118,14 +146,31 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(request)
             .then((response) => {
-                const responseClone = response.clone();
-                caches.open(ASSETS_CACHE).then((cache) => {
-                    cache.put(request, responseClone);
-                });
+                // Only cache successful GET responses
+                if (response.ok && request.method === 'GET') {
+                    const responseClone = response.clone();
+                    caches.open(ASSETS_CACHE).then((cache) => {
+                        cache.put(request, responseClone);
+                    });
+                }
                 return response;
             })
-            .catch(() => {
-                return caches.match(request);
+            .catch(async () => {
+                const cached = await caches.match(request);
+                if (cached) return cached;
+
+                // If it's a navigation request, we already handled it above, 
+                // but just in case or for other resource types:
+                if (request.mode === 'navigate') {
+                    return caches.match('/offline.html');
+                }
+
+                // Return a basic error response instead of undefined
+                return new Response('Network error occurred', {
+                    status: 408,
+                    statusText: 'Network Error',
+                    headers: new Headers({ 'Content-Type': 'text/plain' })
+                });
             })
     );
 });

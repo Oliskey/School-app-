@@ -14,9 +14,10 @@ import {
 interface ComplianceOfficerDashboardProps {
     onLogout: () => void;
     setIsHomePage: (isHome: boolean) => void;
+    currentUser: any;
 }
 
-const ComplianceOfficerDashboard: React.FC<ComplianceOfficerDashboardProps> = ({ onLogout, setIsHomePage }) => {
+const ComplianceOfficerDashboard: React.FC<ComplianceOfficerDashboardProps> = ({ onLogout, setIsHomePage, currentUser }) => {
     const { profile } = useProfile();
     const [complianceStats, setComplianceStats] = useState({
         activeAudits: 3,

@@ -10,13 +10,44 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-// Register service worker - MODIFIED FOR DEV DEBUGGING TO UNREGISTER
+// Register service worker - MODIFIED TO UNREGISTER IN DEV
 export function registerServiceWorker() {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
         return;
     }
 
-    // FORCE UNREGISTER FOR DEVELOPMENT DEBUGGING
+    // In development, unregister service workers and clear caches to avoid HMR/import issues
+    const isDev = window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.port === '3000' ||
+        window.location.port === '5173';
+
+    if (isDev) {
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then((names) => {
+                for (const name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+                registration.unregister().then(success => {
+                    if (success) {
+                        console.log('✅ Service Worker unregistered for development and caches cleared');
+                        // Force a one-time reload to clear the controller if it exists
+                        if (navigator.serviceWorker.controller) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            }
+        });
+        return;
+    }
+
     window.addEventListener('load', async () => {
         try {
             const registration = await navigator.serviceWorker.register('/sw.js');

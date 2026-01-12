@@ -255,7 +255,7 @@ export const getAllNotices = async () => ([]);
 export const createNotice = async (d: any) => d;
 export const deleteNotice = async (id: number) => ({ success: true });
 export const saveAttendance = async (d: any) => d;
-export const getAttendanceByClass = async (c: string) => ([]);
+export const getAttendanceByClass = async (c: string, d?: string) => ([]);
 
 export default {
     supabase,

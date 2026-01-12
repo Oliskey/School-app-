@@ -48,6 +48,20 @@ const GeoGuesserGameScreen: React.FC<GeoGuesserGameScreenProps> = ({ navigateTo,
     const [options, setOptions] = useState<string[]>([]);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
     const [disabledOptions, setDisabledOptions] = useState<string[]>([]);
+    const [highScore, setHighScore] = useState(0);
+
+    // Load High Score
+    useEffect(() => {
+        const saved = localStorage.getItem('geoguesser_highscore');
+        if (saved) setHighScore(parseInt(saved));
+    }, []);
+
+    useEffect(() => {
+        if (score > highScore) {
+            setHighScore(score);
+            localStorage.setItem('geoguesser_highscore', score.toString());
+        }
+    }, [score, highScore]);
 
     // --- GAME LOOP ---
 

@@ -6,7 +6,8 @@ import Signup from './components/auth/Signup';
 import AIChatScreen from './components/shared/AIChatScreen';
 import { requestNotificationPermission, showNotification } from './components/shared/notifications';
 import { ProfileProvider } from './context/ProfileContext';
-import { GamificationProvider } from './context/GamificationContext';
+
+// import { GamificationProvider } from './context/GamificationContext'; // Moved to StudentDashboard
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { realtimeService } from './services/RealtimeService';
 import { registerServiceWorker } from './lib/pwa';
@@ -15,14 +16,15 @@ import { PWAInstallPrompt } from './components/shared/PWAInstallPrompt';
 import { Toaster } from 'react-hot-toast';
 
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
-const TeacherDashboard = lazy(() => import('./components/dashboards/TeacherDashboard'));
+const SuperAdminDashboard = lazy(() => import('./components/admin/SuperAdminDashboard'));
+const TeacherDashboard = lazy(() => import('./components/teacher/TeacherDashboard'));
 const ParentDashboard = lazy(() => import('./components/parent/ParentDashboard'));
 const StudentDashboard = lazy(() => import('./components/student/StudentDashboard'));
-const ProprietorDashboard = lazy(() => import('./components/dashboards/ProprietorDashboard'));
-const InspectorDashboard = lazy(() => import('./components/dashboards/InspectorDashboard'));
-const ExamOfficerDashboard = lazy(() => import('./components/dashboards/ExamOfficerDashboard'));
-const ComplianceOfficerDashboard = lazy(() => import('./components/dashboards/ComplianceOfficerDashboard'));
-const CounselorDashboard = lazy(() => import('./components/dashboards/CounselorDashboard'));
+const ProprietorDashboard = lazy(() => import('./components/proprietor/ProprietorDashboard'));
+const InspectorDashboard = lazy(() => import('./components/inspector/InspectorDashboard'));
+const ExamOfficerDashboard = lazy(() => import('./components/admin/ExamOfficerDashboard'));
+const ComplianceOfficerDashboard = lazy(() => import('./components/admin/ComplianceOfficerDashboard'));
+const CounselorDashboard = lazy(() => import('./components/admin/CounselorDashboard'));
 
 // A simple checkmark icon for the success animation
 const CheckCircleIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className || ''}`.trim()} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></svg>;
@@ -43,6 +45,61 @@ const LoadingScreen: React.FC = () => (
   </div>
 );
 
+// Basic Error Boundary for catching dashboard crashes
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Dashboard Crash Caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center bg-red-50 h-full flex flex-col items-center justify-center">
+          <h2 className="text-2xl font-bold text-red-700 mb-2">Dashboard Error</h2>
+          <p className="text-red-500 mb-4 max-w-md mx-auto">
+            {this.state.error?.message || "Critical error loading dashboard."}
+            <br />
+            <span className="text-sm font-normal">This can happen due to a connection break or a module failing to load.</span>
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={() => {
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.getRegistrations().then(regs => {
+                    for (let reg of regs) reg.unregister();
+                  });
+                }
+                if ('caches' in window) {
+                  caches.keys().then(names => {
+                    for (let name of names) caches.delete(name);
+                  });
+                }
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            >
+              Reset Connection & Reload
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            >
+              Simple Refresh
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const AuthenticatedApp: React.FC = () => {
   const { user, role, signOut, loading } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -51,6 +108,7 @@ const AuthenticatedApp: React.FC = () => {
 
   useEffect(() => {
     if (user && role) {
+      console.log(`👤 User Authenticated: ${user.email} as ${role}`);
       requestNotificationPermission();
 
       // Realtime Subscriptions
@@ -86,18 +144,27 @@ const AuthenticatedApp: React.FC = () => {
 
   const renderDashboard = () => {
     const props = { onLogout: handleLogout, setIsHomePage, currentUser: user };
+    console.log(`🚀 Rendering Dashboard for role: ${role}`);
 
-    switch (role) {
-      case DashboardType.Admin: return <AdminDashboard {...props} />;
-      case DashboardType.Teacher: return <TeacherDashboard {...props} />;
-      case DashboardType.Parent: return <ParentDashboard {...props} />;
-      case DashboardType.Student: return <StudentDashboard {...props} />;
-      case DashboardType.Proprietor: return <ProprietorDashboard {...props} />;
-      case DashboardType.Inspector: return <InspectorDashboard {...props} />;
-      case DashboardType.ExamOfficer: return <ExamOfficerDashboard {...props} />;
-      case DashboardType.ComplianceOfficer: return <ComplianceOfficerDashboard {...props} />;
-      case DashboardType.Counselor: return <CounselorDashboard {...props} />;
-      default: return <StudentDashboard {...props} />;
+    try {
+      switch (role) {
+        case DashboardType.SuperAdmin: return <SuperAdminDashboard {...props} />;
+        case DashboardType.Admin: return <AdminDashboard {...props} />;
+        case DashboardType.Teacher: return <TeacherDashboard {...props} />;
+        case DashboardType.Parent: return <ParentDashboard {...props} />;
+        case DashboardType.Student: return <StudentDashboard {...props} />;
+        case DashboardType.Proprietor: return <ProprietorDashboard {...props} />;
+        case DashboardType.Inspector: return <InspectorDashboard {...props} />;
+        case DashboardType.ExamOfficer: return <ExamOfficerDashboard {...props} />;
+        case DashboardType.ComplianceOfficer: return <ComplianceOfficerDashboard {...props} />;
+        case DashboardType.Counselor: return <CounselorDashboard {...props} />;
+        default:
+          console.warn(`No specific component for role ${role}, falling back to Student.`);
+          return <StudentDashboard {...props} />;
+      }
+    } catch (e) {
+      console.error("Critical error in renderDashboard:", e);
+      return <div className="p-8 text-red-600">Failed to render dashboard component.</div>;
     }
   };
 
@@ -106,9 +173,11 @@ const AuthenticatedApp: React.FC = () => {
   }
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      {renderDashboard()}
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingScreen />}>
+        {renderDashboard()}
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 
@@ -121,22 +190,20 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <ProfileProvider>
-        <GamificationProvider>
-          {/* Toast Notifications */}
-          <Toaster position="top-right" />
+        {/* Toast Notifications */}
+        <Toaster position="top-right" />
 
-          {/* Offline indicator - shows when no internet connection */}
-          <OfflineIndicator />
+        {/* Offline indicator - shows when no internet connection */}
+        <OfflineIndicator />
 
-          <div className="font-sans w-screen h-screen bg-[#F0F2F5] flex flex-col items-center justify-center">
-            <div className="relative w-full h-full flex flex-col shadow-2xl">
-              <AuthenticatedApp />
-            </div>
+        <div className="font-sans w-screen h-screen bg-[#F0F2F5] flex flex-col items-center justify-center">
+          <div className="relative w-full h-full flex flex-col shadow-2xl">
+            <AuthenticatedApp />
           </div>
+        </div>
 
-          {/* PWA install prompt - shows after 30s if not installed */}
-          <PWAInstallPrompt />
-        </GamificationProvider>
+        {/* PWA install prompt - shows after 30s if not installed */}
+        <PWAInstallPrompt />
       </ProfileProvider>
     </AuthProvider>
   );

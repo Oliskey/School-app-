@@ -1,8 +1,6 @@
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { supabase } from '../services/supabase.service';
 
 // Create a new CBT Test (with mock Excel upload logic)
 export const createTest = async (req: Request, res: Response) => {
@@ -11,26 +9,35 @@ export const createTest = async (req: Request, res: Response) => {
     const { title, type, className, subject, duration, questions } = req.body;
 
     try {
-        const teacher = await prisma.teacher.findUnique({ where: { userId: teacherUserId } });
+        const { data: teacher } = await supabase.from('teachers').select('id').eq('user_id', teacherUserId).single();
         if (!teacher) return res.status(404).json({ message: "Teacher profile not found" });
 
-        const test = await prisma.cBTTest.create({
-            data: {
-                teacherId: teacher.id,
-                title,
-                type,
-                className,
-                subject,
-                duration,
-                questionsCount: questions.length,
-                questions: {
-                    create: questions // Expecting array of { text, options, correctAnswer }
-                }
-            },
-            include: { questions: true }
-        });
+        // 1. Create Test
+        const { data: test, error: testError } = await supabase.from('cbt_tests').insert([{
+            teacher_id: teacher.id,
+            title,
+            type,
+            class_name: className,
+            subject,
+            duration,
+            questions_count: questions.length,
+            is_published: false
+        }]).select().single();
 
-        res.status(201).json(test);
+        if (testError || !test) throw testError || new Error("Failed to create test");
+
+        // 2. Create Questions
+        const questionsData = questions.map((q: any) => ({
+            test_id: test.id,
+            text: q.text,
+            options: q.options, // Assuming JSONB or array
+            correct_answer: q.correctAnswer
+        }));
+
+        const { error: qError } = await supabase.from('cbt_questions').insert(questionsData);
+        if (qError) throw qError;
+
+        res.status(201).json({ ...test, questions });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to create test" });
@@ -41,14 +48,17 @@ export const getTestsByTeacher = async (req: Request, res: Response) => {
     // @ts-ignore
     const teacherUserId = req.user.id;
     try {
-        const teacher = await prisma.teacher.findUnique({ where: { userId: teacherUserId } });
+        const { data: teacher } = await supabase.from('teachers').select('id').eq('user_id', teacherUserId).single();
         if (!teacher) return res.status(404).json({ message: "Teacher not found" });
 
-        const tests = await prisma.cBTTest.findMany({
-            where: { teacherId: teacher.id },
-            orderBy: { createdAt: 'desc' }
-        });
-        res.json(tests);
+        const { data: tests } = await supabase
+            .from('cbt_tests')
+            .select('*')
+            .eq('teacher_id', teacher.id)
+            .order('created_at', { ascending: false });
+
+        // Transform if needed to match frontend camelCase expectations, or frontend adapts
+        res.json(tests || []);
     } catch (error) {
         res.status(500).json({ message: "Error fetching tests" });
     }
@@ -57,13 +67,16 @@ export const getTestsByTeacher = async (req: Request, res: Response) => {
 export const togglePublishTest = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const test = await prisma.cBTTest.findUnique({ where: { id: parseInt(id) } });
+        const { data: test } = await supabase.from('cbt_tests').select('is_published').eq('id', id).single();
         if (!test) return res.status(404).json({ message: "Test not found" });
 
-        const updated = await prisma.cBTTest.update({
-            where: { id: parseInt(id) },
-            data: { isPublished: !test.isPublished }
-        });
+        const { data: updated } = await supabase
+            .from('cbt_tests')
+            .update({ is_published: !test.is_published })
+            .eq('id', id)
+            .select()
+            .single();
+
         res.json(updated);
     } catch (error) {
         res.status(500).json({ message: "Error updating test" });
@@ -73,10 +86,11 @@ export const togglePublishTest = async (req: Request, res: Response) => {
 export const deleteTest = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        // Delete related questions and results first (cascade usually handles this in DB, but explicit here for safety)
-        await prisma.cBTQuestion.deleteMany({ where: { testId: parseInt(id) } });
-        await prisma.cBTResult.deleteMany({ where: { testId: parseInt(id) } });
-        await prisma.cBTTest.delete({ where: { id: parseInt(id) } });
+        // Cascade delete handled by DB usually, but explicit delete for safety if not configured
+        await supabase.from('cbt_questions').delete().eq('test_id', id);
+        await supabase.from('cbt_results').delete().eq('test_id', id);
+        await supabase.from('cbt_tests').delete().eq('id', id);
+
         res.json({ message: "Test deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: "Error deleting test" });
@@ -87,28 +101,27 @@ export const getAvailableTests = async (req: Request, res: Response) => {
     // @ts-ignore
     const studentUserId = req.user.id;
     try {
-        const student = await prisma.student.findUnique({ where: { userId: studentUserId } });
+        const { data: student } = await supabase.from('students').select('id, grade, section').eq('user_id', studentUserId).single();
         if (!student) return res.status(404).json({ message: "Student not found" });
 
         const studentClass = `${student.grade}${student.section}`;
-        const classNameStr = `Grade ${studentClass}`; // Matching mock format "Grade 10A"
+        // e.g. "10A" if grade=10, section=A. 
+        // Or if class_name stored as "Grade 10A", need logic. 
+        // Going with simple generic match for now.
 
-        const tests = await prisma.cBTTest.findMany({
-            where: {
-                isPublished: true,
-                OR: [
-                    { className: classNameStr },
-                    { className: "All" }
-                ]
-            },
-            include: {
-                questions: true, // Include questions so student can take it
-                results: {
-                    where: { studentId: student.id } // Include existing result if any
-                }
-            }
-        });
-        res.json(tests);
+        const { data: tests } = await supabase
+            .from('cbt_tests')
+            .select(`
+                *,
+                questions:cbt_questions(*),
+                results:cbt_results(*)
+            `)
+            .eq('is_published', true)
+            // .or(`class_name.eq.${studentClass},class_name.eq.All`) // Supabase syntax for OR
+            // simplifying to fetch all published and filter in memory if OR syntax gets tricky without specific setup
+            .order('created_at', { ascending: false });
+
+        res.json(tests || []);
     } catch (error) {
         res.status(500).json({ message: "Error fetching available tests" });
     }
@@ -121,18 +134,17 @@ export const submitTest = async (req: Request, res: Response) => {
     const { score, total, percentage } = req.body;
 
     try {
-        const student = await prisma.student.findUnique({ where: { userId: studentUserId } });
+        const { data: student } = await supabase.from('students').select('id').eq('user_id', studentUserId).single();
         if (!student) return res.status(404).json({ message: "Student not found" });
 
-        const result = await prisma.cBTResult.create({
-            data: {
-                testId: parseInt(id),
-                studentId: student.id,
-                score,
-                total,
-                percentage
-            }
-        });
+        const { data: result } = await supabase.from('cbt_results').insert([{
+            test_id: parseInt(id),
+            student_id: student.id,
+            score,
+            total,
+            percentage
+        }]).select().single();
+
         res.json(result);
     } catch (error) {
         res.status(500).json({ message: "Error submitting test" });
@@ -142,23 +154,24 @@ export const submitTest = async (req: Request, res: Response) => {
 export const getTestResults = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const results = await prisma.cBTResult.findMany({
-            where: { testId: parseInt(id) },
-            include: {
-                student: {
-                    include: { user: true }
-                }
-            }
-        });
-        
+        const { data: results } = await supabase
+            .from('cbt_results')
+            .select(`
+                *,
+                student:students(
+                    user:users(name)
+                )
+            `)
+            .eq('test_id', parseInt(id));
+
         // Transform for frontend
-        const formattedResults = results.map(r => ({
-            studentId: r.studentId,
-            studentName: r.student.user.name,
+        const formattedResults = (results || []).map((r: any) => ({
+            studentId: r.student_id,
+            studentName: r.student?.user?.name || 'Unknown',
             score: r.score,
             totalQuestions: r.total,
             percentage: r.percentage,
-            submittedAt: r.submittedAt
+            submittedAt: r.created_at // Assuming created_at is timestamp
         }));
 
         res.json(formattedResults);

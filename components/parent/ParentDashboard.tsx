@@ -34,6 +34,8 @@ import GlobalSearchScreen from '../shared/GlobalSearchScreen';
 
 import { supabase } from '../../lib/supabase';
 import { getHomeworkStatus } from '../../utils/homeworkUtils';
+import { realtimeService } from '../../services/RealtimeService';
+import { toast } from 'react-hot-toast';
 
 // Import all view components
 import ExamSchedule from '../shared/ExamSchedule';
@@ -786,9 +788,30 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                 } else {
                     setCurrentUserId((currentUser as any)?.id ? parseInt((currentUser as any).id) : 0);
                 }
+
+                // Global Real-time Service Integration for Parent
+                realtimeService.subscribeToNotifications(user.id, (notif) => {
+                    toast(notif.message || notif.content || 'New Event', {
+                        icon: '🔔',
+                        duration: 4000
+                    });
+                    forceUpdate();
+                });
+
+                realtimeService.subscribeToMessages(user.id, (msg) => {
+                    toast.success(`School Message: ${msg.sender_name || 'Admin'}`, {
+                        icon: '💬',
+                        duration: 5000
+                    });
+                    forceUpdate();
+                });
             }
         };
         getUser();
+
+        return () => {
+            realtimeService.unsubscribeAll();
+        };
     }, [currentUser]);
 
     const fetchProfile = async () => {
@@ -831,19 +854,24 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
         setIsHomePage(currentView.view === 'dashboard' && !isSearchOpen);
     }, [viewStack, isSearchOpen, setIsHomePage]);
 
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+
     // Navigate function for reuse
     const navigateTo = (view: string, title: string, props: any = {}) => {
         setViewStack(stack => [...stack, { view, props, title }]);
+        if (scrollRef.current) scrollRef.current.scrollTo(0, 0);
     };
 
     const handleBack = () => {
         if (viewStack.length > 1) {
             setViewStack(stack => stack.slice(0, -1));
         }
+        if (scrollRef.current) scrollRef.current.scrollTo(0, 0);
     };
 
     const handleBottomNavClick = (screen: string) => {
         setActiveBottomNav(screen);
+        if (scrollRef.current) scrollRef.current.scrollTo(0, 0);
         switch (screen) {
             case 'home':
                 setViewStack([{ view: 'dashboard', title: 'Parent Dashboard' }]);
@@ -965,7 +993,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                         </div>
                     )}
 
-                    <div className="h-full overflow-y-auto">
+                    <div ref={scrollRef} className="h-full overflow-y-auto">
                         <Suspense fallback={<DashboardSuspenseFallback />}>
                             <ComponentToRender {...commonProps} {...currentNavigation.props} />
                         </Suspense>

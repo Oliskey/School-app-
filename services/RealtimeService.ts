@@ -50,20 +50,21 @@ class RealtimeService {
     }
 
     /**
-     * Subscribe to global announcements
+     * Subscribe to messages for a user or room
      */
-    public subscribeToAnnouncements(onAnnouncement: NotificationCallback) {
+    public subscribeToMessages(roomOrUserId: string | number, onMessage: NotificationCallback) {
         const channel = supabase
-            .channel('global_announcements')
+            .channel(`chat:${roomOrUserId}`)
             .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
                     schema: 'public',
-                    table: 'announcements' // Assuming there is an announcements table
+                    table: 'messages',
+                    // Filter could be room_id or receiver_id depending on schema
                 },
                 (payload) => {
-                    onAnnouncement(payload.new);
+                    onMessage(payload.new);
                 }
             )
             .subscribe();
@@ -72,9 +73,53 @@ class RealtimeService {
         return channel;
     }
 
-    // Note: For chat specifically, we often need to subscribe to specific rooms.
-    // We'll leave that to a specialized ChatService or expand this later.
-    // For now, we rely on the 'notifications' table for high-level alerts.
+    /**
+     * Subscribe to financial transactions (Real-time Payment confirmation)
+     */
+    public subscribeToTransactions(schoolId: string | number, onUpdate: NotificationCallback) {
+        const channel = supabase
+            .channel(`payments:${schoolId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Sync all changes (Insert, Update)
+                    schema: 'public',
+                    table: 'payments',
+                    filter: `school_id=eq.${schoolId}`
+                },
+                (payload) => {
+                    onUpdate(payload.new);
+                }
+            )
+            .subscribe();
+
+        this.channels.push(channel);
+        return channel;
+    }
+
+    /**
+     * Generic subscription to any table
+     */
+    public subscribeToTable(tableName: string, filter: string | null, onEvent: NotificationCallback) {
+        const channel = supabase
+            .channel(`sync:${tableName}:${filter || 'all'}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: tableName,
+                    ...(filter ? { filter } : {})
+                },
+                (payload) => {
+                    onEvent(payload.new);
+                }
+            )
+            .subscribe();
+
+        this.channels.push(channel);
+        return channel;
+    }
 
     public unsubscribeAll() {
         this.channels.forEach(channel => {

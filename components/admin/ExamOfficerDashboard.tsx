@@ -14,9 +14,10 @@ import {
 interface ExamOfficerDashboardProps {
     onLogout: () => void;
     setIsHomePage: (isHome: boolean) => void;
+    currentUser: any;
 }
 
-const ExamOfficerDashboard: React.FC<ExamOfficerDashboardProps> = ({ onLogout, setIsHomePage }) => {
+const ExamOfficerDashboard: React.FC<ExamOfficerDashboardProps> = ({ onLogout, setIsHomePage, currentUser }) => {
     const { profile } = useProfile();
     const [examStats, setExamStats] = useState({
         upcomingExams: 4,

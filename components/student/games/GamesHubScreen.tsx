@@ -105,6 +105,9 @@ const LevelAccordion: React.FC<{ level: string; games: EducationalGame[]; defaul
                                         else if (game.gameName === 'Literary Analysis Shark Tank') navigateTo('sharkTank', 'Literary Shark Tank');
                                         else if (game.gameName === 'Virtual Science Lab') navigateTo('physicsLab', 'Physics Lab');
                                         else if (game.gameName === 'Stock Market Game') navigateTo('stockMarket', 'Stock Market Simulator');
+                                        else if (game.gameName === 'Vocabulary Pictionary') navigateTo('vocabularyPictionary', 'Vocabulary Pictionary');
+                                        else if (game.gameName === 'Simple Machine Scavenger Hunt') navigateTo('simpleMachineHunt', 'Scavenger Hunt');
+                                        else if (game.gameName === 'Historical Hot Seat') navigateTo('historicalHotSeat', 'Historical Hot Seat');
                                         else toast('Game coming soon!', { icon: '🚧' });
                                     }}
                                 />

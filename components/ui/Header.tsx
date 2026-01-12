@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { LogoutIcon, ChevronLeftIcon, NotificationIcon, SearchIcon, UserIcon } from '../../constants';
+import { Menu } from 'lucide-react';
 
 interface HeaderProps {
   title: string;
@@ -8,13 +9,14 @@ interface HeaderProps {
   bgColor: string;
   onLogout?: () => void;
   onBack?: () => void;
+  onMenuClick?: () => void;
   onNotificationClick?: () => void;
   notificationCount?: number;
   onSearchClick?: () => void;
   className?: string; // Allow custom classes
 }
 
-const Header: React.FC<HeaderProps> = ({ title, avatarUrl, bgColor, onLogout, onBack, onNotificationClick, notificationCount, onSearchClick, className = '' }) => {
+const Header: React.FC<HeaderProps> = ({ title, avatarUrl, bgColor, onLogout, onBack, onMenuClick, onNotificationClick, notificationCount, onSearchClick, className = '' }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
@@ -43,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ title, avatarUrl, bgColor, onLogout, on
       {avatarUrl ? (
         <img src={avatarUrl} alt="avatar" className="rounded-full w-full h-full object-cover" />
       ) : (
-        <UserIcon className="w-full h-full p-1 text-gray-100" />
+        <UserIcon className={`w-full h-full p-1 ${bgColor.includes('bg-white') || bgColor.includes('bg-gray-50') ? 'text-gray-400' : 'text-gray-100'}`} />
       )}
     </div>
   );
@@ -52,6 +54,11 @@ const Header: React.FC<HeaderProps> = ({ title, avatarUrl, bgColor, onLogout, on
     <header className={`${bgColor} text-white px-3 sm:px-5 py-4 sm:py-5 pb-8 rounded-b-3xl relative z-10 print:hidden ${className}`}>
       <div className="flex justify-between items-center gap-2">
         <div className="flex items-center space-x-2 min-w-0 flex-1">
+          {onMenuClick && (
+            <button onClick={onMenuClick} className={`p-1.5 sm:p-2 -ml-2 mr-1 rounded-full hover:bg-current/10 flex-shrink-0 lg:hidden focus:outline-none`} aria-label="Open menu">
+              <Menu className={`h-6 w-6 sm:h-7 sm:w-7 ${bgColor.includes('bg-white') || bgColor.includes('bg-gray-50') ? 'text-gray-900' : 'text-white'}`} />
+            </button>
+          )}
           {onBack && (
             <button onClick={onBack} className="p-1.5 sm:p-2 -ml-2 rounded-full hover:bg-white/10 flex-shrink-0" aria-label="Go back">
               <ChevronLeftIcon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
@@ -61,14 +68,14 @@ const Header: React.FC<HeaderProps> = ({ title, avatarUrl, bgColor, onLogout, on
         </div>
         <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {onSearchClick && (
-            <button onClick={onSearchClick} className="relative p-1.5 sm:p-2 rounded-full hover:bg-white/10" aria-label="Search">
-              <SearchIcon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+            <button onClick={onSearchClick} className="relative p-1.5 sm:p-2 rounded-full hover:bg-current/10" aria-label="Search">
+              <SearchIcon className={`h-6 w-6 sm:h-7 sm:w-7 ${bgColor.includes('bg-white') || bgColor.includes('bg-gray-50') ? 'text-gray-900' : 'text-white'}`} />
             </button>
           )}
           {onNotificationClick && (
-            <button onClick={onNotificationClick} className="relative p-1.5 sm:p-2 rounded-full hover:bg-white/10" aria-label={`View notifications. ${notificationCount || 0} unread.`}>
+            <button onClick={onNotificationClick} className="relative p-1.5 sm:p-2 rounded-full hover:bg-current/10" aria-label={`View notifications. ${notificationCount || 0} unread.`}>
               <div className="relative">
-                <NotificationIcon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                <NotificationIcon className={`h-6 w-6 sm:h-7 sm:w-7 ${bgColor.includes('bg-white') || bgColor.includes('bg-gray-50') ? 'text-gray-900' : 'text-white'}`} />
                 {notificationCount !== undefined && notificationCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-sm border border-white pointer-events-none">
                     {notificationCount > 9 ? '9+' : notificationCount}

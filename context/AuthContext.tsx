@@ -109,13 +109,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const getDashboardTypeFromUserType = (userType: string): DashboardType => {
-        switch (userType) {
-            case 'Admin': return DashboardType.Admin;
-            case 'Teacher': return DashboardType.Teacher;
-            case 'Parent': return DashboardType.Parent;
-            case 'Student': return DashboardType.Student;
-            default: return DashboardType.Student;
-        }
+        const lower = userType.toLowerCase();
+        if (lower === 'superadmin') return DashboardType.SuperAdmin;
+        if (lower === 'admin') return DashboardType.Admin;
+        if (lower === 'teacher') return DashboardType.Teacher;
+        if (lower === 'parent') return DashboardType.Parent;
+        if (lower === 'student') return DashboardType.Student;
+        if (lower === 'proprietor') return DashboardType.Proprietor;
+        if (lower === 'inspector') return DashboardType.Inspector;
+        if (lower === 'examofficer') return DashboardType.ExamOfficer;
+        if (lower === 'complianceofficer') return DashboardType.ComplianceOfficer;
+        if (lower === 'counselor') return DashboardType.Counselor;
+        return DashboardType.Student;
     };
 
     const signIn = async (dashboard: DashboardType, userData: any) => {

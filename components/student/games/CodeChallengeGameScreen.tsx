@@ -75,6 +75,18 @@ const CodeChallengeGameScreen: React.FC<CodeChallengeGameScreenProps> = ({ navig
     const [executingStep, setExecutingStep] = useState(-1);
     const [gameStatus, setGameStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
 
+    // Persistence
+    useEffect(() => {
+        const saved = localStorage.getItem('code_challenge_level');
+        if (saved) setLevelIndex(parseInt(saved));
+    }, []);
+
+    useEffect(() => {
+        if (levelIndex > 0) {
+            localStorage.setItem('code_challenge_level', levelIndex.toString());
+        }
+    }, [levelIndex]);
+
     const currentLevel = LEVELS[levelIndex];
 
     // Reset Level
@@ -150,14 +162,6 @@ const CodeChallengeGameScreen: React.FC<CodeChallengeGameScreenProps> = ({ navig
             return { pos: newPos, dir: newDir };
         });
     };
-
-    // Check Win Condition (Triggered by useEffect on botState changes if not running? No, wait for run to finish)
-    // Actually, we must check "Success" AFTER the run finishes.
-    // We do this by tracking the FINAL state in the effect cleanup or a separate check? 
-    // Effect dependency on [isRunning] turning false is tricky because botState might not be updated yet from last tick.
-    // Let's rely on a check function called at the end of interval. 
-    // BUT 'botState' inside setInterval closure is stale.
-    // We need a REF for executuion logic.
 
     const botStateRef = useRef(botState);
     useEffect(() => { botStateRef.current = botState; }, [botState]);

@@ -328,7 +328,7 @@ const CBTExamGame: React.FC<CBTExamGameProps> = ({ onBack }) => {
                                 </div>
                             </div>
                         </div>
-                    ) : props.gameState === 'playing' || gameState === 'playing' ? ( /* Fallback for 'playing' */
+                    ) : gameState === 'playing' ? ( /* Fallback for 'playing' */
                         <>
                             {/* Question UI */}
                             <div className="flex justify-between items-center mb-2">

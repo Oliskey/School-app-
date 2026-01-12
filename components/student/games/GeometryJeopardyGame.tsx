@@ -121,6 +121,17 @@ const GeometryJeopardyGame: React.FC<GeometryJeopardyGameProps> = ({ onBack }) =
         }, 2000);
     };
 
+    // Load Total Winnings
+    useEffect(() => {
+        const saved = localStorage.getItem('jeopardy_total_winnings');
+        if (saved) {
+            // Maybe show a "Lifetime Earnings" badge or just keep track? 
+            // For now, let's just log it or maybe display it.
+            // Actually, let's add it to current score visually or separate?
+            // Let's just keep strict game session score, but maybe unlock something if total > 1000.
+        }
+    }, []);
+
     const checkWin = (currentCategories: Category[]) => {
         const allAnswered = currentCategories.every(c => c.questions.every(q => q.isAnswered));
         if (allAnswered) {
@@ -129,6 +140,10 @@ const GeometryJeopardyGame: React.FC<GeometryJeopardyGameProps> = ({ onBack }) =
             unlockBadge('geometry-genius');
             confetti({ particleCount: 200, spread: 100 });
             speak("Board Cleared! You are a Geometry Genius.");
+
+            // Save Winnings
+            const currentTotal = parseInt(localStorage.getItem('jeopardy_total_winnings') || '0');
+            localStorage.setItem('jeopardy_total_winnings', (currentTotal + score).toString());
         }
     };
 
@@ -146,18 +161,16 @@ const GeometryJeopardyGame: React.FC<GeometryJeopardyGameProps> = ({ onBack }) =
         >
             <div className="h-full w-full bg-blue-900 overflow-hidden flex flex-col p-4 relative font-mono">
 
-                {/* Board */}
-                <div className="flex-1 grid grid-cols-4 gap-2 sm:gap-4 max-w-5xl mx-auto w-full content-center">
+                {/* Board - Responsive Grid */}
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 max-w-5xl mx-auto w-full content-center overflow-y-auto">
                     {/* Headers */}
                     {categories.map(cat => (
-                        <div key={cat.id} className="bg-blue-800 text-yellow-400 font-bold text-center py-4 rounded-lg border-2 border-black shadow-lg flex items-center justify-center text-sm sm:text-lg uppercase tracking-wider">
+                        <div key={cat.id} className="bg-blue-800 text-yellow-400 font-bold text-center py-2 sm:py-4 rounded-lg border-2 border-black shadow-lg flex items-center justify-center text-xs sm:text-lg uppercase tracking-wider min-h-[50px]">
                             {cat.title}
                         </div>
                     ))}
 
-                    {/* Questions Grid (Transposed visual logic naturally flows if we map col by col, but CSS grid rows implies row by row. 
-                        We need to map row 1 (all 100s), row 2 (all 200s)... 
-                    */}
+                    {/* Questions Grid */}
                     {[0, 1, 2].map(rowIndex => (
                         <React.Fragment key={rowIndex}>
                             {categories.map((cat, catIndex) => {
@@ -169,7 +182,7 @@ const GeometryJeopardyGame: React.FC<GeometryJeopardyGameProps> = ({ onBack }) =
                                         whileTap={!q.isAnswered ? { scale: 0.95 } : {}}
                                         onClick={() => handleQuestionClick(catIndex, rowIndex)}
                                         disabled={q.isAnswered}
-                                        className={`aspect-video rounded-lg border-2 border-black shadow-xl flex items-center justify-center text-2xl sm:text-4xl font-black transition-colors duration-500 ${q.isAnswered ? 'bg-blue-900/50 text-blue-900/0 border-blue-900/20' : 'bg-blue-600 text-yellow-300 cursor-pointer'
+                                        className={`aspect-[4/3] sm:aspect-video rounded-lg border-2 border-black shadow-xl flex items-center justify-center text-xl sm:text-4xl font-black transition-colors duration-500 ${q.isAnswered ? 'bg-blue-900/50 text-blue-900/0 border-blue-900/20' : 'bg-blue-600 text-yellow-300 cursor-pointer'
                                             }`}
                                     >
                                         {q.isAnswered ? "" : q.points}

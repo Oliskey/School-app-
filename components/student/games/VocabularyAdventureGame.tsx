@@ -196,6 +196,18 @@ const VocabularyAdventureGame: React.FC<VocabularyAdventureGameProps> = ({ onBac
         speak("Try again.");
     };
 
+    // Persistence
+    useEffect(() => {
+        const saved = localStorage.getItem('vocab_adventure_level');
+        if (saved) setMaxUnlockedLevel(parseInt(saved));
+    }, []);
+
+    useEffect(() => {
+        if (maxUnlockedLevel > 1) {
+            localStorage.setItem('vocab_adventure_level', maxUnlockedLevel.toString());
+        }
+    }, [maxUnlockedLevel]);
+
     const handleLevelComplete = () => {
         setLevelComplete(true);
         setScore(prev => prev + 100);
@@ -208,8 +220,11 @@ const VocabularyAdventureGame: React.FC<VocabularyAdventureGameProps> = ({ onBac
 
             // Unlock next level logic
             if (currentLevelId < LEVELS.length) {
-                setMaxUnlockedLevel(currentLevelId + 1);
-                setCurrentLevelId(currentLevelId + 1); // Auto move to next? Or let user click? Let's move.
+                const nextLevel = currentLevelId + 1;
+                if (nextLevel > maxUnlockedLevel) {
+                    setMaxUnlockedLevel(nextLevel);
+                }
+                setCurrentLevelId(nextLevel);
             } else {
                 // Game Won
                 unlockBadge('explorer-legend');
@@ -231,8 +246,11 @@ const VocabularyAdventureGame: React.FC<VocabularyAdventureGameProps> = ({ onBac
 
                 {/* MAP VIEW */}
                 <div className={`absolute inset-0 transition-opacity duration-1000 ${showMap ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                    {/* Map Background */}
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')] opacity-20" />
+                    {/* Map Background (Offline-safe) */}
+                    <div className="absolute inset-0 bg-[#2c1a0d]" />
+                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-200/20 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTAgMjBMMjAgMEgwaDIwek0yMCA0MEw0MCAyMEgyMGgyMHpNMjAgMjBMMDAgMEgyMGgyMHoiLz48L2c+PC9zdmc+')] opacity-30" />
+
                     <div className="absolute inset-0 bg-gradient-to-tr from-amber-900/50 to-slate-900/50" />
 
                     {/* Paths (SVG Lines) */}
@@ -270,8 +288,8 @@ const VocabularyAdventureGame: React.FC<VocabularyAdventureGameProps> = ({ onBac
                                 <motion.div
                                     whileHover={isUnlocked ? { scale: 1.1, translateY: -5 } : {}}
                                     className={`w-16 h-16 rounded-full border-4 shadow-xl flex items-center justify-center ${isCompleted ? 'bg-green-500 border-green-300' :
-                                            isUnlocked ? 'bg-amber-500 border-amber-300 animate-pulse' :
-                                                'bg-gray-700 border-gray-600'
+                                        isUnlocked ? 'bg-amber-500 border-amber-300 animate-pulse' :
+                                            'bg-gray-700 border-gray-600'
                                         }`}
                                 >
                                     {isCompleted ? <CheckIcon className="text-white w-8 h-8" /> :
