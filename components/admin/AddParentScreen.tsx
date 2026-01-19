@@ -10,6 +10,7 @@ import { createUserAccount, sendVerificationEmail, checkEmailExists } from '../.
 import { sendWelcomeEmail } from '../../lib/emailService';
 import CredentialsModal from '../ui/CredentialsModal';
 import { mockParents } from '../../data';
+import { useProfile } from '../../context/ProfileContext';
 
 interface AddParentScreenProps {
     parentToEdit?: Parent;
@@ -18,6 +19,7 @@ interface AddParentScreenProps {
 }
 
 const AddParentScreen: React.FC<AddParentScreenProps> = ({ parentToEdit, forceUpdate, handleBack }) => {
+    const { profile } = useProfile();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
@@ -212,6 +214,7 @@ const AddParentScreen: React.FC<AddParentScreenProps> = ({ parentToEdit, forceUp
                 .from('parents')
                 .insert([{
                     user_id: userData.id, // Linking to Legacy User ID
+                    school_id: profile.schoolId,
                     name,
                     email: email,
                     phone,

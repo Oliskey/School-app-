@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { createUserAccount, sendVerificationEmail, checkEmailExists } from '../../lib/auth';
 import CredentialsModal from '../ui/CredentialsModal';
 import { mockTeachers } from '../../data';
+import { useProfile } from '../../context/ProfileContext';
 
 interface AddTeacherScreenProps {
     teacherToEdit?: Teacher;
@@ -103,6 +104,7 @@ const TagInput: React.FC<{
 
 
 const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forceUpdate, handleBack }) => {
+    const { profile } = useProfile();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
@@ -334,6 +336,7 @@ const AddTeacherScreen: React.FC<AddTeacherScreenProps> = ({ teacherToEdit, forc
                     .from('teachers')
                     .insert([{
                         user_id: userData.id,
+                        school_id: profile.schoolId,
                         name,
                         email: teacherEmail,
                         phone,

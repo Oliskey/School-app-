@@ -345,9 +345,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onLogout, setIsHome
                     return;
                 }
 
-                const isDemoEmail = currentUser.email?.endsWith('@school.com') ||
-                    currentUser.email?.includes('student') ||
-                    currentUser.email?.includes('demo');
+                const isDemoEmail = currentUser.email === 'student@school.edu' ||
+                    currentUser.email?.endsWith('@demo.com');
 
                 const createDemoStudent = (): Student => ({
                     id: 1,

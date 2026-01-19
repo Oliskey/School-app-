@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Header from '../ui/Header';
 import { useProfile } from '../../context/ProfileContext';
 import { AdminBottomNav } from '../ui/DashboardBottomNav';
+import { AdminSidebar } from '../ui/DashboardSidebar';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { DashboardType } from '../../types';
 import { realtimeService } from '../../services/RealtimeService';
@@ -369,7 +370,13 @@ const AdminDashboardContent: React.FC<AdminDashboardProps> = ({ onLogout, setIsH
     return (
         <div className="flex h-screen w-full overflow-hidden bg-gray-100">
             {/* DESKTOP SIDEBAR */}
-            {/* Sidebar removed - using bottom nav only */}
+            <div className="hidden lg:block w-64 h-full flex-shrink-0 bg-white border-r border-gray-200 z-20">
+                <AdminSidebar
+                    activeScreen={activeBottomNav}
+                    setActiveScreen={handleBottomNavClick}
+                    onLogout={onLogout}
+                />
+            </div>
             <div className="flex-1 flex flex-col h-screen w-full overflow-hidden min-w-0">
                 {/* Error Banners */}
                 {!isSupabaseConfigured && <div className="bg-amber-600 text-white text-xs py-1 px-4 text-center font-medium z-50">Supabase Config Missing</div>}

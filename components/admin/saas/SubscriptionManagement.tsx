@@ -18,6 +18,7 @@ import {
 import { initializePaystackPayment, initializeFlutterwavePayment } from '../../../lib/paymentGateways';
 import { toast } from 'react-hot-toast';
 
+
 interface Subscription {
     id: string;
     school_id: string;
@@ -29,6 +30,7 @@ interface Subscription {
     auto_renew: boolean;
     school_name?: string;
     plan_name?: string;
+    contact_email?: string;
 }
 
 interface SubscriptionManagementProps {
@@ -61,7 +63,7 @@ export const SubscriptionManagement: React.FC<SubscriptionManagementProps> = ({ 
                 .from('subscriptions')
                 .select(`
                     *,
-                    schools (name),
+                    schools (name, email),
                     plans (name)
                 `)
                 .order('created_at', { ascending: false });
@@ -71,6 +73,7 @@ export const SubscriptionManagement: React.FC<SubscriptionManagementProps> = ({ 
             const formatted = data?.map(sub => ({
                 ...sub,
                 school_name: sub.schools?.name || 'Unknown School',
+                contact_email: sub.schools?.email || 'admin@school.com',
                 plan_name: sub.plans?.name || 'Unknown Plan'
             })) || [];
 

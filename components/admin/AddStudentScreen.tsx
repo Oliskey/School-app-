@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { createUserAccount, generateUsername, generatePassword, sendVerificationEmail, checkEmailExists } from '../../lib/auth';
 import CredentialsModal from '../ui/CredentialsModal';
 import { mockStudents, mockParents } from '../../data';
+import { useProfile } from '../../context/ProfileContext';
 
 interface AddStudentScreenProps {
     studentToEdit?: Student;
@@ -15,6 +16,7 @@ interface AddStudentScreenProps {
 }
 
 const AddStudentScreen: React.FC<AddStudentScreenProps> = ({ studentToEdit, forceUpdate, handleBack }) => {
+    const { profile } = useProfile();
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [fullName, setFullName] = useState('');
     const [gender, setGender] = useState('');
@@ -380,6 +382,7 @@ parents(
                     .from('students')
                     .insert([{
                         user_id: userData.id,
+                        school_id: profile.schoolId,
                         name: fullName,
                         avatar_url: avatarUrl,
                         grade: grade,

@@ -9,6 +9,7 @@ interface UserProfile {
   avatarUrl: string;
   role?: 'Student' | 'Teacher' | 'Parent' | 'Admin' | 'Proprietor' | 'Inspector' | 'Exam Officer' | 'Compliance Officer' | 'Super Admin' | 'Counselor' | string;
   supabaseId?: string;
+  schoolId?: string;
 }
 
 interface ProfileContextType {
@@ -38,7 +39,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setIsLoading(true);
       try {
         // Try to get the logged-in user from Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.getUser();
+        const { data: authData } = await supabase.auth.getUser();
         if (authData?.user?.email) {
           // Fetch user profile from users table by email
           const { data: userData, error: userError } = await supabase
@@ -48,6 +49,25 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
             .single();
 
           if (!userError && userData) {
+            let schoolId: string | undefined;
+
+            // Fetch School ID based on role
+            if (['Admin', 'Proprietor'].includes(userData.role)) {
+              const { data: schoolData } = await supabase
+                .from('schools')
+                .select('id')
+                .eq('email', userData.email)
+                .single();
+              if (schoolData) schoolId = schoolData.id;
+            } else if (userData.role === 'Student') {
+              const { data: sData } = await supabase.from('students').select('school_id').eq('user_id', userData.id).single();
+              if (sData) schoolId = sData.school_id;
+            } else if (userData.role === 'Teacher') {
+              const { data: tData } = await supabase.from('teachers').select('school_id').eq('user_id', userData.id).single();
+              if (tData) schoolId = tData.school_id;
+            }
+            // For Parents, complex. Skip for now or default.
+
             const dbProfile: UserProfile = {
               id: userData.id,
               name: userData.name || 'Demo User',
@@ -55,6 +75,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
               phone: profile.phone, // Keep existing or fetch if added to DB
               avatarUrl: userData.avatar_url || 'https://i.pravatar.cc/150?u=user',
               role: (userData.role as any) || profile.role,
+              schoolId: schoolId,
             };
             setProfileState(dbProfile);
             return;

@@ -14,6 +14,8 @@ import { registerServiceWorker } from './lib/pwa';
 import { OfflineIndicator } from './components/shared/OfflineIndicator';
 import { PWAInstallPrompt } from './components/shared/PWAInstallPrompt';
 import { Toaster } from 'react-hot-toast';
+import { supabase } from './lib/supabase';
+import { DataService } from './services/DataService';
 
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const SuperAdminDashboard = lazy(() => import('./components/admin/SuperAdminDashboard'));
@@ -100,16 +102,55 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+
+import PaymentPage from './components/admin/saas/PaymentPage';
+
 const AuthenticatedApp: React.FC = () => {
   const { user, role, signOut, loading } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHomePage, setIsHomePage] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
 
+  // State to simulate subscription for demo purposes
+  // In real app, this comes from 'schools' table via user's school_id
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'inactive' | 'trial'>('inactive');
+  const [showPayment, setShowPayment] = useState(false);
+
   useEffect(() => {
     if (user && role) {
       console.log(`👤 User Authenticated: ${user.email} as ${role}`);
       requestNotificationPermission();
+
+      // Check subscription status if Admin/Proprietor
+      if (role === DashboardType.Admin || role === DashboardType.Proprietor || role === DashboardType.SuperAdmin) {
+        const checkSubscription = async () => {
+          // Demo Bypass
+          if (user.email === 'demo@school.edu' || user.email?.includes('demo')) {
+            setSubscriptionStatus('active');
+            return;
+          }
+
+          try {
+            // 1. Get School ID from Profile via Service
+            const profile = await DataService.getUserProfile(user.id, user.email || '');
+
+            if (profile?.school_id) {
+              // 2. Get Subscription Status from Service
+              const status = await DataService.getSchoolSubscription(profile.school_id);
+              setSubscriptionStatus(status as any);
+            } else {
+              setSubscriptionStatus('inactive');
+            }
+          } catch (err) {
+            console.error("Error checking subscription:", err);
+            setSubscriptionStatus('inactive');
+          }
+        };
+        checkSubscription();
+      } else {
+        // Non-admins don't pay
+        setSubscriptionStatus('active');
+      }
 
       // Realtime Subscriptions
       const userId = user.id;
@@ -137,10 +178,34 @@ const AuthenticatedApp: React.FC = () => {
   }
 
   const handleLogout = async () => {
+    // Check if current user is a demo user before signing out
+    const isDemo = user?.email?.includes('demo') || user?.user_metadata?.is_demo;
     await signOut();
     setIsHomePage(true);
     setIsChatOpen(false);
+
+    // If it was a demo user, show the demo login view
+    if (isDemo) {
+      // We need a way to pass this to Login. 
+      // Since `authView` is state here, we can use that if we expanded it.
+      // Or we can save to local storage.
+      localStorage.setItem('last_login_mode', 'demo');
+    } else {
+      localStorage.removeItem('last_login_mode');
+    }
   };
+
+  // Payment Flow Interception
+  // Only for School Admins
+  if ((role === DashboardType.Admin || role === DashboardType.Proprietor) && subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing') {
+    return (
+      <PaymentPage
+        schoolName={user.user_metadata?.school_name || "My School"}
+        email={user.email || ''}
+        onSuccess={() => setSubscriptionStatus('active')}
+      />
+    );
+  }
 
   const renderDashboard = () => {
     const props = { onLogout: handleLogout, setIsHomePage, currentUser: user };

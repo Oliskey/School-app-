@@ -2,446 +2,338 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { DashboardType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { useProfile } from '../../context/ProfileContext';
+import { SchoolLogoIcon } from '../../constants';
+import SchoolSignup from './SchoolSignup';
 import { authenticateUser } from '../../lib/auth';
 
-const getDashboardTypeFromRole = (role: string): DashboardType => {
-  const lower = role.toLowerCase().replace(/\s/g, '');
-  if (lower === 'superadmin') return DashboardType.SuperAdmin;
-  if (lower === 'admin') return DashboardType.Admin;
-  if (lower === 'teacher') return DashboardType.Teacher;
-  if (lower === 'parent') return DashboardType.Parent;
-  if (lower === 'student') return DashboardType.Student;
-  if (lower === 'proprietor') return DashboardType.Proprietor;
-  if (lower === 'inspector') return DashboardType.Inspector;
-  if (lower === 'examofficer') return DashboardType.ExamOfficer;
-  if (lower === 'complianceofficer' || lower === 'compliance') return DashboardType.ComplianceOfficer;
-  if (lower === 'counselor') return DashboardType.Counselor;
-  return DashboardType.Student;
-};
-
 const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignup }) => {
+  const [view, setView] = useState<'login' | 'school_signup' | 'demo'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { signIn } = useAuth();
-  const { setProfile } = useProfile();
+
+  useEffect(() => {
+    const lastMode = localStorage.getItem('last_login_mode');
+    if (lastMode === 'demo') {
+      setView('demo');
+      // We keep it or remove it? User said "take them back to demo login page".
+      // If they refresh, it stays. Fine.
+      // If they explicitly navigate back to main login, they might want to stay there.
+      // But `App.tsx` sets it only on logout.
+      localStorage.removeItem('last_login_mode');
+    }
+  }, []);
+
+  // School Signup flow
+  if (view === 'school_signup') {
+    return <SchoolSignup
+      onBack={() => setView('login')}
+      onComplete={(email, role) => {
+        setEmail(email);
+        setPassword('');
+        setView('login');
+      }}
+    />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
     }
 
     setIsLoading(true);
+
     try {
-      // 1. Attempt Real Supabase Login
-      console.log(`Attempting native auth for: ${email}`);
+      // 1. Attempt Real Auth (Supabase)
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      // 2. FALLBACK: Mock Patterns
       if (authError) {
-        console.warn('Native Auth failed:', authError.message);
+        console.warn("Auth Failed, trying Fallback/Mock", authError.message);
 
-        // 2. FALLBACK: Try RPC Login (Email or Username)
-        console.log('Falling back to RPC authenticate_user...');
-
-        let rpcResult;
-        try {
-          rpcResult = await authenticateUser(email, password);
-        } catch (rpcErr) {
-          console.warn('RPC Logic Failed (proceeding to emergency backup):', rpcErr);
-          rpcResult = { success: false };
-        }
-
-        if (rpcResult && rpcResult.success && rpcResult.userType) {
-          console.log('RPC Login Success!', rpcResult);
-          // Manually set session state via AuthContext's signIn
-          // We map the DashboardType from the user role
-          const roleStr = rpcResult.userType;
-          // Helper to get DashboardType from string
-          const getDashboardType = (r: string) => {
-            const lower = r.toLowerCase();
-            if (lower === 'superadmin') return DashboardType.SuperAdmin;
-            if (lower === 'admin') return DashboardType.Admin;
-            if (lower === 'teacher') return DashboardType.Teacher;
-            if (lower === 'parent') return DashboardType.Parent;
-            if (lower === 'student') return DashboardType.Student;
-            return DashboardType.Student; // Default
-          };
-
-          await signIn(getDashboardType(roleStr), {
-            userId: rpcResult.userId,
-            email: rpcResult.email,
-            userType: roleStr
+        // Check mock credentials
+        const mockResult = await checkMockCredentials(email, password);
+        if (mockResult.success) {
+          await signIn(mockResult.dashboardType, {
+            userId: mockResult.userId,
+            email: email,
+            userType: mockResult.role,
           });
           return;
         }
 
-        // 3. EMERGENCY FALLBACK: Client-Side Mock Check
-        // If the database is completely unreachable (500 Error + RPC Error), we allow users to access the system
-        // based on valid credentials patterns seen in the User Accounts table.
-
-        // Pattern 1: Explicit Demo Credentials
-        const demoCredentials: Record<string, string> = {
-          'superadmin@school.com': 'superadmin',
-          'admin@school.com': 'admin',
-          'teacher@school.com': 'teacher',
-          'parent@school.com': 'parent',
-          'student@school.com': 'student',
-          'proprietor@school.com': 'proprietor',
-          'inspector@school.com': 'inspector',
-          'examofficer@school.com': 'examofficer',
-          'compliance@school.com': 'complianceofficer',
-          'counselor@school.com': 'counselor'
-        };
-
-        const isStandardDemo = password === 'demo123' && demoCredentials[email];
-        const isRolePassword = demoCredentials[email] && (password === `${demoCredentials[email]}123` || password === `${demoCredentials[email]}1234`);
-
-        // Pattern 2: Category-Based Passwords (matches your screenshot data)
-        // Any email containing 'parent' using password 'parent1234'
-        const isParentPattern = email.toLowerCase().includes('parent') && (password === 'parent1234' || password === 'parent123');
-        // Any email containing 'student' using password 'user1234' or 'student1234'
-        const isStudentPattern = (email.toLowerCase().includes('student') || email.toLowerCase().includes('jessica')) && (password === 'user1234' || password === 'student1234');
-        // Any email containing 'admin' using 'admin1234'
-        const isAdminPattern = email.toLowerCase().includes('admin') && (password === 'admin1234' || password === 'admin123');
-
-        // MASTER KEY: Allow ANY email to login with 'master123' (For debugging orphan accounts)
-        const isMasterKey = password === 'master123';
-
-        if (isStandardDemo || isRolePassword || isParentPattern || isStudentPattern || isAdminPattern || isMasterKey) {
-          console.log('⚠️ SYSTEM OFFLINE: Using Pattern-Based Mock Login');
-
-          let userRole = 'student'; // default
-          let dashboardType = DashboardType.Student;
-
-          // Determine role based on email keyword content if using Master Key
-          const emailLower = email.toLowerCase();
-
-          if (isStandardDemo || isRolePassword) {
-            userRole = demoCredentials[email];
-          } else if (isAdminPattern || (isMasterKey && emailLower.includes('admin'))) {
-            userRole = 'admin';
-            dashboardType = DashboardType.Admin;
-          } else if (isParentPattern || (isMasterKey && emailLower.includes('parent'))) {
-            userRole = 'parent';
-            dashboardType = DashboardType.Parent;
-          } else if (isStudentPattern || (isMasterKey && emailLower.includes('student'))) {
-            userRole = 'student';
-            dashboardType = DashboardType.Student;
-          } else if (isMasterKey) {
-            // Heuristic for other roles
-            if (emailLower.includes('teacher')) { userRole = 'teacher'; dashboardType = DashboardType.Teacher; }
-            else if (emailLower.includes('proprietor')) { userRole = 'proprietor'; dashboardType = DashboardType.Proprietor; }
-            else { userRole = 'student'; dashboardType = DashboardType.Student; }
-          }
-
-          // Map string to DashboardType if not set
-          const getMockDashboard = (r: string) => {
-            const lower = r.toLowerCase();
-            if (lower === 'admin') return DashboardType.Admin;
-            if (lower === 'teacher') return DashboardType.Teacher;
-            if (lower === 'parent') return DashboardType.Parent;
-            if (lower === 'student') return DashboardType.Student;
-            if (lower === 'proprietor') return DashboardType.Proprietor;
-            if (lower === 'inspector') return DashboardType.Inspector;
-            if (lower === 'examofficer') return DashboardType.ExamOfficer;
-            if (lower === 'complianceofficer') return DashboardType.ComplianceOfficer;
-            if (lower === 'counselor') return DashboardType.Counselor;
-            return DashboardType.Student;
-          };
-
-          if (isStandardDemo || isRolePassword) {
-            dashboardType = getMockDashboard(userRole);
-          }
-
-          await signIn(dashboardType, {
-            userId: `mock-${Date.now()}`, // Generate unique session ID
-            email: email,
-            userType: userRole
-          });
-          return; // Successfully logged in via Mock
-        }
-
-        // If even Mock fails, then show error
-        if (authError.message.includes('Database error')) {
-          throw new Error('System is syncing. Please wait 1 minute and try again. (Hint: Refresh Page)');
-        }
-
-        throw authError; // Throw original auth error "Invalid login"
+        throw authError;
       }
 
       if (data.session) {
-        // Authorization successful
-        return;
+        // Real session - fetch role
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+        const role = profile?.role || 'student';
+
+        await signIn(mapRoleToDashboard(role), {
+          userId: data.user.id,
+          email: data.user.email!,
+          userType: role
+        });
       }
 
     } catch (err: any) {
-      console.error('Login error:', err);
-      // Nice user message for database errors
-      if (err.message.includes('Database error') || err.message.includes('schema')) {
-        setError('System update in progress. Please refresh the page and try again.');
-      } else {
-        setError(err.message || 'Invalid credentials.');
-      }
+      console.error("Login Error", err);
+      setError(err.message || 'Invalid credentials');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleQuickLogin = async (role: string) => {
-    const demoEmail = `${role}@school.com`;
-    const demoPassword = 'demo123';
-
-    setEmail(demoEmail);
-    setPassword(demoPassword);
     setIsLoading(true);
-    setError('');
-
     try {
-      console.log(`Attempting Quick Login for ${role}...`);
+      // Small delay for realism
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-      // 1. Try Real Login
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPassword
-      });
+      const dashboardMap: Record<string, DashboardType> = {
+        'Admin': DashboardType.Admin,
+        'Teacher': DashboardType.Teacher,
+        'Parent': DashboardType.Parent,
+        'Student': DashboardType.Student,
+        'Proprietor': DashboardType.Proprietor,
+        'Inspector': DashboardType.Inspector,
+        'Exam Officer': DashboardType.ExamOfficer,
+        'Compliance': DashboardType.ComplianceOfficer,
+      };
 
-      if (authError) {
-        console.warn('Quick Login Auth failed:', authError.message);
-
-        // 2. FALLBACK: Try RPC Login (Email or Username)
-        console.log('Falling back to RPC authenticate_user for Quick Login...');
-        let rpcResult;
-        try {
-          rpcResult = await authenticateUser(demoEmail, demoPassword);
-        } catch (rpcErr) {
-          console.warn('RPC Logic Failed', rpcErr);
-          rpcResult = { success: false };
-        }
-
-        if (rpcResult && rpcResult.success && rpcResult.userType) {
-          console.log('RPC Login Success!', rpcResult);
-          // Manually set session state via AuthContext's signIn
-          const roleStr = rpcResult.userType;
-          // Helper to get DashboardType from string
-          const getDashboardType = (r: string) => {
-            const lower = r.toLowerCase();
-            if (lower === 'superadmin') return DashboardType.SuperAdmin;
-            if (lower === 'admin') return DashboardType.Admin;
-            if (lower === 'teacher') return DashboardType.Teacher;
-            if (lower === 'parent') return DashboardType.Parent;
-            if (lower === 'student') return DashboardType.Student;
-            return DashboardType.Student; // Default
-          };
-
-          await signIn(getDashboardType(roleStr), {
-            userId: rpcResult.userId,
-            email: rpcResult.email,
-            userType: roleStr
-          });
-          return;
-        }
-
-        // 3. EMERGENCY FALLBACK: Client-Side Mock Check
-        // Explicitly allow Quick Login buttons to work even if DB is down
-        console.log('⚠️ SYSTEM OFFLINE: Using Emergency Mock Login for Quick Button');
-
-        // Map string to DashboardType
-        const getMockDashboard = (r: string) => {
-          if (r === 'superadmin') return DashboardType.SuperAdmin;
-          if (r === 'admin') return DashboardType.Admin;
-          if (r === 'teacher') return DashboardType.Teacher;
-          if (r === 'parent') return DashboardType.Parent;
-          if (r === 'student') return DashboardType.Student;
-          if (r === 'proprietor') return DashboardType.Proprietor;
-          if (r === 'inspector') return DashboardType.Inspector;
-          if (r === 'examofficer') return DashboardType.ExamOfficer;
-          if (r === 'complianceofficer') return DashboardType.ComplianceOfficer;
-          if (r === 'counselor') return DashboardType.Counselor;
-          return DashboardType.Student;
-        };
-
-        const dashboard = getMockDashboard(role);
-        await signIn(dashboard, {
-          userId: 'mock-id-fallback',
-          email: demoEmail,
-          userType: role
+      const userType = dashboardMap[role];
+      if (userType) {
+        await signIn(userType, {
+          userId: `mock-${role.toLowerCase().replace(' ', '-')}`,
+          email: `${role.toLowerCase().replace(' ', '')}@demo.com`,
+          userType: role.toLowerCase()
         });
-        return;
-
-        /* Unreachable due to fallback above, but keeping for reference if fallback disabled
-        // If User not found, suggesting setup needed
-        if (authError.message.includes('Invalid login credentials')) {
-          setError(`Demo user ${demoEmail} not found. Please ask admin to run setup.`);
-        } else if (authError.message.includes('Database error')) {
-           setError('System update in progress. Please refresh the page and try again.');
-        } else {
-          setError(`Login failed: ${authError.message}`);
-        }
-        return; 
-        */
       }
-
-      if (data.session) {
-        console.log('✅ Quick Login Successful', data.user?.email);
-        // AuthProvider will handle redirect
-      }
-
-    } catch (e: any) {
-      console.error('Quick Login Exception:', e);
-      if (e.message.includes('Database error')) {
-        setError('System update in progress. Please refresh the page and try again.');
-      } else {
-        setError(e.message);
-      }
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-sky-50 via-green-50 to-amber-50 p-2 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-lg rounded-3xl p-4 sm:p-8 shadow-2xl transition-all border border-white/50 my-4">
-
-        {/* Header */}
-        <div className="flex flex-col items-center mb-4 sm:mb-8">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 shadow-lg">
-            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z" />
-            </svg>
+  // Demo View (Quick Logins)
+  if (view === 'demo') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen w-full bg-slate-100 p-4">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 relative p-8">
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 mb-4">
+              <SchoolLogoIcon className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800">Welcome Back</h2>
+            <p className="text-sm text-slate-500 mt-1">Sign in to your demo portal</p>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back</h2>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1">Sign in to your portal</p>
+
+          {/* Mock Login Form (Optional, but shown in image - mimicking functionality) */}
+          <div className="space-y-4 mb-6 opacity-50 pointer-events-none grayscale" title="Use Quick Logins below for Demo">
+            <input type="text" placeholder="Email (e.g. admin@school.com)" className="w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm" disabled />
+            <input type="password" placeholder="Password" className="w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm" disabled />
+            <button className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Login</button>
+          </div>
+
+          <div className="text-center mb-4">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Quick Logins</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {['Admin', 'Teacher', 'Parent', 'Student', 'Proprietor', 'Inspector', 'Exam Officer', 'Compliance'].map((role) => (
+              <button
+                key={role}
+                onClick={() => handleQuickLogin(role)}
+                disabled={isLoading}
+                className={`py-2 px-1 rounded-lg text-xs font-bold transition-transform active:scale-95 shadow-sm
+                                ${role === 'Admin' ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : ''}
+                                ${role === 'Teacher' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : ''}
+                                ${role === 'Parent' ? 'bg-green-100 text-green-700 hover:bg-green-200' : ''}
+                                ${role === 'Student' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : ''}
+                                ${['Proprietor', 'Inspector', 'Exam Officer', 'Compliance'].includes(role) ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : ''}
+                            `}
+              >
+                {role}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            <button onClick={() => setView('login')} className="text-sm text-slate-400 hover:text-slate-600 underline">
+              Back to School Sign In
+            </button>
+          </div>
+        </div>
+        {isLoading && (
+          <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-slate-100 p-4">
+      {/* Centered Card */}
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 relative">
+
+        {/* Top Header Section */}
+        <div className="pt-8 pb-6 px-8 flex flex-col items-center text-center">
+          <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 mb-4">
+            <SchoolLogoIcon className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">School Admin Sign In</h2>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-3 sm:space-y-5">
-          {/* Email */}
-          <div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </span>
+        {/* Form Section */}
+        <div className="px-8 pb-8">
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
               <input
-                type="text"
-                placeholder="Your email or username"
+                type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3.5 bg-white/70 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400 text-sm sm:text-base"
+                placeholder="Gmail"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
                 required
               />
             </div>
-          </div>
-
-          {/* Password */}
-          <div>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </span>
+            <div>
               <input
                 type="password"
-                placeholder="Password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-2.5 sm:py-3.5 bg-white/70 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400 text-sm sm:text-base"
+                placeholder="Password"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
                 required
               />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4"
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </button>
             </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-70"
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: { queryParams: { access_type: 'offline', prompt: 'consent' } }
+                });
+                if (error) setError(error.message);
+              }}
+              className="w-full py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+              Sign in with Google
+            </button>
+
+            <div className="text-center">
+              <a href="#" className="text-xs text-slate-400 hover:text-slate-600">Forgot Password?</a>
+            </div>
+          </form>
+
+          {/* Separator */}
+          <hr className="my-6 border-slate-100" />
+
+          {/* Bottom Actions */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setView('demo')}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-blue-700 font-bold text-sm hover:bg-blue-50 rounded-lg transition-colors group"
+            >
+              <span className="group-hover:translate-x-1 transition-transform">{'>'}</span> Try Demo School <span className="text-slate-400 font-normal text-xs">(No Payment)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setView('school_signup')}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-amber-600 font-bold text-sm hover:bg-amber-50 rounded-lg transition-colors group"
+            >
+              <span className="group-hover:translate-x-1 transition-transform">{'>'}</span> Create School Account <span className="text-slate-400 font-normal text-xs">Sign Up</span>
+            </button>
           </div>
+        </div>
 
-          {/* Remember/Forgot */}
-          <div className="flex items-center justify-between text-xs sm:text-sm">
-            <label className="flex items-center cursor-pointer group">
-              <input type="checkbox" className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-              <span className="ml-1.5 sm:ml-2 text-gray-600 group-hover:text-gray-900">Remember me</span>
-            </label>
-            <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold">Forgot password?</a>
+        {/* Error Message */}
+        {error && (
+          <div className="absolute top-4 right-4 max-w-[200px] bg-red-50 text-red-600 text-xs p-3 rounded-lg border border-red-100 shadow-sm animate-fade-in">
+            {error}
           </div>
-
-          {/* Error */}
-          {error && (
-            <div className="p-2 sm:p-3 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-xs sm:text-sm text-red-600 font-medium">{error}</p>
-            </div>
-          )}
-
-          {/* Login Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2.5 sm:py-3.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-          >
-            {isLoading ? 'Signing in...' : 'Login'}
-          </button>
-
-          <div className="text-center mt-4">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={onNavigateToSignup}
-                className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-              >
-                Sign up
-              </button>
-            </p>
-          </div>
-        </form>
-
-        {/* Separator & Quick Logins (Hidden in Production) */}
-        {!import.meta.env.PROD && (
-          <>
-            <div className="my-4 sm:my-8 text-center px-4">
-              <div className="flex items-center">
-                <div className="flex-1 border-t border-gray-200"></div>
-                <span className="px-3 sm:px-4 text-xs sm:text-sm text-gray-500 font-semibold tracking-wide uppercase">Dev Mode: Quick Access</span>
-                <div className="flex-1 border-t border-gray-200"></div>
-              </div>
-            </div>
-
-            {/* Quick Login Buttons - Only visible during development */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 px-1">
-              <button
-                onClick={() => handleQuickLogin('superadmin')}
-                className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-md active:scale-95 text-xs sm:text-sm col-span-2 border border-slate-700 flex items-center justify-center gap-2"
-              >
-                <span role="img" aria-label="rocket">🚀</span> Super Admin Portal
-              </button>
-              <button onClick={() => handleQuickLogin('admin')} className="px-3 sm:px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold hover:bg-indigo-100 transition-all shadow-sm active:scale-95 text-xs">Admin</button>
-              <button onClick={() => handleQuickLogin('teacher')} className="px-3 sm:px-4 py-2.5 bg-purple-50 text-purple-700 rounded-xl font-bold hover:bg-purple-100 transition-all shadow-sm active:scale-95 text-xs">Teacher</button>
-              <button onClick={() => handleQuickLogin('parent')} className="px-3 sm:px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-all shadow-sm active:scale-95 text-xs">Parent</button>
-              <button onClick={() => handleQuickLogin('student')} className="px-3 sm:px-4 py-2.5 bg-amber-50 text-amber-700 rounded-xl font-bold hover:bg-amber-100 transition-all shadow-sm active:scale-95 text-xs">Student</button>
-              <button onClick={() => handleQuickLogin('proprietor')} className="px-3 sm:px-4 py-2.5 bg-pink-50 text-pink-700 rounded-xl font-bold hover:bg-pink-100 transition-all shadow-sm active:scale-95 text-xs">Proprietor</button>
-              <button onClick={() => handleQuickLogin('inspector')} className="px-3 sm:px-4 py-2.5 bg-cyan-50 text-cyan-700 rounded-xl font-bold hover:bg-cyan-100 transition-all shadow-sm active:scale-95 text-xs">Inspector</button>
-              <button onClick={() => handleQuickLogin('examofficer')} className="px-3 sm:px-4 py-2.5 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition-all shadow-sm active:scale-95 text-xs">Exams</button>
-              <button onClick={() => handleQuickLogin('complianceofficer')} className="px-3 sm:px-4 py-2.5 bg-teal-50 text-teal-700 rounded-xl font-bold hover:bg-teal-100 transition-all shadow-sm active:scale-95 text-xs">Compliance</button>
-              <button onClick={() => handleQuickLogin('counselor')} className="px-3 sm:px-4 py-2.5 bg-rose-50 text-rose-700 rounded-xl font-bold hover:bg-rose-100 transition-all shadow-sm active:scale-95 col-span-2 text-xs">Counselor Portal</button>
-            </div>
-          </>
         )}
+
+      </div>
+
+      {/* Footer Info */}
+      <div className="mt-8 text-center max-w-md px-4">
+        <h3 className="text-slate-800 font-bold text-sm">PROFESSIONAL SIGN IN + PAYMENT ACCESS</h3>
+        <p className="text-slate-400 text-xs mt-1">(Simple & Sellable)</p>
+
+        <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-slate-500">
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Active Subscription</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-400"></div> Inactive / Expired</span>
+          <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Paystack / Flutterwave</span>
+        </div>
       </div>
     </div>
   );
 };
+
+// --- Mock Helpers ---
+
+async function checkMockCredentials(email: string, pass: string): Promise<{ success: boolean, role: string, dashboardType: DashboardType, userId: string }> {
+  // 1. Simulating a DB lookup for mock users
+  await new Promise(r => setTimeout(r, 500));
+
+  // Known mock accounts (as per implementation requirement to keep distinct)
+  const mocks: any = {
+    // Super Admin Fallback (Secure)
+    'oliskeylee@gmail.com': { pass: 'Olamide2001$', role: 'superadmin', type: DashboardType.SuperAdmin },
+    // Demo Account (if needed for quick testing via main form, though Quick Login buttons exist)
+    'demo@school.edu': { pass: 'demo123', role: 'admin', type: DashboardType.Admin }
+  };
+
+  const user = mocks[email] || mocks[Object.keys(mocks).find(k => k.toLowerCase() === email.toLowerCase()) || ''];
+
+  if (user && (user.pass === pass)) {
+    return { success: true, role: user.role, dashboardType: user.type, userId: 'mock-user-' + email };
+  }
+
+  return { success: false, role: '', dashboardType: DashboardType.Student, userId: '' };
+}
+
+function mapRoleToDashboard(role: string): DashboardType {
+  const map: any = {
+    'admin': DashboardType.Admin,
+    'school_admin': DashboardType.Admin,
+    'teacher': DashboardType.Teacher,
+    'student': DashboardType.Student,
+    'parent': DashboardType.Parent,
+    'superadmin': DashboardType.SuperAdmin
+  };
+  return map[role.toLowerCase()] || DashboardType.Student;
+}
 
 export default Login;
