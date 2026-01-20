@@ -129,7 +129,7 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
   // Demo View (Quick Logins)
   if (view === 'demo') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen w-full bg-slate-100 p-4">
+      <div className="flex flex-col items-center justify-center min-h-screen w-full bg-slate-100 p-4 py-8">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 relative p-8">
           <div className="flex flex-col items-center text-center mb-6">
             <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 mb-4">
@@ -185,7 +185,7 @@ const Login: React.FC<{ onNavigateToSignup: () => void }> = ({ onNavigateToSignu
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-slate-100 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-slate-100 p-4 py-8">
       {/* Centered Card */}
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 relative">
 

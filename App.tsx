@@ -197,7 +197,7 @@ const AuthenticatedApp: React.FC = () => {
 
   // Payment Flow Interception
   // Only for School Admins
-  if ((role === DashboardType.Admin || role === DashboardType.Proprietor) && subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing') {
+  if ((role === DashboardType.Admin || role === DashboardType.Proprietor) && subscriptionStatus !== 'active' && subscriptionStatus !== 'trial') {
     return (
       <PaymentPage
         schoolName={user.user_metadata?.school_name || "My School"}
@@ -261,8 +261,8 @@ const App: React.FC = () => {
         {/* Offline indicator - shows when no internet connection */}
         <OfflineIndicator />
 
-        <div className="font-sans w-screen h-screen bg-[#F0F2F5] flex flex-col items-center justify-center">
-          <div className="relative w-full h-full flex flex-col shadow-2xl">
+        <div className="font-sans w-full min-h-screen bg-[#F0F2F5] flex flex-col items-center justify-center overflow-y-auto">
+          <div className="relative w-full flex-1 flex flex-col shadow-2xl">
             <AuthenticatedApp />
           </div>
         </div>

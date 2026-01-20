@@ -993,7 +993,7 @@ const ParentDashboard: React.FC<ParentDashboardProps> = ({ onLogout, setIsHomePa
                         </div>
                     )}
 
-                    <div ref={scrollRef} className="h-full overflow-y-auto">
+                    <div ref={scrollRef} className="h-full overflow-y-auto pb-56 lg:pb-0">
                         <Suspense fallback={<DashboardSuspenseFallback />}>
                             <ComponentToRender {...commonProps} {...currentNavigation.props} />
                         </Suspense>

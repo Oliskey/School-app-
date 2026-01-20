@@ -393,11 +393,11 @@ const AdminDashboardContent: React.FC<AdminDashboardProps> = ({ onLogout, setIsH
                     onSearchClick={() => setIsSearchOpen(true)}
                 />
 
-                <div className="flex-1 overflow-y-auto pb-32 lg:pb-0">
-                    <div className="h-full">
+                <div className="flex-1 overflow-y-auto pb-56 lg:pb-0">
+                    <div className="min-h-full">
                         {/* ErrorBoundary removed */}
                         <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}>
-                            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up h-full">
+                            <div key={`${viewStack.length}-${version}`} className="animate-slide-in-up min-h-full">
                                 {renderContent()}
                             </div>
                         </Suspense>
